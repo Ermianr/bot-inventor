@@ -20,10 +20,11 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "check-types": "turbo run check-types",
     "dev:web": "turbo run dev -F web",
+    "build:web": "turbo run build -F web",
+    "desktop:dev": "turbo run desktop:dev -F web",
+    "desktop:build": "turbo run desktop:build -F web",
+    "check-types": "turbo run check-types",
     "check": "biome check --write ."
   },
   "dependencies": {
