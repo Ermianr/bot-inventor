@@ -79,6 +79,62 @@ export function greetingProject(): Project {
   }
 }
 
+/**
+ * A Project with one Flow: `/hello` answered with a fixed piece of text typed
+ * into the Reply Node, with no Data Wire involved.
+ */
+export function helloProject(): Project {
+  return {
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    id: "project-hello",
+    name: "Hello Bot",
+    flows: [
+      {
+        id: "flow-hello",
+        name: "Hello",
+        nodes: [
+          {
+            id: "node-trigger",
+            type: "discord.trigger.slashCommand",
+            position: { x: 0, y: 0 },
+            fields: { name: "hello", description: "Says hello" }
+          },
+          {
+            id: "node-reply",
+            type: "discord.interaction.reply",
+            position: { x: 320, y: 0 },
+            fields: { content: "Hello!", ephemeral: false }
+          }
+        ],
+        wires: [
+          {
+            id: "wire-execution",
+            kind: "execution",
+            from: { node: "node-trigger", port: "next" },
+            to: { node: "node-reply", port: "in" }
+          }
+        ]
+      }
+    ]
+  }
+}
+
+/**
+ * `helloProject` with a second Reply Node dropped on the Canvas and wired to
+ * nothing: it is part of the Project, but not part of any run.
+ */
+export function unreachableNodeProject(): Project {
+  const project = helloProject()
+  const flow = requireFirst(project.flows, "Flow")
+  flow.nodes.push({
+    id: "node-orphan",
+    type: "discord.interaction.reply",
+    position: { x: 320, y: 240 },
+    fields: { content: "Nobody asked for this", ephemeral: false }
+  })
+  return project
+}
+
 /** A Project claiming a format this build does not know how to read. */
 export function futureVersionProject(): unknown {
   return { ...greetingProject(), schemaVersion: CURRENT_SCHEMA_VERSION + 1 }

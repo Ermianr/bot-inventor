@@ -1,6 +1,11 @@
-/**
- * Placeholder entry point. This package is scaffolding only: it exists so the
- * build, type-check and test tasks are wired before any domain code lands.
- * Replace this export with the first real one.
- */
-export const packageName = "@bot-inventor/runtime" as const
+export { type Coercions, coercions } from "./coercions.js"
+export type {
+  DiscordRuntime,
+  DiscordUser,
+  ReplyOptions,
+  SlashCommandDefinition,
+  SlashCommandEvent,
+  SlashCommandHandler
+} from "./discord.js"
+export { createDiscordRuntime, type DiscordRuntimeOptions } from "./discord-js-runtime.js"
+export type { FlowFailure, Runtime, TraceEvent } from "./runtime.js"

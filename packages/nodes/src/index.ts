@@ -1,6 +1,25 @@
-/**
- * Placeholder entry point. This package is scaffolding only: it exists so the
- * build, type-check and test tasks are wired before any domain code lands.
- * Replace this export with the first real one.
- */
-export const packageName = "@bot-inventor/nodes" as const
+export { buildCatalogue, catalogue, type NodeCatalogue } from "./catalogue.js"
+export {
+  applyCoercion,
+  type CoercionDefinition,
+  coercions,
+  findCoercion
+} from "./coercions.js"
+export {
+  type CompilerMode,
+  type DataPortDefinition,
+  type DataType,
+  type ExecutionPortDefinition,
+  type FieldDefinition,
+  findField,
+  findPort,
+  type GenerationContext,
+  indent,
+  joinStatements,
+  type NodeDefinition,
+  type PortDefinition,
+  type PortDirection,
+  type TraceRequest
+} from "./definition.js"
+export { reply } from "./discord/reply.js"
+export { slashCommandTrigger } from "./discord/slash-command-trigger.js"

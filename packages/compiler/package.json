@@ -7,6 +7,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
     }
   },
   "scripts": {
@@ -16,6 +20,7 @@
   },
   "dependencies": {
     "@bot-inventor/nodes": "workspace:*",
+    "@bot-inventor/runtime": "workspace:*",
     "@bot-inventor/schema": "workspace:*"
   },
   "devDependencies": {
