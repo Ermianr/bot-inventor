@@ -88,6 +88,9 @@
     "packages/schema": {
       "name": "@bot-inventor/schema",
       "version": "0.0.0",
+      "dependencies": {
+        "zod": "catalog:",
+      },
       "devDependencies": {
         "@bot-inventor/config": "workspace:*",
         "typescript": "catalog:",
