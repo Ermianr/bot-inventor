@@ -7,6 +7,11 @@ import { inDesktopShell } from "@/session/desktop"
  *
  * The window is the one way out of the editor that the editor does not draw, so
  * it is the one place unsaved work could disappear without anybody being asked.
+ *
+ * Listening for the close is what makes the editor responsible for it: Tauri
+ * stops closing the window on its own and destroys it from here once the
+ * handler has answered. That is why the window needs `core:window:allow-destroy`
+ * in `capabilities/default.json` — without it the window never closes at all.
  * Outside the desktop shell there is no window to hold on to and this does
  * nothing: a browser tab is not what the user's work lives in.
  */
