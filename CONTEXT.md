@@ -46,6 +46,10 @@ _Avoid_: catch, error handler, error output
 The unit the user opens, edits and saves: the complete definition of one bot, with all its Flows.
 _Avoid_: bot, workspace, file
 
+**Project File**:
+The `.botinv` file a Project is saved to and opened from. It holds the Project and nothing else: never a Secret, so it can be sent to somebody else as it is.
+_Avoid_: save file, document, botinv (on its own)
+
 **Compiler**:
 Translates a Project into JavaScript. It emits the same behaviour in two modes — Development Mode (with Tracing) and Build — from a single definition of each Node.
 _Avoid_: generator, transpiler, engine

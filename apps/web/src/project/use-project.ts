@@ -22,15 +22,18 @@ export type ProjectEditor = {
   /** The Flow the Canvas is showing. */
   flow: Flow
   openFlow(flowId: string): void
+  /** Puts another Project on the Canvas: opening a file, or starting a new one. */
+  replace(project: Project): void
   moveNode(nodeId: string, position: Position): void
   setNodeField(nodeId: string, fieldId: string, value: FieldValue): void
   connectWire(wire: { kind: WireKind; from: PortReference; to: PortReference }): void
   disconnectWire(wireId: string): void
 }
 
-export function useProject(initial: Project): ProjectEditor {
-  const [project, setProject] = useState(initial)
-  const [openFlowId, setOpenFlowId] = useState(() => initial.flows[0]?.id ?? "")
+/** `createInitial` is called once: the Project the editor opens with. */
+export function useProject(createInitial: () => Project): ProjectEditor {
+  const [project, setProject] = useState(createInitial)
+  const [openFlowId, setOpenFlowId] = useState(() => project.flows[0]?.id ?? "")
 
   const flow = useMemo(() => {
     const open = project.flows.find(candidate => candidate.id === openFlowId)
@@ -50,6 +53,10 @@ export function useProject(initial: Project): ProjectEditor {
     project,
     flow,
     openFlow: setOpenFlowId,
+    replace: useCallback((next: Project) => {
+      setProject(next)
+      setOpenFlowId(next.flows[0]?.id ?? "")
+    }, []),
     moveNode: useCallback(
       (nodeId, position) => edit(current => moveNode(current, nodeId, position)),
       [edit]

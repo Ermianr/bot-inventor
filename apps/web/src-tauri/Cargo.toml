@@ -24,6 +24,9 @@ log = "0.4"
 tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-shell = "2"
+# The operating system's file dialogs, which is how the user says which
+# `.botinv` to open and where to save one.
+tauri-plugin-dialog = "2"
 # The OS keychain a Project's Secrets live in while it is being edited.
 keyring = { version = "3", features = ["windows-native", "apple-native", "sync-secret-service"] }
 # Asking Discord which servers a bot is in. It happens here rather than in the

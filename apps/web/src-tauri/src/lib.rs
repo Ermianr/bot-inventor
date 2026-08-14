@@ -1,4 +1,5 @@
 mod jail;
+mod project_file;
 mod secrets;
 mod session;
 mod test_servers;
@@ -7,8 +8,12 @@ mod test_servers;
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_shell::init())
+    .plugin(tauri_plugin_dialog::init())
     .manage(session::Sessions::default())
     .invoke_handler(tauri::generate_handler![
+      project_file::back_up_project_file,
+      project_file::read_project_file,
+      project_file::write_project_file,
       secrets::store_secret,
       secrets::secret_exists,
       session::start_session,
