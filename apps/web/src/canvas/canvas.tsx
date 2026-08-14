@@ -16,6 +16,7 @@ import { FlowNode, type FlowNodeData, type FlowNodeType } from "@/canvas/flow-no
 import { Wire, type WireData, type WireType } from "@/canvas/wire"
 import { translate, translateDefinitionKey } from "@/i18n/messages"
 import type { ProjectEditor } from "@/project/use-project"
+import type { RunTrace } from "@/session/trace"
 
 import "@xyflow/react/dist/style.css"
 
@@ -26,6 +27,10 @@ import "@xyflow/react/dist/style.css"
  * file and nowhere else: everything the rest of the editor is handed is spelled
  * the way `CONTEXT.md` spells it.
  *
+ * While a bot is running, the Canvas is also where the user watches it think:
+ * the Tracing of the most recent run marks each Node as it is reached and
+ * writes on every Wire what travelled down it.
+ *
  * Whether a Wire may be drawn is not decided here. `checkConnection` decides
  * it, from the same Coercion table the Compiler emits from, so a Wire the user
  * is allowed to draw is always one the Compiler accepts.
@@ -34,9 +39,16 @@ import "@xyflow/react/dist/style.css"
 const nodeTypes = { flowNode: FlowNode }
 const wireTypes = { wire: Wire }
 
-export function Canvas({ editor }: { editor: ProjectEditor }) {
+export function Canvas({ editor, trace }: { editor: ProjectEditor; trace?: RunTrace }) {
   const { flow } = editor
   const [refusal, setRefusal] = useState<string | undefined>(undefined)
+
+  /**
+   * What the run being watched did in this Flow. A run of another Flow lights
+   * nothing up here: the user is looking at one Flow, and a Node of it that did
+   * not run must not be drawn as though it had.
+   */
+  const watching = trace?.flow === flow.id ? trace : undefined
 
   /**
    * Why the last connection the user tried was refused. React Flow asks whether
@@ -54,6 +66,7 @@ export function Canvas({ editor }: { editor: ProjectEditor }) {
         const data: FlowNodeData = {
           node,
           definition,
+          runState: watching?.nodes[node.id],
           setField: (fieldId, value) => editor.setNodeField(node.id, fieldId, value)
         }
         return [
@@ -70,7 +83,7 @@ export function Canvas({ editor }: { editor: ProjectEditor }) {
           }
         ]
       }),
-    [flow.nodes, editor.setNodeField]
+    [flow.nodes, editor.setNodeField, watching]
   )
 
   const wires = useMemo<WireType[]>(
@@ -79,6 +92,7 @@ export function Canvas({ editor }: { editor: ProjectEditor }) {
         const data: WireData = {
           kind: wire.kind,
           coercionLabelKey: coercionLabelKeyOf(flow, wire),
+          carried: watching?.wires[wire.id],
           remove: editor.disconnectWire
         }
         return {
@@ -91,7 +105,7 @@ export function Canvas({ editor }: { editor: ProjectEditor }) {
           data
         }
       }),
-    [flow, editor.disconnectWire]
+    [flow, editor.disconnectWire, watching]
   )
 
   /**

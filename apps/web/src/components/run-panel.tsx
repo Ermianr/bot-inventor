@@ -14,18 +14,20 @@ import { useEffect, useRef, useState } from "react"
 import { TestServerPicker } from "@/components/test-server-picker"
 import { translate } from "@/i18n/messages"
 import { describeRefusal } from "@/session/refusal"
-import { type SessionEntry, type SessionStatus, useSession } from "@/session/use-session"
+import type { Session, SessionEntry, SessionStatus } from "@/session/use-session"
 
 /**
  * Everything it takes to see the bot alive on Discord: a token, a server to
  * test in, Run, and what the bot is saying.
  *
+ * The Session itself belongs to the editor rather than to this panel: the
+ * Canvas watches the same run light up while it is going on.
+ *
  * The token is typed here and goes straight to the operating system keychain
  * through the Tauri side. It is never held in the Project, and it is not kept
  * in this component beyond the moment it is saved.
  */
-export function RunPanel({ project }: { project: Project }) {
-  const session = useSession(project)
+export function RunPanel({ project, session }: { project: Project; session: Session }) {
   const [secret, setSecret] = useState("")
   const [stored, setStored] = useState(false)
   const [testServerId, setTestServerId] = useState("")

@@ -13,6 +13,7 @@ import type {
   SlashCommandHandler
 } from "./discord.js"
 import type { FlowFailure, Runtime, TraceEvent } from "./runtime.js"
+import { createTracing } from "./tracing.js"
 
 /**
  * A call the bot made to Discord. Tests assert on these rather than on the
@@ -114,6 +115,9 @@ export function createFakeRuntime(options: FakeRuntimeOptions = {}): FakeRuntime
   const failures: FlowFailure[] = []
   const traces: TraceEvent[] = []
   const handlers = new Map<string, SlashCommandHandler>()
+  const trace = (event: TraceEvent) => {
+    traces.push(event)
+  }
 
   return {
     calls,
@@ -142,12 +146,11 @@ export function createFakeRuntime(options: FakeRuntimeOptions = {}): FakeRuntime
       }
     },
     coerce: coercions,
+    ...createTracing(trace),
     reportFailure(failure) {
       failures.push(failure)
     },
-    trace(event) {
-      traces.push(event)
-    },
+    trace,
     async start() {},
     async stop() {},
     async dispatchSlashCommand(input) {

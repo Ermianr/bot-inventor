@@ -1,4 +1,5 @@
 import { indent, type NodeCatalogue } from "@bot-inventor/nodes"
+import type { TraceEvent } from "@bot-inventor/runtime"
 import type { Project } from "@bot-inventor/schema"
 import { z } from "zod"
 import { compile } from "./compile.js"
@@ -14,9 +15,10 @@ import { TOKEN_VARIABLE } from "./node-project.js"
  * `readSessionLine` is what turns those lines into something the output panel
  * can use.
  *
- * Tracing is not on this pipe yet. Development Mode's generated code already
- * emits it, but nothing reports it until there is a Canvas to highlight, and a
- * message kind nobody reads is a contract that has never been tested.
+ * Tracing rides this pipe as well, one message per event, which is what lets
+ * the Canvas light up as the bot works. It is the busiest thing on here by far,
+ * and it is why the reading end is written to keep going past a message it does
+ * not understand rather than to stop at it.
  *
  * The pipe carries no token in either direction. The token reaches the bot on
  * the child process's environment, and `redactSecret` is the last line of
@@ -43,6 +45,37 @@ export const SESSION_MESSAGE_PREFIX = "@botinv "
 /** What replaces a Secret in anything the user is shown. */
 const REDACTION = "[redacted]"
 
+/**
+ * A Tracing event as it arrives from the sidecar.
+ *
+ * It restates `TraceEvent` because this side of the pipe cannot trust the other
+ * one: what comes back is text a process wrote, and the Canvas is handed only
+ * what this describes. The two are kept in step by `traceEventSchema` being
+ * declared to satisfy it.
+ */
+const traceEventSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("node-entered"),
+    run: z.number(),
+    flow: z.string(),
+    node: z.string()
+  }),
+  z.object({
+    kind: z.literal("node-completed"),
+    run: z.number(),
+    flow: z.string(),
+    node: z.string()
+  }),
+  z.object({
+    kind: z.literal("wire-carried"),
+    run: z.number(),
+    flow: z.string(),
+    wire: z.string(),
+    /** Already text: Tracing serialises a value for display before sending it. */
+    value: z.string()
+  })
+]) satisfies z.ZodType<TraceEvent>
+
 const sessionMessageSchema = z.discriminatedUnion("kind", [
   /**
    * How the start went. `ready` means connected and registered; `failed` comes
@@ -64,12 +97,22 @@ const sessionMessageSchema = z.discriminatedUnion("kind", [
     registered: z.array(z.string()),
     deleted: z.array(z.string())
   }),
-  /** A Flow that stopped because an action failed and its Failure Port was free. */
+  /**
+   * A Flow that stopped because an action failed and its Failure Port was free.
+   * `run` is absent when nothing was running — a bot that broke outside any
+   * Flow of its own has no run to point at.
+   */
   z.object({
     kind: z.literal("flow-failed"),
     flow: z.string(),
     node: z.string(),
-    message: z.string()
+    message: z.string(),
+    run: z.number().optional()
+  }),
+  /** One Tracing event: a Node entered or completed, or a Wire's value. */
+  z.object({
+    kind: z.literal("trace"),
+    event: traceEventSchema
   })
 ])
 
@@ -144,7 +187,8 @@ export function renderDevelopmentSession(
     `  token: process.env.${TOKEN_VARIABLE} ?? "",`,
     ...guild,
     '  onCommandsRegistered: result => send({ kind: "commands-registered", registered: result.registered, deleted: result.deleted }),',
-    '  onFailure: failure => send({ kind: "flow-failed", flow: failure.flow, node: failure.node, message: describe(failure.error) }),',
+    '  onFailure: failure => send({ kind: "flow-failed", flow: failure.flow, node: failure.node, message: describe(failure.error), run: failure.run }),',
+    '  onTrace: event => send({ kind: "trace", event }),',
     '  onUnexpectedError: error => send({ kind: "flow-failed", flow: "", node: "", message: describe(error) })',
     "})",
     "",

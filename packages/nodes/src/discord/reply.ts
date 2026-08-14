@@ -43,6 +43,7 @@ export const reply: NodeDefinition = {
     return joinStatements([
       context.trace({ kind: "node-entered" }),
       `await ${context.runtime}.discord.reply(${context.event}, { ${options} })`,
+      context.trace({ kind: "node-completed" }),
       context.continuation("next")
     ])
   }

@@ -14,14 +14,23 @@ import { translate, translateDefinitionKey } from "@/i18n/messages"
  * When the Wire converts what it carries, the Coercion is written on it: a
  * conversion the user can see is a decision they made, and one they cannot is
  * something that happened to them.
+ *
+ * While a bot is running, the value the Wire carried in the most recent run is
+ * written on it too, which is the whole point of watching a Flow run: a graph
+ * becomes something a person understands when they can read what went through.
  */
 
 export type WireData = {
   kind: WireKind
   /** The Coercion this Wire applies, or `undefined` when it carries the value as it is. */
   coercionLabelKey: string | undefined
+  /** What this Wire carried in the run being watched, ready to read. */
+  carried: string | undefined
   remove: (wireId: string) => void
 }
+
+/** How much of a value fits on a Wire before the rest is left to the tooltip. */
+const CARRIED_LIMIT = 32
 
 export type WireType = ReactFlowEdge<WireData, "wire">
 
@@ -62,6 +71,22 @@ export function Wire({
           data-testid={`wire-${id}`}
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
         >
+          {data?.carried !== undefined && (
+            <span
+              aria-label={translate("canvas.wire.carried", { value: data.carried })}
+              className="max-w-40 truncate rounded-full border border-amber-500/60 bg-background px-2 py-0.5 font-mono text-[10px]"
+              data-testid={`wire-carried-${id}`}
+              // The badge is cut short to fit the Wire, so what it says out
+              // loud, and what a pointer resting on it shows, is the whole
+              // value: the value is the thing the user came to read.
+              role="note"
+              title={data.carried}
+            >
+              {data.carried.length > CARRIED_LIMIT
+                ? `${data.carried.slice(0, CARRIED_LIMIT)}…`
+                : data.carried}
+            </span>
+          )}
           {data?.coercionLabelKey !== undefined && (
             <span
               className="rounded-full border bg-background px-2 py-0.5 text-[10px]"

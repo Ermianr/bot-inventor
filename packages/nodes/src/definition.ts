@@ -56,10 +56,13 @@ export type FieldDefinition = {
 /**
  * A Tracing statement a Node asks for. It emits nothing in Build mode, so a
  * Node author writes the same generate() for both modes.
+ *
+ * Only the two moments a Node knows about are asked for here. What a Wire
+ * carried is the Compiler's to report, because the Wire is the Compiler's to
+ * find, and a Node reporting its own outputs would say nothing about the ones
+ * nobody connected.
  */
-export type TraceRequest =
-  | { kind: "node-entered" }
-  | { kind: "value-produced"; port: string; expression: string }
+export type TraceRequest = { kind: "node-entered" } | { kind: "node-completed" }
 
 /**
  * What a Node's generate() is given. Everything graph-shaped — where a Data
@@ -86,7 +89,11 @@ export type GenerationContext = {
   continuation(portId: string): string
   /** Renders a value as a JavaScript literal. */
   literal(value: unknown): string
-  /** A Tracing statement, or the empty string in Build mode. */
+  /**
+   * A Tracing statement, or the empty string in Build mode. A Node emits
+   * `node-entered` before it does anything and `node-completed` once it has,
+   * which is what the Canvas lights up as the run travels through it.
+   */
   trace(request: TraceRequest): string
 }
 

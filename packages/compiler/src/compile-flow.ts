@@ -1,6 +1,7 @@
 import {
   applyCoercion,
   type CompilerMode,
+  type DataType,
   defaultFieldValue,
   findCoercion,
   findField,
@@ -20,6 +21,8 @@ import { assignIdentifierPrefixes, literal } from "./identifiers.js"
 const RUNTIME = "runtime"
 const EVENT = "event"
 const CURRENT_NODE = "currentNode"
+/** Holds the id of the run in progress, so overlapping runs never share one. */
+const CURRENT_RUN = "currentRun"
 
 /**
  * Emits one Flow. There is a single traversal: `mode` only decides whether the
@@ -37,6 +40,8 @@ class FlowCompiler {
   private readonly bound = new Set<string>()
   /** Nodes already emitted in this run, so a cycle is reported rather than inlined forever. */
   private readonly emitted = new Set<string>()
+  /** Whether the run this Flow's Tracing stamps its events with is declared yet. */
+  private runDeclared = false
 
   constructor(
     private readonly flow: Flow,
@@ -99,12 +104,15 @@ class FlowCompiler {
     }
     this.emitted.add(target.id)
 
+    // Claimed before the Nodes are emitted, so that a run's id is declared
+    // outside the try rather than in it, where the catch could not read it.
+    const runDeclaration = startsRun ? this.declareRun() : ""
     const generated = this.definitionOf(target).generate(this.contextFor(target, false))
 
     // The run's own declaration already records which Node is first, so only
     // the Nodes after it need to say so.
     return startsRun
-      ? this.wrapRun(generated, target.id)
+      ? this.wrapRun(generated, target.id, runDeclaration)
       : joinStatements([`${CURRENT_NODE} = ${literal(target.id)}`, generated])
   }
 
@@ -113,17 +121,22 @@ class FlowCompiler {
    * that is connected will divert execution before reaching here; leaving it
    * unconnected is what ends the Flow.
    */
-  private wrapRun(body: string, firstNodeId: string): string {
-    return [
+  private wrapRun(body: string, firstNodeId: string, runDeclaration: string): string {
+    // A failure is the end of a run, so it is reported with the run's id: the
+    // Canvas marks the Node it stopped at, in the run the user was watching.
+    const run = this.mode === "build" ? "" : `, run: ${CURRENT_RUN}`
+
+    return joinStatements([
+      runDeclaration,
       `let ${CURRENT_NODE} = ${literal(firstNodeId)}`,
       "try {",
       indent(body),
       "} catch (error) {",
       indent(
-        `${RUNTIME}.reportFailure({ flow: ${literal(this.flow.id)}, node: ${CURRENT_NODE}, error })`
+        `${RUNTIME}.reportFailure({ flow: ${literal(this.flow.id)}, node: ${CURRENT_NODE}, error${run} })`
       ),
       "}"
-    ].join("\n")
+    ])
   }
 
   private contextFor(node: Node, isTrigger: boolean): GenerationContext {
@@ -155,13 +168,22 @@ class FlowCompiler {
   private traceStatement(node: Node, request: TraceRequest): string {
     if (this.mode === "build") return ""
 
-    const location = `flow: ${literal(this.flow.id)}, node: ${literal(node.id)}`
-    const payload =
-      request.kind === "node-entered"
-        ? `{ kind: "node-entered", ${location} }`
-        : `{ kind: "value-produced", ${location}, port: ${literal(request.port)}, value: ${request.expression} }`
+    const event = `{ kind: ${literal(request.kind)}, run: ${CURRENT_RUN}, flow: ${literal(this.flow.id)}, node: ${literal(node.id)} }`
+    return joinStatements([this.declareRun(), `${RUNTIME}.trace(${event})`])
+  }
 
-    return `${RUNTIME}.trace(${payload})`
+  /**
+   * The statement that begins a run, the first time something needs the run's
+   * id and nothing after that.
+   *
+   * Everything a run reports is stamped with it, and it is a local rather than
+   * something the Runtime holds because two people can use the same command at
+   * the same time: a run in progress must not be able to see another one's id.
+   */
+  private declareRun(): string {
+    if (this.mode === "build" || this.runDeclared) return ""
+    this.runDeclared = true
+    return `const ${CURRENT_RUN} = ${RUNTIME}.startRun()`
   }
 
   private fieldOf(node: Node, definition: NodeDefinition, id: string): FieldValue {
@@ -223,17 +245,42 @@ class FlowCompiler {
       )
     }
 
-    const expression = `${this.prefixOf(source)}_${wire.from.port}`
-    if (sourcePort.dataType === port.dataType) return expression
+    const bound = `${this.prefixOf(source)}_${wire.from.port}`
+    const expression = this.coerced(bound, wire.id, sourcePort.dataType, port.dataType, node)
 
-    const coercion = findCoercion(sourcePort.dataType, port.dataType)
+    return this.traceWire(wire.id, expression)
+  }
+
+  /** Puts a Wire's value through the Coercion the two Ports need, if any. */
+  private coerced(
+    expression: string,
+    wireId: string,
+    from: DataType,
+    to: DataType,
+    node: Node
+  ): string {
+    if (from === to) return expression
+
+    const coercion = findCoercion(from, to)
     if (coercion === undefined) {
       throw new CompilerError(
-        `Data Wire "${wire.id}" carries ${sourcePort.dataType} into ${port.dataType}, and no Coercion exists between them`,
+        `Data Wire "${wireId}" carries ${from} into ${to}, and no Coercion exists between them`,
         { flow: this.flow.id, node: node.id }
       )
     }
     return applyCoercion(expression, coercion, RUNTIME)
+  }
+
+  /**
+   * Reports the value a Wire carried, around the expression that reads it.
+   *
+   * It wraps the Coercion rather than the value before it, because what the
+   * user is shown on a Wire has to be what arrived at the other end of it: a
+   * User drawn into a text field carried the mention, not the User.
+   */
+  private traceWire(wireId: string, expression: string): string {
+    if (this.mode === "build") return expression
+    return `${RUNTIME}.traceWire(${CURRENT_RUN}, ${literal(this.flow.id)}, ${literal(wireId)}, ${expression})`
   }
 
   private definitionOf(node: Node): NodeDefinition {

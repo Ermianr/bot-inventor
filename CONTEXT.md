@@ -74,6 +74,14 @@ _Avoid_: guild, dev server, sandbox
 The instrumentation Development Mode injects into the generated code so the Canvas can highlight the Node currently executing and show the values travelling along each Wire.
 _Avoid_: debugging, logging, telemetry
 
+**Run**:
+One execution of a Flow, from its Trigger firing until the Flow stops. A Session is the bot being alive; a Run is one thing the bot did while it was. Runs are numbered so that two of them happening at once can be told apart, and the Canvas shows the most recent.
+_Avoid_: execution, invocation, session, trace
+
+**Trace Event**:
+One thing Tracing reports about a Run: a Node entered, a Node completed, or the value a Wire carried. A value in a Trace Event is already text, serialised for the person reading it and never read back.
+_Avoid_: log line, span, message
+
 **Build**:
 Producing the final JavaScript the user takes away: no Tracing, and containing only what their Flows actually use.
 _Avoid_: compile, production build

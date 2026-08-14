@@ -28,11 +28,24 @@ export type CommandRegistration = {
   commands: readonly ReceivedCommand[]
 }
 
+/** A slash command someone used, as the bot answered it. */
+export type ReceivedReply = {
+  content: string
+}
+
 export type FakeDiscordServer = {
   /** What to hand the bot as `DISCORD_API_URL`. */
   readonly apiBaseUrl: string
   /** Every command registration received, in order. */
   readonly registrations: readonly CommandRegistration[]
+  /** Every answer the bot sent back to an interaction, in order. */
+  readonly replies: readonly ReceivedReply[]
+  /**
+   * Uses one of the bot's slash commands, as a person on Discord would. It is
+   * what starts a run, and so the only way to see Tracing arrive from a bot
+   * that is really running.
+   */
+  useSlashCommand(command: { name: string; user?: Partial<InteractionUser> }): void
   /** Everything the bot asked for, so a bot that never starts can be told from one that stalls. */
   readonly requests: readonly string[]
   /** Resolves once the bot has registered its commands, which is the last step of its start. */
@@ -43,8 +56,22 @@ export type FakeDiscordServer = {
 /** The application id the fake gateway claims, which is what the bot registers against. */
 const APPLICATION_ID = "100000000000000001"
 
+/** Whoever used the command, in Discord's own shape. */
+type InteractionUser = {
+  id: string
+  username: string
+  global_name: string
+}
+
+const ANONYMOUS: InteractionUser = {
+  id: "300000000000000003",
+  username: "ana",
+  global_name: "Ana"
+}
+
 export async function startFakeDiscordServer(): Promise<FakeDiscordServer> {
   const registrations: CommandRegistration[] = []
+  const replies: ReceivedReply[] = []
   const requests: string[] = []
   const waiting: ((registration: CommandRegistration) => void)[] = []
 
@@ -61,8 +88,13 @@ export async function startFakeDiscordServer(): Promise<FakeDiscordServer> {
   const gatewayUrl = `ws://127.0.0.1:${portOf(gateway)}`
 
   const sockets = new WebSocketServer({ server: gateway })
+  /** The bot's gateway connection, which is what an interaction is sent down. */
+  let connection: { send(data: string): void } | undefined
+  let dispatched = 1
+
   sockets.on("connection", socket => {
     requests.push("gateway connection")
+    connection = socket
 
     // HELLO first: the client will not identify until it has one, and the
     // interval is what it paces its heartbeats by.
@@ -81,7 +113,7 @@ export async function startFakeDiscordServer(): Promise<FakeDiscordServer> {
 
   const rest = createServer((request, response) => {
     requests.push(`${request.method} ${request.url}`)
-    handleRest(request, response, gatewayUrl, record).catch(() => {
+    handleRest(request, response, gatewayUrl, record, reply => replies.push(reply)).catch(() => {
       // Something can fail after the response has gone out, and answering twice
       // throws where nothing is waiting to catch it, taking the test runner's
       // worker down instead of failing one test.
@@ -95,7 +127,20 @@ export async function startFakeDiscordServer(): Promise<FakeDiscordServer> {
   return {
     apiBaseUrl: `http://127.0.0.1:${portOf(rest)}/api`,
     registrations,
+    replies,
     requests,
+    useSlashCommand({ name, user }) {
+      if (connection === undefined) {
+        throw new Error("the bot is not on the gateway, so nobody can use its commands")
+      }
+      dispatched += 1
+      send(connection, {
+        op: 0,
+        s: dispatched,
+        t: "INTERACTION_CREATE",
+        d: interaction(name, { ...ANONYMOUS, ...user })
+      })
+    },
     waitForRegistration() {
       const [first] = registrations
       if (first !== undefined) return Promise.resolve(first)
@@ -115,7 +160,8 @@ async function handleRest(
   request: IncomingMessage,
   response: ServerResponse,
   gatewayUrl: string,
-  record: (registration: CommandRegistration) => void
+  record: (registration: CommandRegistration) => void,
+  recordReply: (reply: ReceivedReply) => void
 ): Promise<void> {
   const url = new URL(request.url ?? "/", "http://127.0.0.1")
   const path = url.pathname.replace(/^\/api\/v\d+/, "")
@@ -148,7 +194,47 @@ async function handleRest(
     }
   }
 
+  // Answering an interaction. Discord returns the callback it recorded, and
+  // discord.js reads that back, so an empty body is not an answer here.
+  if (/^\/interactions\/[^/]+\/[^/]+\/callback$/.test(path) && request.method === "POST") {
+    const body = JSON.parse(await read(request)) as { data?: { content?: string } }
+    recordReply({ content: body.data?.content ?? "" })
+    respond(response, 200, {
+      interaction: {
+        id: "400000000000000004",
+        type: 2,
+        response_message_loading: false,
+        response_message_ephemeral: false
+      },
+      resource: { type: 4 }
+    })
+    return
+  }
+
   respond(response, 404, { message: `the fake Discord has no ${request.method} ${path}` })
+}
+
+/**
+ * One use of a slash command, reduced to the fields discord.js needs to build a
+ * ChatInputCommandInteraction. It arrives without a server on purpose: a
+ * command used in a direct message needs no guild to be resolved against, and
+ * what is being proven here is the run, not Discord's caching.
+ */
+function interaction(name: string, user: InteractionUser) {
+  return {
+    id: "500000000000000005",
+    application_id: APPLICATION_ID,
+    type: 2,
+    token: "fake-interaction-token",
+    version: 1,
+    locale: "en-US",
+    channel_id: "600000000000000006",
+    app_permissions: "0",
+    entitlements: [],
+    authorizing_integration_owners: {},
+    user,
+    data: { id: "700000000000000007", name, type: 1 }
+  }
 }
 
 function registered(scope: CommandRegistration["scope"], commands: readonly ReceivedCommand[]) {

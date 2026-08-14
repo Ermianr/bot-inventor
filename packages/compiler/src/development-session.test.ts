@@ -47,7 +47,11 @@ describe("the entry point a Session runs", () => {
   })
 
   it("carries the Tracing the Canvas needs, unlike a Build", () => {
-    expect(renderDevelopmentSession(helloProject(), {})).toContain("node-entered")
+    const source = renderDevelopmentSession(helloProject(), {})
+
+    expect(source).toContain("node-entered")
+    // Emitting Tracing and never sending it would light nothing up.
+    expect(source).toContain('onTrace: event => send({ kind: "trace", event })')
   })
 
   it("emits nothing but the Session's own messages when a Project has no Trigger", () => {
@@ -65,6 +69,29 @@ describe("reading a line the Session wrote", () => {
       kind: "status",
       status: "ready"
     })
+  })
+
+  it("recognises a Tracing event, which is what the Canvas lights up from", () => {
+    expect(
+      readSessionLine(
+        '@botinv {"kind":"trace","event":{"kind":"wire-carried","run":1,"flow":"flow-greet","wire":"wire-data","value":"<@42>"}}'
+      )
+    ).toEqual({
+      kind: "trace",
+      event: {
+        kind: "wire-carried",
+        run: 1,
+        flow: "flow-greet",
+        wire: "wire-data",
+        value: "<@42>"
+      }
+    })
+  })
+
+  it("drops a Tracing event that is not shaped the way the Canvas reads it", () => {
+    expect(
+      readSessionLine('@botinv {"kind":"trace","event":{"kind":"node-entered"}}')
+    ).toBeUndefined()
   })
 
   it("treats anything else as output for the panel", () => {
@@ -99,6 +126,16 @@ describe("redacting a Secret from what the panel shows", () => {
 
   it("hides every occurrence, not just the first", () => {
     expect(redactSecret(`${TOKEN} and ${TOKEN}`, TOKEN)).toBe("[redacted] and [redacted]")
+  })
+
+  it("hides the token inside a Tracing event before anything reads it", () => {
+    // A Wire cannot carry the token today, but redaction is applied to the
+    // whole line rather than to the panel's share of it, so that no message
+    // kind added later becomes a way around it.
+    const line = `@botinv {"kind":"trace","event":{"kind":"wire-carried","run":1,"flow":"f","wire":"w","value":"${TOKEN}"}}`
+    const message = readSessionLine(redactSecret(line, TOKEN))
+
+    expect(message).toMatchObject({ kind: "trace", event: { value: "[redacted]" } })
   })
 
   it("leaves the line alone when there is no Secret to hide", () => {
