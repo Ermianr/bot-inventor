@@ -1,4 +1,13 @@
 import { Button } from "@bot-inventor/ui/components/button"
+import {
+  Combobox,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList
+} from "@bot-inventor/ui/components/combobox"
 import { Input } from "@bot-inventor/ui/components/input"
 import { Label } from "@bot-inventor/ui/components/label"
 import { invoke } from "@tauri-apps/api/core"
@@ -10,8 +19,8 @@ import { describeRefusal } from "@/session/refusal"
  * Choosing the Test Server by name.
  *
  * The list comes from Discord, through the Tauri side, because asking takes the
- * token. A bot in a great many servers is why there is a search box rather than
- * a plain dropdown, and why the id can still be pasted by hand: the list is
+ * token. A bot in a great many servers is why this is a Combobox rather than a
+ * plain dropdown, and why an id can still be pasted by hand: the list is
  * capped, and the one server the user wants might be past the cap.
  */
 
@@ -32,7 +41,6 @@ export function TestServerPicker({ projectId, value, onChange }: TestServerPicke
   const [servers, setServers] = useState<readonly TestServer[]>([])
   const [loading, setLoading] = useState(false)
   const [problem, setProblem] = useState<string | undefined>(undefined)
-  const [search, setSearch] = useState("")
 
   const look = useCallback(async () => {
     setLoading(true)
@@ -53,72 +61,72 @@ export function TestServerPicker({ projectId, value, onChange }: TestServerPicke
     void look()
   }, [look])
 
-  const wanted = search.trim().toLowerCase()
-  const matching =
-    wanted.length === 0
-      ? servers
-      : servers.filter(
-          server => server.name.toLowerCase().includes(wanted) || server.id.includes(wanted)
-        )
+  const chosen = servers.find(server => server.id === value) ?? null
+  const capped = servers.length >= LIMIT
 
   return (
     <div className="grid gap-1.5">
       <div className="flex items-center justify-between">
-        <Label htmlFor="test-server-search">{translate("run.testServer.label")}</Label>
+        <Label htmlFor="test-server">{translate("run.testServer.label")}</Label>
         <Button variant="ghost" size="xs" onClick={look} disabled={loading}>
           {translate("run.testServer.reload")}
         </Button>
       </div>
 
-      <Input
-        id="test-server-search"
-        placeholder={translate("run.testServer.search")}
-        value={search}
-        onChange={event => setSearch(event.target.value)}
-      />
-
-      <div className="max-h-40 overflow-y-auto ring-1 ring-foreground/10">
-        {loading ? (
-          <p className="p-2 text-muted-foreground text-xs">{translate("run.testServer.loading")}</p>
-        ) : matching.length === 0 ? (
-          <p className="p-2 text-muted-foreground text-xs">
-            {translate(servers.length === 0 ? "run.testServer.none" : "run.testServer.noMatch")}
-          </p>
-        ) : (
-          <ul>
-            {matching.map(server => (
-              <li key={server.id}>
-                <button
-                  type="button"
-                  onClick={() => onChange(server.id)}
-                  aria-current={server.id === value}
-                  className="w-full px-2 py-1 text-left text-xs hover:bg-muted aria-[current=true]:bg-muted aria-[current=true]:font-medium"
-                >
+      <Combobox
+        items={servers as TestServer[]}
+        value={chosen}
+        onValueChange={(server: TestServer | null) => onChange(server?.id ?? "")}
+        itemToStringLabel={(server: TestServer) => server.name}
+        // Searching by id as well as by name, because the id is what someone
+        // arrives with when they copied it out of Discord.
+        filter={(server: TestServer, query: string) =>
+          server.name.toLowerCase().includes(query.trim().toLowerCase()) ||
+          server.id.includes(query.trim())
+        }
+        disabled={loading || servers.length === 0}
+      >
+        <ComboboxInput
+          id="test-server"
+          placeholder={translate(loading ? "run.testServer.loading" : "run.testServer.search")}
+        />
+        <ComboboxContent>
+          <ComboboxEmpty>{translate("run.testServer.noMatch")}</ComboboxEmpty>
+          <ComboboxList>
+            <ComboboxCollection>
+              {(server: TestServer) => (
+                <ComboboxItem key={server.id} value={server}>
                   {server.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                </ComboboxItem>
+              )}
+            </ComboboxCollection>
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
 
-      {servers.length >= LIMIT ? (
-        <p className="text-muted-foreground text-xs">
-          {translate("run.testServer.capped", { count: String(LIMIT) })}
-        </p>
-      ) : null}
-
-      {problem === undefined ? null : <p className="text-destructive text-xs">{problem}</p>}
-
-      <Label htmlFor="test-server-id" className="text-muted-foreground">
-        {translate("run.testServer.manual")}
-      </Label>
-      <Input
-        id="test-server-id"
-        inputMode="numeric"
-        value={value}
-        onChange={event => onChange(event.target.value)}
-      />
+      {/*
+        The way out of everything the list cannot do: a bot in no server yet, a
+        token Discord would not answer for, or a server past the cap.
+      */}
+      {loading || (servers.length > 0 && !capped) ? null : (
+        <>
+          <p className="text-muted-foreground text-xs">
+            {problem ??
+              translate(capped ? "run.testServer.capped" : "run.testServer.none", {
+                count: String(LIMIT)
+              })}
+          </p>
+          <Label htmlFor="test-server-id" className="text-muted-foreground">
+            {translate("run.testServer.manual")}
+          </Label>
+          <Input
+            id="test-server-id"
+            inputMode="numeric"
+            value={value}
+            onChange={event => onChange(event.target.value)}
+          />
+        </>
+      )}
 
       <p className="text-muted-foreground text-xs">{translate("run.testServer.help")}</p>
     </div>
