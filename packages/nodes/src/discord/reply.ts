@@ -16,7 +16,7 @@ export const reply: NodeDefinition = {
       id: "content",
       kind: "data",
       direction: "input",
-      dataType: "string",
+      dataType: "text",
       labelKey: "nodes.discord.interaction.reply.ports.content.label"
     }
   ],

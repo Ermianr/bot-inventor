@@ -15,24 +15,17 @@ export type CoercionDefinition = {
   labelKey: string
 }
 
+/**
+ * The Coercion table. It is data on purpose: the Compiler reads it to decide
+ * what to emit and the editor reads it to decide whether a Wire is legal, so
+ * the two cannot disagree, and the editor can name the Coercion on the Wire.
+ */
 export const coercions: readonly CoercionDefinition[] = [
   {
     from: "user",
-    to: "string",
+    to: "text",
     runtimeCall: "userToText",
     labelKey: "coercions.userToText.label"
-  },
-  {
-    from: "number",
-    to: "string",
-    runtimeCall: "numberToText",
-    labelKey: "coercions.numberToText.label"
-  },
-  {
-    from: "boolean",
-    to: "string",
-    runtimeCall: "booleanToText",
-    labelKey: "coercions.booleanToText.label"
   }
 ]
 

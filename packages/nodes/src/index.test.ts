@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { buildCatalogue, catalogue } from "./catalogue.js"
-import { applyCoercion, findCoercion } from "./coercions.js"
-import { findField, findPort, indent, joinStatements } from "./definition.js"
+import { applyCoercion, coercions, findCoercion } from "./coercions.js"
+import { checkConnection } from "./connections.js"
+import { findField, findPort, indent, joinStatements, type PortDefinition } from "./definition.js"
 import { reply } from "./discord/reply.js"
 import { slashCommandTrigger } from "./discord/slash-command-trigger.js"
 
@@ -55,17 +56,89 @@ describe("the Reply Node", () => {
   })
 })
 
-describe("Coercions", () => {
-  it("converts a user into text", () => {
-    const coercion = findCoercion("user", "string")
+describe("the Coercion table", () => {
+  it("has User to Text as its first entry", () => {
+    expect(coercions[0]).toMatchObject({ from: "user", to: "text" })
+  })
+
+  it("names the Runtime call the Compiler emits for it", () => {
+    const coercion = findCoercion("user", "text")
     expect(coercion).toBeDefined()
     expect(coercion && applyCoercion("caller", coercion, "runtime")).toBe(
       "runtime.coerce.userToText(caller)"
     )
   })
 
+  it("gives every entry a label, because a Coercion is drawn on the Wire", () => {
+    for (const coercion of coercions) {
+      expect(coercion.labelKey.length).toBeGreaterThan(0)
+    }
+  })
+
   it("has none between types that must not be connected", () => {
-    expect(findCoercion("string", "user")).toBeUndefined()
+    expect(findCoercion("text", "user")).toBeUndefined()
+  })
+})
+
+describe("checking whether a Wire is legal", () => {
+  const callerPort = findPort(slashCommandTrigger, "user")
+  const contentPort = findPort(reply, "content")
+  const nextPort = findPort(slashCommandTrigger, "next")
+  const inPort = findPort(reply, "in")
+
+  function requirePort(port: PortDefinition | undefined): PortDefinition {
+    if (port === undefined) throw new Error("the Node does not declare that Port")
+    return port
+  }
+
+  it("accepts an Execution Wire without coercing anything", () => {
+    expect(checkConnection(requirePort(nextPort), requirePort(inPort))).toEqual({
+      legal: true,
+      coercion: undefined
+    })
+  })
+
+  it("accepts the User output into a text field, and says it coerces", () => {
+    const check = checkConnection(requirePort(callerPort), requirePort(contentPort))
+
+    expect(check).toMatchObject({ legal: true })
+    expect(check.legal && check.coercion).toMatchObject({ runtimeCall: "userToText" })
+  })
+
+  it("rejects a Wire between an Execution Port and a Data Port", () => {
+    expect(checkConnection(requirePort(nextPort), requirePort(contentPort))).toEqual({
+      legal: false,
+      reasonKey: "connections.rejected.kind"
+    })
+  })
+
+  it("rejects a Wire between Data types with no Coercion between them", () => {
+    const textOutput: PortDefinition = {
+      id: "out",
+      kind: "data",
+      direction: "output",
+      dataType: "text",
+      labelKey: "ports.out.label"
+    }
+    const userInput: PortDefinition = {
+      id: "target",
+      kind: "data",
+      direction: "input",
+      dataType: "user",
+      labelKey: "ports.target.label"
+    }
+
+    expect(checkConnection(textOutput, userInput)).toEqual({
+      legal: false,
+      reasonKey: "connections.rejected.dataType"
+    })
+  })
+
+  it("rejects a Wire that does not run from an output to an input", () => {
+    expect(checkConnection(requirePort(contentPort), requirePort(callerPort))).toEqual({
+      legal: false,
+      reasonKey: "connections.rejected.direction"
+    })
   })
 })
 

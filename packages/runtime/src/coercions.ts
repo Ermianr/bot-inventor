@@ -6,14 +6,14 @@ import type { DiscordUser } from "./discord.js"
  * implementation rather than one per Node that happens to need it.
  */
 export type Coercions = {
-  /** A user rendered as the text a human expects to read. */
+  /**
+   * A user rendered as a mention. Discord turns `<@id>` into the name the
+   * reader knows them by and pings them, which is what someone dropping a user
+   * into a message expects — a plain display name would neither.
+   */
   userToText(user: DiscordUser): string
-  numberToText(value: number): string
-  booleanToText(value: boolean): string
 }
 
 export const coercions: Coercions = {
-  userToText: user => user.displayName,
-  numberToText: value => String(value),
-  booleanToText: value => String(value)
+  userToText: user => `<@${user.id}>`
 }

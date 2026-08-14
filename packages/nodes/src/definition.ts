@@ -10,8 +10,12 @@ import type { FieldValue } from "@bot-inventor/schema"
 /** Which mode the Compiler is emitting for. It is a parameter, never a second code path. */
 export type CompilerMode = "development" | "build"
 
-/** The type a Data Port carries. Coercions are defined between these. */
-export type DataType = "string" | "number" | "boolean" | "user"
+/**
+ * The type a Data Port carries. Coercions are defined between these, and a
+ * Wire between two of them is legal only when they match or the Coercion table
+ * has an entry for the pair.
+ */
+export type DataType = "text" | "user"
 
 export type PortDirection = "input" | "output"
 

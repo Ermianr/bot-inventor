@@ -65,7 +65,7 @@ describe("the fake Runtime", () => {
 })
 
 describe("Coercions", () => {
-  it("renders a user as the name a human reads", () => {
-    expect(coercions.userToText({ id: "1", username: "ada", displayName: "Ada L." })).toBe("Ada L.")
+  it("renders a user as a Discord mention", () => {
+    expect(coercions.userToText({ id: "1", username: "ada", displayName: "Ada L." })).toBe("<@1>")
   })
 })

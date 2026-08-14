@@ -1,4 +1,10 @@
-import { buildCatalogue, reply, slashCommandTrigger } from "@bot-inventor/nodes"
+import {
+  buildCatalogue,
+  type DataType,
+  type NodeDefinition,
+  reply,
+  slashCommandTrigger
+} from "@bot-inventor/nodes"
 import type { RecordedCall } from "@bot-inventor/runtime/testing"
 import type { Project } from "@bot-inventor/schema"
 import {
@@ -18,6 +24,20 @@ function replies(result: RunProjectResult): string[] {
   return result.calls
     .filter((call): call is Extract<RecordedCall, { method: "reply" }> => call.method === "reply")
     .map(call => call.content)
+}
+
+/** A Node whose Data Port carries a different type, for testing an illegal Wire. */
+function withDataType(
+  definition: NodeDefinition,
+  portId: string,
+  dataType: DataType
+): NodeDefinition {
+  return {
+    ...definition,
+    ports: definition.ports.map(port =>
+      port.id === portId && port.kind === "data" ? { ...port, dataType } : port
+    )
+  }
 }
 
 /** `helloProject` with a second Reply wired after the first. */
@@ -59,12 +79,12 @@ describe("running a compiled Project", () => {
     ])
   })
 
-  it("carries a value from the Trigger into the reply through a Coercion", async () => {
+  it("greets the caller by mentioning them, coercing the User into text", async () => {
     const result = await runProject(greetingProject(), [
-      { type: "slashCommand", command: "greet", user: { displayName: "Ada" } }
+      { type: "slashCommand", command: "greet", user: { id: "42", displayName: "Ada" } }
     ])
 
-    expect(replies(result)).toEqual(["Ada"])
+    expect(replies(result)).toEqual(["<@42>"])
   })
 
   it("leaves out Nodes that are not reachable from the Trigger", async () => {
@@ -183,6 +203,21 @@ describe("refusing a Project it cannot emit", () => {
     })
 
     expect(() => compile(project, { mode: "build" })).toThrowError(/exactly one value/)
+  })
+
+  it("refuses a Data Wire between Port types with no Coercion between them", () => {
+    // The Wire of the greeting fixture, run the wrong way round the Coercion
+    // table: text into a User. The editor would never draw it, and the Compiler
+    // must not emit it either.
+    const producesText = withDataType(slashCommandTrigger, "user", "text")
+    const demandsAUser = withDataType(reply, "content", "user")
+
+    expect(() =>
+      compile(greetingProject(), {
+        mode: "build",
+        catalogue: buildCatalogue([producesText, demandsAUser])
+      })
+    ).toThrowError(/no Coercion exists/)
   })
 
   it("compiles against a catalogue given to it", () => {
