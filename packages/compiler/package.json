@@ -27,7 +27,8 @@
     "@bot-inventor/runtime": "workspace:*",
     "@bot-inventor/schema": "workspace:*",
     "dotenv": "catalog:",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@bot-inventor/config": "workspace:*",

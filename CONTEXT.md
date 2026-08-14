@@ -54,6 +54,18 @@ _Avoid_: generator, transpiler, engine
 Running the real bot, connected to Discord with a test token, from inside the application and with Tracing enabled.
 _Avoid_: dev mode, preview, test mode
 
+**Session**:
+One run of a Project in Development Mode: the process the bot lives in, from pressing Run until it stops. It belongs to the application — closing the application ends it.
+_Avoid_: run, instance, process, execution
+
+**Sidecar**:
+The Node.js binary shipped inside the installer, which every Session runs on. The user never installs it and never sees it.
+_Avoid_: runtime binary, embedded node, engine
+
+**Test Server**:
+The Discord server a Session registers its commands to. Registering to one server takes effect immediately, unlike the global registration an Export uses.
+_Avoid_: guild, dev server, sandbox
+
 **Tracing**:
 The instrumentation Development Mode injects into the generated code so the Canvas can highlight the Node currently executing and show the values travelling along each Wire.
 _Avoid_: debugging, logging, telemetry
