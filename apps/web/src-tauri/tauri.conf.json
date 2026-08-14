@@ -35,6 +35,8 @@
     ],
     "android": {
       "debugApplicationIdSuffix": ".debug"
-    }
+    },
+    "externalBin": ["binaries/node"],
+    "resources": ["resources/runtime.mjs"]
   }
 }

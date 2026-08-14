@@ -23,3 +23,11 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.11.3" }
 tauri-plugin-log = "2"
+tauri-plugin-shell = "2"
+# The OS keychain a Project's Secrets live in while it is being edited.
+keyring = { version = "3", features = ["windows-native", "apple-native", "sync-secret-service"] }
+
+[target.'cfg(windows)'.dependencies]
+# Tying a bot's lifetime to the application's, so a crash leaves nothing behind.
+win32job = "2"
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Threading"] }

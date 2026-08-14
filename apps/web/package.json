@@ -10,11 +10,15 @@
     "start": "vite",
     "check-types": "vite build && tsc --noEmit",
     "tauri": "tauri",
-    "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build"
+    "sidecar": "bun run ../../scripts/prepare-sidecar.ts",
+    "desktop:dev": "bun run sidecar && tauri dev",
+    "desktop:build": "bun run sidecar && tauri build"
   },
   "dependencies": {
+    "@bot-inventor/compiler": "workspace:*",
+    "@bot-inventor/schema": "workspace:*",
     "@bot-inventor/ui": "workspace:*",
+    "@tauri-apps/api": "^2.9.0",
     "@hookform/resolvers": "^5.5.7",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-router": "^1.170.18",

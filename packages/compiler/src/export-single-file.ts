@@ -3,6 +3,7 @@ import { join } from "node:path"
 import type { NodeCatalogue } from "@bot-inventor/nodes"
 import type { Project } from "@bot-inventor/schema"
 import { build } from "esbuild"
+import { NATIVE_ADDON_EXTERNALS, NODE_BUNDLE_BANNER } from "./bundle.js"
 import { compile } from "./compile.js"
 import { ExportError } from "./export-error.js"
 
@@ -23,40 +24,11 @@ import { ExportError } from "./export-error.js"
 export const SINGLE_FILE_NAME = "bot.mjs"
 
 /**
- * The optional native addons discord.js and `ws` probe for and fall back away
- * from when they are absent. They resolve to `.node` binaries, which esbuild
- * has no loader for, so they are excluded unconditionally: whether they are
- * installed depends on the machine doing the bundling, never on the Project, so
- * a build that happens to pass here proves nothing about anywhere else.
- */
-export const SINGLE_FILE_EXTERNALS: readonly string[] = [
-  "zlib-sync",
-  "bufferutil",
-  "utf-8-validate"
-]
-
-/**
  * The Node.js the Export is compiled down to. It is the floor we support rather
  * than the version the sidecar pins, because an Export runs on the user's host,
  * which we do not control.
  */
 export const SINGLE_FILE_TARGET = "node20"
-
-/**
- * discord.js is CommonJS internally, and esbuild's interop emits a `__require`
- * that throws `Dynamic require of "node:events" is not supported` on the first
- * line of execution. Defining it from `import.meta.url` is what makes the
- * bundle run at all; `__filename` and `__dirname` are defensive, because
- * bundled CommonJS commonly reads them.
- */
-const BANNER = [
-  'import { createRequire as __createRequire } from "node:module"',
-  'import { fileURLToPath as __fileURLToPath } from "node:url"',
-  'import { dirname as __pathDirname } from "node:path"',
-  "const require = __createRequire(import.meta.url)",
-  "const __filename = __fileURLToPath(import.meta.url)",
-  "const __dirname = __pathDirname(__filename)"
-].join("\n")
 
 export type ExportSingleFileOptions = {
   /** The directory the file is written into. It is created when it does not exist. */
@@ -113,8 +85,8 @@ export async function exportSingleFile(
     platform: "node",
     format: "esm",
     target: SINGLE_FILE_TARGET,
-    external: [...SINGLE_FILE_EXTERNALS],
-    banner: { js: BANNER },
+    external: [...NATIVE_ADDON_EXTERNALS],
+    banner: { js: NODE_BUNDLE_BANNER },
     write: false
   })
 

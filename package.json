@@ -28,7 +28,8 @@
     "build": "turbo run build",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
-    "check": "biome check --write ."
+    "check": "biome check --write .",
+    "sidecar": "bun run scripts/prepare-sidecar.ts"
   },
   "dependencies": {
     "dotenv": "catalog:",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.6",
+    "@bot-inventor/compiler": "workspace:*",
     "@bot-inventor/config": "workspace:*",
     "@types/node": "catalog:",
     "turbo": "^2.10.7",
