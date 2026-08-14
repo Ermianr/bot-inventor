@@ -9,7 +9,7 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
 use crate::jail::Jail;
-use crate::secrets;
+use crate::secrets::{self, Refusal};
 
 /// A Session: one run of a Project in Development Mode, on the Node.js sidecar.
 ///
@@ -59,16 +59,6 @@ struct Exit {
     code: Option<i32>,
 }
 
-/// Why a Session could not be started, in the terms the editor reports it in.
-#[derive(Serialize)]
-#[serde(tag = "kind", rename_all = "kebab-case")]
-pub enum StartFailure {
-    /// There is no token for this Project yet. The editor asks for one.
-    MissingSecret,
-    /// Everything else: the sidecar is not there, the folder cannot be written.
-    Failed { message: String },
-}
-
 /// Compiles nothing and decides nothing: it is handed the entry point the
 /// Compiler rendered, and runs it.
 #[tauri::command]
@@ -77,27 +67,26 @@ pub async fn start_session(
     sessions: State<'_, Sessions>,
     project_id: String,
     entry: String,
-) -> Result<(), StartFailure> {
-    let token = match secrets::read(&project_id).map_err(StartFailure::failed)? {
-        Some(token) => token,
-        None => return Err(StartFailure::MissingSecret),
-    };
+) -> Result<(), Refusal> {
+    let token = secrets::read(&project_id)
+        .map_err(Refusal::failed)?
+        .ok_or(Refusal::MissingSecret)?;
 
     // Running two bots for one Project would register the same commands twice
     // and answer every interaction twice with it.
     stop_running(&sessions);
 
-    let directory = prepare(&app, &project_id, &entry).map_err(StartFailure::failed)?;
+    let directory = prepare(&app, &project_id, &entry).map_err(Refusal::failed)?;
 
     let (mut events, child) = app
         .shell()
         .sidecar("node")
-        .map_err(StartFailure::failed)?
+        .map_err(Refusal::failed)?
         .current_dir(directory.clone())
         .env(TOKEN_VARIABLE, token.clone())
         .args([ENTRY_NAME])
         .spawn()
-        .map_err(StartFailure::failed)?;
+        .map_err(Refusal::failed)?;
 
     sessions.jail.hold(child.pid());
     *sessions.running.lock().unwrap() = Some(child);
@@ -216,14 +205,6 @@ impl Output {
             } else {
                 line.replace(secret, "[redacted]")
             },
-        }
-    }
-}
-
-impl StartFailure {
-    fn failed(error: impl std::fmt::Display) -> Self {
-        Self::Failed {
-            message: error.to_string(),
         }
     }
 }

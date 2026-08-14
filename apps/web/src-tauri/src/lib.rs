@@ -1,6 +1,7 @@
 mod jail;
 mod secrets;
 mod session;
+mod test_servers;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -11,7 +12,8 @@ pub fn run() {
       secrets::store_secret,
       secrets::secret_exists,
       session::start_session,
-      session::stop_session
+      session::stop_session,
+      test_servers::list_test_servers
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
