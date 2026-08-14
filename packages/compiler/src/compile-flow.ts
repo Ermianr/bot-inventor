@@ -124,7 +124,9 @@ class FlowCompiler {
   private wrapRun(body: string, firstNodeId: string, runDeclaration: string): string {
     // A failure is the end of a run, so it is reported with the run's id: the
     // Canvas marks the Node it stopped at, in the run the user was watching.
-    const run = this.mode === "build" ? "" : `, run: ${CURRENT_RUN}`
+    // A Build numbers no runs and so reports none.
+    const failure = [`flow: ${literal(this.flow.id)}`, `node: ${CURRENT_NODE}`, "error"]
+    if (this.mode !== "build") failure.push(`run: ${CURRENT_RUN}`)
 
     return joinStatements([
       runDeclaration,
@@ -132,9 +134,7 @@ class FlowCompiler {
       "try {",
       indent(body),
       "} catch (error) {",
-      indent(
-        `${RUNTIME}.reportFailure({ flow: ${literal(this.flow.id)}, node: ${CURRENT_NODE}, error${run} })`
-      ),
+      indent(`${RUNTIME}.reportFailure({ ${failure.join(", ")} })`),
       "}"
     ])
   }

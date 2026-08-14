@@ -78,14 +78,26 @@ function render(value: unknown): string {
   }
 }
 
-/** Keeps a value that points back at itself from taking the run down. */
+/**
+ * Keeps a value that points back at itself from taking the run down.
+ *
+ * What it watches is the way down to the value being written, not everything
+ * seen so far: the same object appearing twice side by side is a value that
+ * travelled, and writing the second one off as a cycle would show the user
+ * something their bot never carried.
+ */
 function replaceCycles() {
-  const seen = new WeakSet<object>()
+  const path: unknown[] = []
 
-  return (_key: string, current: unknown): unknown => {
+  return function (this: unknown, _key: string, current: unknown): unknown {
     if (typeof current !== "object" || current === null) return current
-    if (seen.has(current)) return "[circular]"
-    seen.add(current)
+
+    // `this` is what holds the value being written, so anything the walk has
+    // already climbed back out of is no longer on the way down to it.
+    while (path.length > 0 && path.at(-1) !== this) path.pop()
+    if (path.includes(current)) return "[circular]"
+
+    path.push(current)
     return current
   }
 }

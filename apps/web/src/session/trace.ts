@@ -1,4 +1,4 @@
-import type { TraceEvent } from "@bot-inventor/compiler"
+import type { SessionMessage, TraceEvent } from "@bot-inventor/compiler"
 
 /**
  * The run the Canvas is showing.
@@ -24,13 +24,11 @@ export type RunTrace = {
   failure: { node: string; message: string } | undefined
 }
 
-/** A Flow that stopped, as the Session reports it. */
-export type FlowFailureMessage = {
-  flow: string
-  node: string
-  message: string
-  run?: number
-}
+/**
+ * A Flow that stopped, exactly as the Session reports it: taken from the pipe's
+ * own message rather than restated, so the two cannot drift apart.
+ */
+export type FlowFailureMessage = Extract<SessionMessage, { kind: "flow-failed" }>
 
 /** Takes in one Tracing event and gives back the run to draw. */
 export function watchTrace(current: RunTrace | undefined, event: TraceEvent): RunTrace | undefined {

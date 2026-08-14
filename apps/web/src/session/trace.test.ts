@@ -97,6 +97,7 @@ describe("runs that follow one another quickly", () => {
 describe("a run that failed", () => {
   it("marks the Node it stopped at", () => {
     const trace = watchFailure(watch([entered(1, "node-reply")]), {
+      kind: "flow-failed",
       run: 1,
       flow: "flow-greet",
       node: "node-reply",
@@ -115,16 +116,27 @@ describe("a run that failed", () => {
     // marking the run on screen would blame a Node that did nothing wrong.
     const watching = watch([entered(2, "node-reply")])
 
-    expect(watchFailure(watching, { flow: "", node: "", message: "the gateway closed" })).toEqual(
-      watching
-    )
+    expect(
+      watchFailure(watching, {
+        kind: "flow-failed",
+        flow: "",
+        node: "",
+        message: "the gateway closed"
+      })
+    ).toEqual(watching)
   })
 
   it("ignores a failure from a run that is no longer the one shown", () => {
     const watching = watch([entered(2, "node-reply")])
 
     expect(
-      watchFailure(watching, { run: 1, flow: "flow-greet", node: "node-reply", message: "gone" })
+      watchFailure(watching, {
+        kind: "flow-failed",
+        run: 1,
+        flow: "flow-greet",
+        node: "node-reply",
+        message: "gone"
+      })
     ).toEqual(watching)
   })
 })

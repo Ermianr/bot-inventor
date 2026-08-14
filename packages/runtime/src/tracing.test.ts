@@ -53,6 +53,16 @@ describe("describing a value for the user", () => {
     expect(described.endsWith("…")).toBe(true)
   })
 
+  it("shows the same value twice when it travelled twice", () => {
+    // Two Ports carrying one User is not a cycle, and calling it one would show
+    // the user something their bot never carried.
+    const ana = { displayName: "Ana" }
+
+    expect(describeValue({ from: ana, to: ana })).toBe(
+      '{"from":{"displayName":"Ana"},"to":{"displayName":"Ana"}}'
+    )
+  })
+
   it("survives a value that points back at itself", () => {
     const looping: Record<string, unknown> = { name: "Ana" }
     looping.self = looping
