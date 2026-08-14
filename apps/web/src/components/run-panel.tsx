@@ -13,6 +13,7 @@ import { invoke } from "@tauri-apps/api/core"
 import { useEffect, useRef, useState } from "react"
 import { TestServerPicker } from "@/components/test-server-picker"
 import { translate } from "@/i18n/messages"
+import { describeRefusal } from "@/session/refusal"
 import { type SessionEntry, type SessionStatus, useSession } from "@/session/use-session"
 
 /**
@@ -28,6 +29,8 @@ export function RunPanel({ project }: { project: Project }) {
   const [secret, setSecret] = useState("")
   const [stored, setStored] = useState(false)
   const [testServerId, setTestServerId] = useState("")
+  /** Why storing the token did not work, when it did not. */
+  const [problem, setProblem] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     invoke<boolean>("secret_exists", { projectId: project.id })
@@ -35,9 +38,21 @@ export function RunPanel({ project }: { project: Project }) {
       .catch(() => setStored(false))
   }, [project.id])
 
+  /**
+   * A keychain that refuses the token says so. Letting the call reject on its
+   * own leaves a button that does nothing and explains nothing — and outside
+   * the desktop shell, where there is no keychain to write to, that is every
+   * press of it.
+   */
   const save = async () => {
-    await invoke("store_secret", { projectId: project.id, secret })
-    setStored(true)
+    setProblem(undefined)
+    try {
+      await invoke("store_secret", { projectId: project.id, secret })
+      setStored(true)
+    } catch (error) {
+      setStored(false)
+      setProblem(describeRefusal(error))
+    }
   }
 
   const running = session.status === "connecting" || session.status === "ready"
@@ -70,6 +85,7 @@ export function RunPanel({ project }: { project: Project }) {
           {stored ? (
             <p className="text-muted-foreground text-xs">{translate("run.token.stored")}</p>
           ) : null}
+          {problem === undefined ? null : <p className="text-destructive text-xs">{problem}</p>}
         </div>
 
         <TestServerPicker projectId={project.id} value={testServerId} onChange={setTestServerId} />

@@ -34,8 +34,13 @@ export type ConnectionRequest = {
  * Answers "is this connection legal, and does it coerce?" for a Wire the user
  * is drawing. Two Port declarations are not enough to answer it: the Wires
  * already on the Flow decide whether one more may leave an Execution output or
- * arrive at a Data input, and whether it would close a cycle. Every Wire this
- * accepts is one the Compiler emits.
+ * arrive at a Data input, and whether it would close a cycle.
+ *
+ * One thing the Compiler checks is still missing here: it also refuses a Data
+ * Wire whose source does not run before its target. No Node in the catalogue
+ * can be wired that way yet — only the Trigger has a Data output, and the
+ * Trigger always runs first — but the first Node with a Data input and a Data
+ * output makes it reachable, and it belongs here when that Node lands.
  */
 export function checkConnection(request: ConnectionRequest): ConnectionCheck {
   const from = findFlowPort(request.flow, request.catalogue, request.from)

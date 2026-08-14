@@ -46,7 +46,16 @@ export function Wire({
 
   return (
     <>
-      <BaseEdge id={id} path={path} />
+      {/*
+        An Execution Wire is drawn solid and a Data Wire dashed. The refusal
+        the editor gives for mixing them talks about order wires and value
+        wires, and it can only do that if the two look different.
+      */}
+      <BaseEdge
+        id={id}
+        path={path}
+        style={data?.kind === "data" ? { strokeDasharray: "6 4" } : undefined}
+      />
       <EdgeLabelRenderer>
         <div
           className="pointer-events-auto absolute flex items-center gap-1"

@@ -4,6 +4,7 @@ import {
   Background,
   type Connection,
   Controls,
+  type EdgeChange,
   type IsValidConnection,
   type NodeChange,
   type OnConnectEnd,
@@ -55,7 +56,19 @@ export function Canvas({ editor }: { editor: ProjectEditor }) {
           definition,
           setField: (fieldId, value) => editor.setNodeField(node.id, fieldId, value)
         }
-        return [{ id: node.id, type: "flowNode" as const, position: node.position, data }]
+        return [
+          {
+            id: node.id,
+            type: "flowNode" as const,
+            position: node.position,
+            // Nothing takes a Node off the Canvas yet. React Flow's own
+            // Backspace would take it off the screen and leave it in the
+            // Project, still compiled and still run, with its Wires pointing at
+            // something the user believes they deleted.
+            deletable: false,
+            data
+          }
+        ]
       }),
     [flow.nodes, editor.setNodeField]
   )
@@ -137,13 +150,33 @@ export function Canvas({ editor }: { editor: ProjectEditor }) {
     [flow, editor.connectWire]
   )
 
+  /** Removing a Wire is removing it from the Project, however it was removed. */
+  const onWiresChange = useCallback(
+    (changes: EdgeChange<WireType>[]) => {
+      for (const change of changes) {
+        if (change.type === "remove") editor.disconnectWire(change.id)
+      }
+    },
+    [editor.disconnectWire]
+  )
+
+  /** A new drag is a new question, so the last answer stops being shown. */
+  const onConnectStart = useCallback(() => {
+    lastRefusal.current = undefined
+    setRefusal(undefined)
+  }, [])
+
   /**
    * A refused Wire is told to the user in words. React Flow's own answer is to
    * drop the Wire on the floor, which leaves someone who does not know the
    * rules believing the application is broken.
+   *
+   * Only an outright refusal is worth saying. Letting go over empty Canvas
+   * leaves `isValid` null, and that is someone changing their mind, not the
+   * editor turning them down.
    */
   const onConnectEnd = useCallback<OnConnectEnd>((_event, state) => {
-    if (state.isValid === true) return
+    if (state.isValid !== false) return
     setRefusal(lastRefusal.current)
     lastRefusal.current = undefined
   }, [])
@@ -159,6 +192,8 @@ export function Canvas({ editor }: { editor: ProjectEditor }) {
         nodes={drawn}
         onConnect={onConnect}
         onConnectEnd={onConnectEnd}
+        onConnectStart={onConnectStart}
+        onEdgesChange={onWiresChange}
         onNodesChange={onNodesChange}
         proOptions={{ hideAttribution: true }}
       >
