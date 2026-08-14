@@ -10,6 +10,7 @@ import {
   type SessionExitEvent,
   type SessionOutputEvent
 } from "@/session/events"
+import { describeRefusal } from "@/session/refusal"
 
 /**
  * A Session, as the editor sees it: a status, and everything the bot has said.
@@ -33,8 +34,15 @@ export type SessionEntry = {
   tone: "output" | "note" | "problem"
 }
 
-/** How `start_session` reports that it could not start the bot. */
-type StartFailure = { kind: "missing-secret" } | { kind: "failed"; message: string }
+/**
+ * How long a bot gets to finish connecting before the editor gives up on it.
+ *
+ * Connecting to Discord is a couple of seconds' work; anything past this is a
+ * network that is not going to answer. It is generous rather than tight because
+ * the cost of being wrong is asymmetric: a user told their bot failed when it
+ * was about to connect goes looking for a problem that was never there.
+ */
+const CONNECTING_LIMIT = 30_000
 
 export type Session = {
   status: SessionStatus
@@ -57,6 +65,13 @@ export function useSession(project: Project): Session {
    */
   const typed = useRef("")
   const nextId = useRef(0)
+  const givingUp = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  /** Nothing is waiting on the bot to connect any more, either way. */
+  const settled = useCallback(() => {
+    clearTimeout(givingUp.current)
+    givingUp.current = undefined
+  }, [])
 
   const say = useCallback((text: string, tone: SessionEntry["tone"]) => {
     setEntries(previous => [...previous, { id: nextId.current++, text, tone }])
@@ -81,6 +96,7 @@ export function useSession(project: Project): Session {
             say(message.text, event.payload.stream === "stderr" ? "problem" : "output")
             return
           case "status":
+            settled()
             if (message.status === "ready") {
               setStatus("ready")
               setProblem(undefined)
@@ -108,6 +124,7 @@ export function useSession(project: Project): Session {
         }
       }),
       listen<SessionExitEvent>(EXIT_EVENT, () => {
+        settled()
         // A start that failed has already said why, and that is more useful
         // than reporting that the process it left behind is gone.
         setStatus(previous => (previous === "failed" ? previous : "stopped"))
@@ -115,31 +132,13 @@ export function useSession(project: Project): Session {
     ]
 
     return () => {
+      settled()
       for (const listener of listeners) listener.then(remove => remove()).catch(() => {})
     }
-  }, [say, note])
-
-  const start = useCallback(
-    async ({ testServerId, secret }: { testServerId: string; secret: string }) => {
-      typed.current = secret
-      setEntries([])
-      setProblem(undefined)
-      setStatus("connecting")
-
-      try {
-        await invoke("start_session", {
-          projectId: project.id,
-          entry: renderDevelopmentSession(project, { testServerId })
-        })
-      } catch (error) {
-        setStatus("failed")
-        setProblem(describe(error))
-      }
-    },
-    [project]
-  )
+  }, [say, note, settled])
 
   const stop = useCallback(async () => {
+    settled()
     try {
       await invoke("stop_session")
     } finally {
@@ -148,16 +147,38 @@ export function useSession(project: Project): Session {
       // a bot they cannot stop and cannot restart.
       setStatus("stopped")
     }
-  }, [])
+  }, [settled])
+
+  const start = useCallback(
+    async ({ testServerId, secret }: { testServerId: string; secret: string }) => {
+      typed.current = secret
+      setEntries([])
+      setProblem(undefined)
+      setStatus("connecting")
+
+      // A bot that spawns and then hangs on the gateway would otherwise leave
+      // the panel saying "connecting" for as long as the user is willing to
+      // look at it. Stopping is what makes Run pressable again.
+      settled()
+      givingUp.current = setTimeout(() => {
+        void stop()
+        setStatus("failed")
+        setProblem(translate("run.failure.timeout"))
+      }, CONNECTING_LIMIT)
+
+      try {
+        await invoke("start_session", {
+          projectId: project.id,
+          entry: renderDevelopmentSession(project, { testServerId })
+        })
+      } catch (error) {
+        settled()
+        setStatus("failed")
+        setProblem(describeRefusal(error))
+      }
+    },
+    [project, settled, stop]
+  )
 
   return { status, entries, problem, start, stop }
-}
-
-/** Turns what the Tauri side refused with into something the user can act on. */
-function describe(error: unknown): string {
-  const failure = error as StartFailure
-  if (failure?.kind === "missing-secret") return translate("run.failure.missingSecret")
-  if (failure?.kind === "failed")
-    return translate("run.failure.unknown", { message: failure.message })
-  return translate("run.failure.unknown", { message: String(error) })
 }

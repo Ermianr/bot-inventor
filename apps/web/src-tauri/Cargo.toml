@@ -15,17 +15,20 @@ name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.6.3" }
+tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.11.3" }
+tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-shell = "2"
 # The OS keychain a Project's Secrets live in while it is being edited.
 keyring = { version = "3", features = ["windows-native", "apple-native", "sync-secret-service"] }
+# Asking Discord which servers a bot is in. It happens here rather than in the
+# editor because it takes the token, which never crosses into the webview.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2"] }
 
 [target.'cfg(windows)'.dependencies]
 # Tying a bot's lifetime to the application's, so a crash leaves nothing behind.

@@ -1,4 +1,5 @@
 use keyring::Entry;
+use serde::Serialize;
 
 /// Secrets, kept in the operating system keychain and never in the Project.
 ///
@@ -14,6 +15,31 @@ use keyring::Entry;
 /// What the keychain lists these entries under, which is what the user sees if
 /// they ever open the Windows Credential Manager.
 const SERVICE: &str = "Bot Inventor";
+
+/// Why something that needed the token could not be done.
+///
+/// The three cases are separated because the user's next move differs for each
+/// one: paste a token, paste a different token, or none of the above. It is
+/// shared by everything that reaches for a Secret, so that starting a bot and
+/// listing its servers report a bad token the same way.
+#[derive(Serialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum Refusal {
+    /// There is no token for this Project yet.
+    MissingSecret,
+    /// Discord refused the token there is.
+    Rejected,
+    /// Everything else: no network, no sidecar, nowhere to write.
+    Failed { message: String },
+}
+
+impl Refusal {
+    pub fn failed(error: impl std::fmt::Display) -> Self {
+        Self::Failed {
+            message: error.to_string(),
+        }
+    }
+}
 
 fn entry(project_id: &str) -> Result<Entry, String> {
     Entry::new(SERVICE, project_id).map_err(|error| format!("the keychain refused to open: {error}"))

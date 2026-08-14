@@ -10,6 +10,7 @@ import { Input } from "@bot-inventor/ui/components/input"
 import { Label } from "@bot-inventor/ui/components/label"
 import { invoke } from "@tauri-apps/api/core"
 import { useEffect, useRef, useState } from "react"
+import { TestServerPicker } from "@/components/test-server-picker"
 import { translate } from "@/i18n/messages"
 import { currentProject } from "@/session/current-project"
 import { type SessionEntry, type SessionStatus, useSession } from "@/session/use-session"
@@ -71,17 +72,11 @@ export function RunPanel() {
           ) : null}
         </div>
 
-        <div className="grid gap-1.5">
-          <Label htmlFor="test-server">{translate("run.testServer.label")}</Label>
-          <Input
-            id="test-server"
-            inputMode="numeric"
-            placeholder={translate("run.testServer.placeholder")}
-            value={testServerId}
-            onChange={event => setTestServerId(event.target.value)}
-          />
-          <p className="text-muted-foreground text-xs">{translate("run.testServer.help")}</p>
-        </div>
+        <TestServerPicker
+          projectId={currentProject.id}
+          value={testServerId}
+          onChange={setTestServerId}
+        />
 
         <div className="flex gap-2">
           <Button onClick={() => session.start({ testServerId, secret })} disabled={running}>
