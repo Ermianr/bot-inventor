@@ -25,6 +25,14 @@ export type DiscordRuntimeOptions = {
    */
   guildId?: string
   /**
+   * The base URL of Discord's API. It exists so a bot can be pointed at a
+   * proxy — and, in our own tests, at a fake Discord that an exported bundle
+   * can be run against without a network. It defaults to `DISCORD_API_URL` from
+   * the environment, and to Discord itself when that is unset, so that an
+   * Export needs no option of its own to be redirected.
+   */
+  apiBaseUrl?: string
+  /**
    * What registration did on start. Development Mode reports the deleted names
    * so a rename does not look like a command that vanished for no reason.
    */
@@ -51,7 +59,27 @@ export async function createDiscordRuntime(options: DiscordRuntimeOptions): Prom
 
   const { Client, Events, GatewayIntentBits, MessageFlags } = await import("discord.js")
 
-  const client: Client = new Client({ intents: [GatewayIntentBits.Guilds] })
+  // An empty variable is how an unset one is commonly written in a container or
+  // a CI environment, and reading it as a base URL breaks the bot on a message
+  // that names neither Discord nor the variable.
+  const configuredApiBaseUrl = options.apiBaseUrl ?? process.env.DISCORD_API_URL
+  const apiBaseUrl =
+    configuredApiBaseUrl === undefined || configuredApiBaseUrl.length === 0
+      ? undefined
+      : configuredApiBaseUrl
+
+  if (apiBaseUrl !== undefined) {
+    // Every request carries the token, so sending them somewhere other than
+    // Discord is worth saying out loud rather than doing quietly.
+    console.warn(
+      `Bot Inventor: talking to ${apiBaseUrl} instead of Discord, because DISCORD_API_URL is set.`
+    )
+  }
+
+  const client: Client = new Client({
+    intents: [GatewayIntentBits.Guilds],
+    ...(apiBaseUrl === undefined ? {} : { rest: { api: apiBaseUrl } })
+  })
   const definitions: SlashCommandDefinition[] = []
   const handlers = new Map<string, SlashCommandHandler>()
   const reportUnexpected =
@@ -120,7 +148,12 @@ export async function createDiscordRuntime(options: DiscordRuntimeOptions): Prom
           : { kind: "guild", guildId: options.guildId }
       const api = createDiscordJsCommandApi(readyClient.rest, readyClient.application.id)
 
-      options.onCommandsRegistered?.(await registerCommands(api, target, definitions))
+      // Registration is not the reporting callback's argument: an optional call
+      // whose callee is absent never evaluates its arguments, which left an
+      // exported bot — the one caller with nothing to report to — registering
+      // no commands at all.
+      const registration = await registerCommands(api, target, definitions)
+      options.onCommandsRegistered?.(registration)
     },
     async stop() {
       await client.destroy()

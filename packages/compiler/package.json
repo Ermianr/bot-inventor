@@ -8,6 +8,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./export": {
+      "types": "./dist/export-single-file.d.ts",
+      "default": "./dist/export-single-file.js"
+    },
     "./testing": {
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"
@@ -21,11 +25,14 @@
   "dependencies": {
     "@bot-inventor/nodes": "workspace:*",
     "@bot-inventor/runtime": "workspace:*",
-    "@bot-inventor/schema": "workspace:*"
+    "@bot-inventor/schema": "workspace:*",
+    "esbuild": "^0.28.2"
   },
   "devDependencies": {
     "@bot-inventor/config": "workspace:*",
+    "@types/ws": "^8.18.1",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "ws": "^8.21.3"
   }
 }
