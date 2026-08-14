@@ -9,6 +9,8 @@
     "serve": "vite preview",
     "start": "vite",
     "check-types": "vite build && tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
     "tauri": "tauri",
     "sidecar": "bun run ../../scripts/prepare-sidecar.ts",
     "desktop:dev": "bun run sidecar && tauri dev",
@@ -16,12 +18,14 @@
   },
   "dependencies": {
     "@bot-inventor/compiler": "workspace:*",
+    "@bot-inventor/nodes": "workspace:*",
     "@bot-inventor/schema": "workspace:*",
     "@bot-inventor/ui": "workspace:*",
-    "@tauri-apps/api": "^2.9.0",
     "@hookform/resolvers": "^5.5.7",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-router": "^1.170.18",
+    "@tauri-apps/api": "^2.9.0",
+    "@xyflow/react": "^12.11.3",
     "dotenv": "catalog:",
     "lucide-react": "catalog:",
     "next-themes": "catalog:",
@@ -32,6 +36,7 @@
   },
   "devDependencies": {
     "@bot-inventor/config": "workspace:*",
+    "@playwright/test": "^1.62.1",
     "@tanstack/react-router-devtools": "^1.167.0",
     "@tanstack/router-plugin": "^1.168.23",
     "@tauri-apps/cli": "^2.11.4",
@@ -42,6 +47,7 @@
     "postcss": "^8.5.24",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
-    "vite": "^8.1.5"
+    "vite": "^8.1.5",
+    "vitest": "catalog:"
   }
 }

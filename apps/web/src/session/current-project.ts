@@ -1,12 +1,12 @@
 import { CURRENT_SCHEMA_VERSION, type Project } from "@bot-inventor/schema"
 
 /**
- * The Project the editor holds.
+ * The Project the editor opens with.
  *
- * Until the Canvas exists there is nothing to open and nothing to edit, so this
- * stands in for it: one Flow, `/hello`, wired to a reply. Everything downstream
- * of it — compiling, running, the output panel — is the real thing, and none of
- * it knows this Project was not drawn by the user.
+ * Until a Project can be opened from disk, this is what the Canvas starts from:
+ * one Flow, `/hello`, wired to a reply. The user edits it from the moment the
+ * editor loads, and everything downstream — compiling, running, the output
+ * panel — sees their edits, not this.
  */
 export const currentProject: Project = {
   schemaVersion: CURRENT_SCHEMA_VERSION,

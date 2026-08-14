@@ -41,7 +41,41 @@ const en = {
   "run.failure.unknown": "Your bot could not start: {message}",
   "run.failure.timeout":
     "Your bot never finished connecting. Check your internet connection and press Run again.",
-  "run.failure.flow": "The Flow {flow} stopped: {message}"
+  "run.failure.flow": "The Flow {flow} stopped: {message}",
+
+  "flows.title": "Your flows",
+  "canvas.label": "Canvas",
+  "canvas.wire.remove": "Remove this wire",
+
+  "connections.rejected.direction":
+    "Wires run from an output on the right of a node to an input on the left.",
+  "connections.rejected.kind":
+    "That is an order wire and a value wire. Order connects to order, values connect to values.",
+  "connections.rejected.dataType": "Those two values are not of the same kind.",
+  "connections.rejected.unknownPort": "That connection point is no longer there.",
+  "connections.rejected.executionOutputTaken":
+    "Only one thing can happen next. Remove the wire that is already there first.",
+  "connections.rejected.dataInputTaken":
+    "This field already reads a value. Remove the wire that is already there first.",
+  "connections.rejected.cycle": "That would send your bot round in a circle.",
+
+  "coercions.userToText.label": "as text",
+
+  "ports.in.label": "Run this",
+  "ports.next.label": "Then",
+
+  "nodes.discord.trigger.slashCommand.label": "Slash command",
+  "nodes.discord.trigger.slashCommand.description": "Starts when someone uses your command.",
+  "nodes.discord.trigger.slashCommand.fields.name.label": "Command",
+  "nodes.discord.trigger.slashCommand.fields.description.label": "What it does",
+  "nodes.discord.trigger.slashCommand.fields.parameters.label": "What it asks for",
+  "nodes.discord.trigger.slashCommand.ports.user.label": "Who used it",
+
+  "nodes.discord.interaction.reply.label": "Reply",
+  "nodes.discord.interaction.reply.description": "Answers whoever used the command.",
+  "nodes.discord.interaction.reply.fields.content.label": "Message",
+  "nodes.discord.interaction.reply.fields.ephemeral.label": "Only they can see it",
+  "nodes.discord.interaction.reply.ports.content.label": "Message"
 } as const
 
 export type MessageKey = keyof typeof en
@@ -78,7 +112,41 @@ const es: Record<MessageKey, string> = {
   "run.failure.unknown": "Tu bot no pudo arrancar: {message}",
   "run.failure.timeout":
     "Tu bot nunca terminó de conectarse. Revisa tu conexión a internet y pulsa Ejecutar otra vez.",
-  "run.failure.flow": "El Flow {flow} se detuvo: {message}"
+  "run.failure.flow": "El Flow {flow} se detuvo: {message}",
+
+  "flows.title": "Tus flujos",
+  "canvas.label": "Lienzo",
+  "canvas.wire.remove": "Quitar este cable",
+
+  "connections.rejected.direction":
+    "Los cables van de una salida a la derecha de un nodo a una entrada a la izquierda.",
+  "connections.rejected.kind":
+    "Ese es un cable de orden y el otro de valor. El orden se conecta con el orden y los valores con los valores.",
+  "connections.rejected.dataType": "Esos dos valores no son del mismo tipo.",
+  "connections.rejected.unknownPort": "Ese punto de conexión ya no está ahí.",
+  "connections.rejected.executionOutputTaken":
+    "Solo puede pasar una cosa después. Quita primero el cable que ya está ahí.",
+  "connections.rejected.dataInputTaken":
+    "Este campo ya lee un valor. Quita primero el cable que ya está ahí.",
+  "connections.rejected.cycle": "Eso haría que tu bot diera vueltas en círculo.",
+
+  "coercions.userToText.label": "como texto",
+
+  "ports.in.label": "Haz esto",
+  "ports.next.label": "Después",
+
+  "nodes.discord.trigger.slashCommand.label": "Comando",
+  "nodes.discord.trigger.slashCommand.description": "Empieza cuando alguien usa tu comando.",
+  "nodes.discord.trigger.slashCommand.fields.name.label": "Comando",
+  "nodes.discord.trigger.slashCommand.fields.description.label": "Qué hace",
+  "nodes.discord.trigger.slashCommand.fields.parameters.label": "Qué pide",
+  "nodes.discord.trigger.slashCommand.ports.user.label": "Quién lo usó",
+
+  "nodes.discord.interaction.reply.label": "Responder",
+  "nodes.discord.interaction.reply.description": "Contesta a quien usó el comando.",
+  "nodes.discord.interaction.reply.fields.content.label": "Mensaje",
+  "nodes.discord.interaction.reply.fields.ephemeral.label": "Solo lo ve esa persona",
+  "nodes.discord.interaction.reply.ports.content.label": "Mensaje"
 }
 
 const messages: Record<Locale, Record<MessageKey, string>> = { en, es }
@@ -87,6 +155,18 @@ const messages: Record<Locale, Record<MessageKey, string>> = { en, es }
 export function currentLocale(): Locale {
   const preferred = typeof navigator === "undefined" ? "en" : navigator.language.slice(0, 2)
   return LOCALES.find(locale => locale === preferred) ?? "en"
+}
+
+/**
+ * Resolves a key a Node definition, a Port or the Coercion table carries.
+ *
+ * Those keys are plain strings by construction — the catalogue is compiled
+ * without the editor — so this is the one place a key is not known at compile
+ * time. A missing one shows as itself rather than as blank space, which is a
+ * bug report the user can read out loud.
+ */
+export function translateDefinitionKey(key: string, locale: Locale = currentLocale()): string {
+  return messages[locale][key as MessageKey] ?? key
 }
 
 /** Resolves a key to text, filling in `{placeholders}`. */

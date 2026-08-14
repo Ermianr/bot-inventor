@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { type MessageKey, translate } from "@/i18n/messages"
+import { inDesktopShell } from "@/session/desktop"
 import {
   EXIT_EVENT,
   OUTPUT_EVENT,
@@ -85,6 +86,8 @@ export function useSession(project: Project): Session {
   )
 
   useEffect(() => {
+    if (!inDesktopShell()) return
+
     const listeners = [
       listen<SessionOutputEvent>(OUTPUT_EVENT, event => {
         const line = redactSecret(event.payload.line, typed.current)
