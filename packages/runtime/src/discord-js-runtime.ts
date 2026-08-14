@@ -1,5 +1,12 @@
-import type { ChatInputCommandInteraction, Client, InteractionReplyOptions } from "discord.js"
+import type { ChatInputCommandInteraction, Client, InteractionReplyOptions, REST } from "discord.js"
 import { coercions } from "./coercions.js"
+import {
+  type DiscordCommandApi,
+  type RegisteredCommand,
+  type RegistrationResult,
+  type RegistrationTarget,
+  registerCommands
+} from "./command-registration.js"
 import type {
   DiscordRuntime,
   ReplyOptions,
@@ -17,6 +24,11 @@ export type DiscordRuntimeOptions = {
    * it because guild commands appear immediately, where global ones do not.
    */
   guildId?: string
+  /**
+   * What registration did on start. Development Mode reports the deleted names
+   * so a rename does not look like a command that vanished for no reason.
+   */
+  onCommandsRegistered?: (result: RegistrationResult) => void
   onFailure?: (failure: FlowFailure) => void
   onTrace?: (event: TraceEvent) => void
   /**
@@ -102,14 +114,40 @@ export async function createDiscordRuntime(options: DiscordRuntimeOptions): Prom
       // only known once Discord has sent READY.
       const readyClient = await ready
 
-      if (options.guildId === undefined) {
-        await readyClient.application.commands.set(definitions)
-      } else {
-        await readyClient.application.commands.set(definitions, options.guildId)
-      }
+      const target: RegistrationTarget =
+        options.guildId === undefined
+          ? { kind: "global" }
+          : { kind: "guild", guildId: options.guildId }
+      const api = createDiscordJsCommandApi(readyClient.rest, readyClient.application.id)
+
+      options.onCommandsRegistered?.(await registerCommands(api, target, definitions))
     },
     async stop() {
       await client.destroy()
+    }
+  }
+}
+
+/**
+ * Command registration against the real Discord, over the REST client the
+ * logged-in `Client` already carries. It only chooses the endpoint: which
+ * commands go and which ones that leaves deleted is decided in
+ * `registerCommands`, for both targets alike.
+ */
+function createDiscordJsCommandApi(rest: REST, applicationId: string): DiscordCommandApi {
+  const route = (target: RegistrationTarget) =>
+    target.kind === "global"
+      ? `/applications/${applicationId}/commands`
+      : `/applications/${applicationId}/guilds/${target.guildId}/commands`
+
+  return {
+    async listCommands(target) {
+      return (await rest.get(route(target) as `/${string}`)) as RegisteredCommand[]
+    },
+    async putCommands(target, commands) {
+      return (await rest.put(route(target) as `/${string}`, {
+        body: commands
+      })) as RegisteredCommand[]
     }
   }
 }

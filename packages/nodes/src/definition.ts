@@ -38,11 +38,18 @@ export type DataPortDefinition = {
 
 export type PortDefinition = ExecutionPortDefinition | DataPortDefinition
 
+/**
+ * How a field is edited on the Canvas. `commandParameters` is the list of
+ * values a slash command asks its caller for, edited as a list rather than as
+ * one control.
+ */
+export type FieldControl = "text" | "number" | "switch" | "commandParameters"
+
 /** A value typed directly into the Node on the Canvas. */
 export type FieldDefinition = {
   id: string
   labelKey: string
-  control: "text" | "number" | "switch"
+  control: FieldControl
   defaultValue: FieldValue
 }
 
@@ -102,6 +109,16 @@ export function findPort(definition: NodeDefinition, id: string): PortDefinition
 
 export function findField(definition: NodeDefinition, id: string): FieldDefinition | undefined {
   return definition.fields.find(field => field.id === id)
+}
+
+/**
+ * The value a Node's field starts at. It is a fresh copy every time: a
+ * definition lives for the life of the process, so handing out its own list
+ * would let one Node's edits appear on every other Node that never set the
+ * field.
+ */
+export function defaultFieldValue(field: FieldDefinition): FieldValue {
+  return structuredClone(field.defaultValue)
 }
 
 /**

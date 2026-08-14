@@ -120,6 +120,26 @@ export function helloProject(): Project {
 }
 
 /**
+ * A Project whose slash command asks its caller for values: the Trigger's
+ * `parameters` field is what ends up registered with Discord as the command's
+ * options.
+ */
+export function parameterisedCommandProject(): Project {
+  const project = helloProject()
+  const flow = requireFirst(project.flows, "Flow")
+  const trigger = requireFirst(flow.nodes, "Node")
+  trigger.fields = {
+    name: "greet",
+    description: "Greets someone",
+    parameters: [
+      { name: "who", description: "Who to greet", type: "user", required: true },
+      { name: "times", description: "How many times", type: "number", required: false }
+    ]
+  }
+  return project
+}
+
+/**
  * `helloProject` with a second Reply Node dropped on the Canvas and wired to
  * nothing: it is part of the Project, but not part of any run.
  */

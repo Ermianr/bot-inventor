@@ -11,10 +11,27 @@ export type DiscordUser = {
   displayName: string
 }
 
+/**
+ * The type a slash command parameter carries. It is the Data Port types a
+ * Trigger can hand downstream, not the whole of Discord's option table.
+ */
+export type SlashCommandParameterType = "text" | "number" | "boolean" | "user"
+
+/** One value the person using a slash command types alongside it. */
+export type SlashCommandParameter = {
+  name: string
+  description: string
+  type: SlashCommandParameterType
+  /** Discord refuses a command whose required parameters follow optional ones. */
+  required: boolean
+}
+
 /** The declaration of a slash command, as a Trigger declares it. */
 export type SlashCommandDefinition = {
   name: string
   description: string
+  /** Absent and empty mean the same thing: a command taking no parameters. */
+  parameters?: readonly SlashCommandParameter[]
 }
 
 /** One invocation of a slash command. */

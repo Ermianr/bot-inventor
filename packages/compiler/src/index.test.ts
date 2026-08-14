@@ -5,12 +5,14 @@ import {
   reply,
   slashCommandTrigger
 } from "@bot-inventor/nodes"
-import type { RecordedCall } from "@bot-inventor/runtime/testing"
+import { registerCommands, type SlashCommandDefinition } from "@bot-inventor/runtime"
+import { createFakeDiscordCommandApi, type RecordedCall } from "@bot-inventor/runtime/testing"
 import type { Project } from "@bot-inventor/schema"
 import {
   emptyProject,
   greetingProject,
   helloProject,
+  parameterisedCommandProject,
   requireFirst,
   unreachableNodeProject
 } from "@bot-inventor/schema/fixtures"
@@ -24,6 +26,16 @@ function replies(result: RunProjectResult): string[] {
   return result.calls
     .filter((call): call is Extract<RecordedCall, { method: "reply" }> => call.method === "reply")
     .map(call => call.content)
+}
+
+/** What the compiled Project declared to the Runtime, ready to be registered. */
+function declarations(result: RunProjectResult): SlashCommandDefinition[] {
+  return result.calls
+    .filter(
+      (call): call is Extract<RecordedCall, { method: "registerSlashCommand" }> =>
+        call.method === "registerSlashCommand"
+    )
+    .map(call => call.definition)
 }
 
 /** A Node whose Data Port carries a different type, for testing an illegal Wire. */
@@ -227,5 +239,63 @@ describe("refusing a Project it cannot emit", () => {
     })
 
     expect(compiled.program.length).toBeGreaterThan(0)
+  })
+})
+
+describe("registering a compiled Project's commands", () => {
+  it("takes name, description and parameters from the Trigger Node's fields", async () => {
+    const result = await runProject(parameterisedCommandProject(), [])
+
+    expect(declarations(result)).toEqual([
+      {
+        name: "greet",
+        description: "Greets someone",
+        parameters: [
+          { name: "who", description: "Who to greet", type: "user", required: true },
+          { name: "times", description: "How many times", type: "number", required: false }
+        ]
+      }
+    ])
+  })
+
+  it("declares no parameters for a command that asks for nothing", async () => {
+    const result = await runProject(helloProject(), [])
+
+    expect(declarations(result)).toEqual([{ name: "hello", description: "Says hello" }])
+  })
+
+  it("registers what the Project declared to a test server", async () => {
+    const api = createFakeDiscordCommandApi()
+    const target = { kind: "guild", guildId: "guild-1" } as const
+
+    const result = await runProject(parameterisedCommandProject(), [])
+    await registerCommands(api, target, declarations(result))
+
+    expect(api.commandsFor(target)).toEqual([
+      {
+        name: "greet",
+        description: "Greets someone",
+        options: [
+          { type: 6, name: "who", description: "Who to greet", required: true },
+          { type: 10, name: "times", description: "How many times", required: false }
+        ]
+      }
+    ])
+  })
+
+  it("drops the previous command when the Trigger's name field is edited", async () => {
+    const api = createFakeDiscordCommandApi()
+    const target = { kind: "global" } as const
+
+    const before = await runProject(helloProject(), [])
+    await registerCommands(api, target, declarations(before))
+
+    const renamed = helloProject()
+    requireFirst(requireFirst(renamed.flows, "Flow").nodes, "Node").fields.name = "hola"
+    const after = await runProject(renamed, [])
+    const registration = await registerCommands(api, target, declarations(after))
+
+    expect(registration.deleted).toEqual(["hello"])
+    expect(api.commandsFor(target).map(command => command.name)).toEqual(["hola"])
   })
 })

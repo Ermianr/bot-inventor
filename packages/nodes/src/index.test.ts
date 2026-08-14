@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest"
 import { buildCatalogue, catalogue } from "./catalogue.js"
 import { applyCoercion, coercions, findCoercion } from "./coercions.js"
 import { checkConnection } from "./connections.js"
-import { findField, findPort, indent, joinStatements, type PortDefinition } from "./definition.js"
+import {
+  defaultFieldValue,
+  findField,
+  findPort,
+  indent,
+  joinStatements,
+  type PortDefinition
+} from "./definition.js"
 import { reply } from "./discord/reply.js"
 import { slashCommandTrigger } from "./discord/slash-command-trigger.js"
 
@@ -34,6 +41,17 @@ describe("the slash command Trigger", () => {
         port => port.kind === "execution" && port.direction === "input"
       )
     ).toEqual([])
+  })
+
+  it("hands out a fresh copy of a field's default, not the catalogue's own", () => {
+    const field = findField(slashCommandTrigger, "parameters")
+    if (field === undefined) throw new Error("the Trigger has no parameters field")
+
+    const value = defaultFieldValue(field)
+    expect(value).toEqual([])
+    ;(value as unknown[]).push({ name: "who" })
+
+    expect(defaultFieldValue(field)).toEqual([])
   })
 
   it("offers the caller as a Data output", () => {

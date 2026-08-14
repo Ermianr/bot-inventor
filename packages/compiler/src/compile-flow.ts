@@ -1,6 +1,7 @@
 import {
   applyCoercion,
   type CompilerMode,
+  defaultFieldValue,
   findCoercion,
   findField,
   findPort,
@@ -171,7 +172,7 @@ class FlowCompiler {
         node: node.id
       })
     }
-    return node.fields[id] ?? field.defaultValue
+    return node.fields[id] ?? defaultFieldValue(field)
   }
 
   /**

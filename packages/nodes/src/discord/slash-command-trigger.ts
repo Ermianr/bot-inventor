@@ -37,13 +37,28 @@ export const slashCommandTrigger: NodeDefinition = {
       labelKey: "nodes.discord.trigger.slashCommand.fields.description.label",
       control: "text",
       defaultValue: ""
+    },
+    {
+      id: "parameters",
+      labelKey: "nodes.discord.trigger.slashCommand.fields.parameters.label",
+      control: "commandParameters",
+      defaultValue: []
     }
   ],
   generate(context) {
-    const definition = [
+    const parameters = context.field("parameters")
+    const declaration = [
       `name: ${context.literal(context.field("name"))}`,
       `description: ${context.literal(context.field("description"))}`
-    ].join(", ")
+    ]
+
+    // A command asking for nothing declares no parameters at all, rather than
+    // an empty list Discord would have to be sent anyway.
+    if (Array.isArray(parameters) && parameters.length > 0) {
+      declaration.push(`parameters: ${context.literal(parameters)}`)
+    }
+
+    const definition = declaration.join(", ")
 
     const body = [
       `const ${context.output("user")} = ${context.event}.user`,

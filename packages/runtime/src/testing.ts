@@ -1,5 +1,11 @@
 import { coercions } from "./coercions.js"
 import type {
+  CommandPayload,
+  DiscordCommandApi,
+  RegisteredCommand,
+  RegistrationTarget
+} from "./command-registration.js"
+import type {
   DiscordUser,
   ReplyOptions,
   SlashCommandDefinition,
@@ -41,6 +47,56 @@ export type FakeRuntime = Runtime & {
   readonly commands: readonly string[]
   /** Runs the Flow registered for a command, as Discord would. */
   dispatchSlashCommand(input: SlashCommandInput): Promise<void>
+}
+
+/**
+ * A stand-in for Discord's command endpoints, holding one set of commands per
+ * target the way Discord does. It touches no network: registration is asserted
+ * against what this ends up holding.
+ */
+export type FakeDiscordCommandApi = DiscordCommandApi & {
+  /** What Discord would hold for a target right now. */
+  commandsFor(target: RegistrationTarget): readonly CommandPayload[]
+  /** Puts commands in place as though they had been registered earlier. */
+  seed(target: RegistrationTarget, commands: readonly CommandPayload[]): void
+  /** Every call made, so a test can tell a guild request from a global one. */
+  readonly requests: readonly { method: "list" | "put"; target: RegistrationTarget }[]
+}
+
+export function createFakeDiscordCommandApi(): FakeDiscordCommandApi {
+  const stored = new Map<string, CommandPayload[]>()
+  const requests: { method: "list" | "put"; target: RegistrationTarget }[] = []
+
+  const keyOf = (target: RegistrationTarget) =>
+    target.kind === "global" ? "global" : `guild:${target.guildId}`
+
+  const held = (target: RegistrationTarget) => stored.get(keyOf(target)) ?? []
+
+  // Discord assigns an id per command per target; a test asserting on names
+  // does not care what it is, only that it is stable across a listing.
+  const identify = (target: RegistrationTarget, command: CommandPayload): RegisteredCommand => ({
+    id: `${keyOf(target)}/${command.name}`,
+    name: command.name
+  })
+
+  return {
+    requests,
+    commandsFor: target => [...held(target)],
+    seed(target, commands) {
+      stored.set(keyOf(target), [...commands])
+    },
+    async listCommands(target) {
+      requests.push({ method: "list", target })
+      return held(target).map(command => identify(target, command))
+    },
+    async putCommands(target, commands) {
+      requests.push({ method: "put", target })
+      // Discord's bulk overwrite replaces the whole set, which is what makes a
+      // command dropped from the Project disappear.
+      stored.set(keyOf(target), [...commands])
+      return commands.map(command => identify(target, command))
+    }
+  }
 }
 
 const anonymous: DiscordUser = {
