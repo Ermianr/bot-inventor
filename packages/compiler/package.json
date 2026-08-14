@@ -9,8 +9,8 @@
       "default": "./dist/index.js"
     },
     "./export": {
-      "types": "./dist/export-single-file.d.ts",
-      "default": "./dist/export-single-file.js"
+      "types": "./dist/export.d.ts",
+      "default": "./dist/export.js"
     },
     "./testing": {
       "types": "./dist/testing.d.ts",
@@ -26,6 +26,7 @@
     "@bot-inventor/nodes": "workspace:*",
     "@bot-inventor/runtime": "workspace:*",
     "@bot-inventor/schema": "workspace:*",
+    "dotenv": "catalog:",
     "esbuild": "^0.28.2"
   },
   "devDependencies": {

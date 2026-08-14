@@ -4,6 +4,7 @@ import type { NodeCatalogue } from "@bot-inventor/nodes"
 import type { Project } from "@bot-inventor/schema"
 import { build } from "esbuild"
 import { compile } from "./compile.js"
+import { ExportError } from "./export-error.js"
 
 /**
  * The Single File Export: a Build bundled with esbuild into one `.mjs` that
@@ -14,9 +15,8 @@ import { compile } from "./compile.js"
  * load-bearing and each one of them has been observed to break the bundle when
  * changed.
  *
- * This is reached through `@bot-inventor/compiler/export` rather than the
- * package's main entry, because it runs a bundler and writes files: the editor
- * imports the Compiler into the browser, and only the Tauri side Exports.
+ * This is reached through `@bot-inventor/compiler/export`, which is where both
+ * formats live.
  */
 
 /** The name of the file an Export writes. The extension is part of ADR 0004. */
@@ -75,14 +75,6 @@ export type SingleFileExport = {
   /** Where the file was written, so the user can be told where to find it. */
   path: string
   bytes: number
-}
-
-/** An Export that could not be written. */
-export class ExportError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = "ExportError"
-  }
 }
 
 /**
