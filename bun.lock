@@ -54,6 +54,7 @@
         "@bot-inventor/nodes": "workspace:*",
         "@bot-inventor/runtime": "workspace:*",
         "@bot-inventor/schema": "workspace:*",
+        "dotenv": "catalog:",
         "esbuild": "^0.28.2",
       },
       "devDependencies": {

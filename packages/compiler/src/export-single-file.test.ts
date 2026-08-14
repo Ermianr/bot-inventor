@@ -4,7 +4,9 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { helloProject } from "@bot-inventor/schema/fixtures"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { ExportError, exportSingleFile, SINGLE_FILE_NAME } from "./export-single-file.js"
+import { delay, died, stop } from "./child-process.js"
+import { ExportError } from "./export-error.js"
+import { exportSingleFile, SINGLE_FILE_NAME } from "./export-single-file.js"
 import { type FakeDiscordServer, startFakeDiscordServer } from "./fake-discord-server.js"
 
 /**
@@ -96,10 +98,7 @@ describe("running the Single File on a real Node.js", () => {
   }, SLOW)
 
   afterAll(async () => {
-    bot?.kill()
-    // Windows kills asynchronously, and a live process holding the Export's
-    // directory open is what makes deleting it fail.
-    if (bot !== undefined && bot.exitCode === null) await Promise.race([died(bot), delay(10_000)])
+    await stop(bot)
     await discord?.close()
   })
 
@@ -168,17 +167,3 @@ describe("Exporting somewhere that is not there yet", () => {
     SLOW
   )
 })
-
-function delay(milliseconds: number): Promise<void> {
-  return new Promise(resolve => {
-    setTimeout(resolve, milliseconds).unref()
-  })
-}
-
-/** Resolves when the child process is gone, describing how it went. */
-function died(child: ChildProcess): Promise<string> {
-  return new Promise(resolve => {
-    child.once("exit", (code, signal) => resolve(`code ${code}, signal ${signal}`))
-    child.once("error", error => resolve(String(error)))
-  })
-}
