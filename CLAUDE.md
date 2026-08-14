@@ -24,6 +24,16 @@ This applies to Node identifiers too: a Node's internal id is stable and English
 
 Chat with the user happens in Spanish — that is conversation, not repository content.
 
+## Git conventions
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): subject`, where the subject is lowercase, imperative and carries no trailing period. The scope is the package or area the change lands in — `schema`, `nodes`, `compiler`, `runtime`, `ui`, `web`, `adr`, `scripts` — and is omitted when a change is genuinely repository-wide.
+
+The types in use are `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `build` and `ci`. A breaking change is marked `type(scope)!:` and explained in the body.
+
+The subject says what the change does for the product, not which files moved: `feat(runtime): register a Project's commands per-server and globally`, never `feat(runtime): update discord-js-runtime.ts`. The body is for why the change is shaped the way it is, and for anything a reader would otherwise have to reconstruct from the diff. Issues are referenced from the body (`Refs #8`, `Closes #8`), never from the subject.
+
+Branch names use the same vocabulary: `type/short-description` in kebab-case, such as `feat/single-file-export` or `fix/wire-coercion-badge`. One branch per issue, and never commit to `main` directly.
+
 ## Stack
 
 Bun workspaces + Turborepo. Vite 8, React 19, TanStack Router, Tailwind 4, shadcn/ui in `packages/ui`, Tauri v2, Biome for lint and format, Zod for schemas.
