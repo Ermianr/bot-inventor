@@ -5,7 +5,12 @@ export {
   coercions,
   findCoercion
 } from "./coercions.js"
-export { type ConnectionCheck, checkConnection } from "./connections.js"
+export {
+  type ConnectionCheck,
+  type ConnectionRequest,
+  checkConnection,
+  findFlowPort
+} from "./connections.js"
 export {
   type CompilerMode,
   type DataPortDefinition,

@@ -1,0 +1,152 @@
+import type { FieldDefinition, NodeDefinition, PortDefinition } from "@bot-inventor/nodes"
+import type { FieldValue, Node } from "@bot-inventor/schema"
+import { Checkbox } from "@bot-inventor/ui/components/checkbox"
+import { Input } from "@bot-inventor/ui/components/input"
+import { Label } from "@bot-inventor/ui/components/label"
+import {
+  Handle,
+  Position as HandlePosition,
+  type NodeProps,
+  type Node as ReactFlowNode
+} from "@xyflow/react"
+import { translateDefinitionKey } from "@/i18n/messages"
+
+/**
+ * A Node on the Canvas: what it is, the values typed into it, and the Ports
+ * its Wires leave from and arrive at.
+ *
+ * Every Node of the catalogue is drawn by this one component, from its
+ * definition. A Node that needed its own component would be a Node the
+ * catalogue cannot describe, and adding Nodes is this product's permanent
+ * activity (ADR 0001).
+ */
+
+export type FlowNodeData = {
+  node: Node
+  definition: NodeDefinition
+  setField: (fieldId: string, value: FieldValue) => void
+}
+
+export type FlowNodeType = ReactFlowNode<FlowNodeData, "flowNode">
+
+/**
+ * `commandParameters` is not drawn yet: until a Flow can read what the caller
+ * answered, a control for declaring parameters is a field the user can fill in
+ * that does nothing.
+ */
+const DRAWN_CONTROLS = new Set<FieldDefinition["control"]>(["text", "number", "switch"])
+
+export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
+  const { node, definition, setField } = data
+  const inputs = definition.ports.filter(port => port.direction === "input")
+  const outputs = definition.ports.filter(port => port.direction === "output")
+
+  return (
+    <div
+      className="w-64 rounded-lg border bg-card text-card-foreground shadow-sm"
+      data-testid={`node-${id}`}
+    >
+      <header className="border-b px-3 py-2">
+        <p className="font-medium text-sm">{translateDefinitionKey(definition.labelKey)}</p>
+        <p className="text-muted-foreground text-xs">
+          {translateDefinitionKey(definition.descriptionKey)}
+        </p>
+      </header>
+
+      <div className="grid gap-1 py-2">
+        {inputs.map(port => (
+          <PortRow key={`in-${port.id}`} nodeId={id} port={port} />
+        ))}
+        {outputs.map(port => (
+          <PortRow key={`out-${port.id}`} nodeId={id} port={port} />
+        ))}
+      </div>
+
+      <div className="grid gap-2 border-t px-3 py-2">
+        {definition.fields
+          .filter(field => DRAWN_CONTROLS.has(field.control))
+          .map(field => (
+            <FieldRow
+              key={field.id}
+              field={field}
+              nodeId={id}
+              setField={setField}
+              value={node.fields[field.id] ?? field.defaultValue}
+            />
+          ))}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * One Port and the Handle its Wires attach to. `Handle` is React Flow's word
+ * for the thing the pointer grabs; ours is Port, and this is the boundary
+ * where the two meet.
+ */
+function PortRow({ nodeId, port }: { nodeId: string; port: PortDefinition }) {
+  const isInput = port.direction === "input"
+
+  return (
+    <div className={`relative px-3 text-xs ${isInput ? "text-left" : "text-right"}`}>
+      <Handle
+        className={port.kind === "execution" ? "!h-3 !w-3 !rounded-sm" : "!h-3 !w-3"}
+        data-testid={`port-${nodeId}-${port.id}`}
+        id={port.id}
+        position={isInput ? HandlePosition.Left : HandlePosition.Right}
+        type={isInput ? "target" : "source"}
+      />
+      <span>{translateDefinitionKey(port.labelKey)}</span>
+    </div>
+  )
+}
+
+function FieldRow({
+  field,
+  nodeId,
+  setField,
+  value
+}: {
+  field: FieldDefinition
+  nodeId: string
+  setField: (fieldId: string, value: FieldValue) => void
+  value: FieldValue
+}) {
+  const inputId = `${nodeId}-${field.id}`
+  const label = translateDefinitionKey(field.labelKey)
+
+  if (field.control === "switch") {
+    return (
+      <div className="flex items-center gap-2">
+        <Checkbox
+          checked={value === true}
+          id={inputId}
+          onCheckedChange={checked => setField(field.id, checked === true)}
+        />
+        <Label className="text-xs" htmlFor={inputId}>
+          {label}
+        </Label>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid gap-1">
+      <Label className="text-xs" htmlFor={inputId}>
+        {label}
+      </Label>
+      <Input
+        className="nodrag h-8"
+        id={inputId}
+        onChange={event =>
+          setField(
+            field.id,
+            field.control === "number" ? Number(event.target.value) : event.target.value
+          )
+        }
+        type={field.control === "number" ? "number" : "text"}
+        value={typeof value === "string" || typeof value === "number" ? value : ""}
+      />
+    </div>
+  )
+}
