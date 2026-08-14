@@ -20,4 +20,5 @@ export type {
   SlashCommandParameterType
 } from "./discord.js"
 export { createDiscordRuntime, type DiscordRuntimeOptions } from "./discord-js-runtime.js"
-export type { FlowFailure, Runtime, TraceEvent } from "./runtime.js"
+export type { FlowFailure, Runtime, TraceEvent, TraceSink } from "./runtime.js"
+export { createTracing, describeValue, type Tracing } from "./tracing.js"

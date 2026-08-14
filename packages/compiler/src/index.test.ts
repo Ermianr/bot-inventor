@@ -140,6 +140,7 @@ describe("running a compiled Project", () => {
     expect(build.traces).toEqual([])
     expect(development.traces).toContainEqual({
       kind: "node-entered",
+      run: 1,
       flow: "flow-hello",
       node: "node-reply"
     })
@@ -150,6 +151,65 @@ describe("running a compiled Project", () => {
 
     expect(result.calls).toEqual([])
     expect(result.commands).toEqual([])
+  })
+})
+
+describe("watching a run in Development Mode", () => {
+  const useGreet = [
+    { type: "slashCommand", command: "greet", user: { id: "42", displayName: "Ana" } }
+  ] as const
+
+  it("reports every Node it entered and completed, in the order it ran them", async () => {
+    const result = await runProject(greetingProject(), useGreet, { mode: "development" })
+
+    expect(
+      result.traces.map(trace => `${trace.kind} ${"node" in trace ? trace.node : ""}`)
+    ).toEqual([
+      "node-entered node-trigger",
+      "node-completed node-trigger",
+      "node-entered node-reply",
+      "wire-carried ",
+      "node-completed node-reply"
+    ])
+  })
+
+  it("reports what a Wire carried, as it arrived at the far end of it", async () => {
+    const result = await runProject(greetingProject(), useGreet, { mode: "development" })
+
+    // The Wire converts the User into text on its way into the Reply, and the
+    // mention is what the Reply was actually given.
+    expect(result.traces).toContainEqual({
+      kind: "wire-carried",
+      run: 1,
+      flow: "flow-greet",
+      wire: "wire-data",
+      value: "<@42>"
+    })
+  })
+
+  it("gives each run its own number, so two of them can be told apart", async () => {
+    const result = await runProject(greetingProject(), [...useGreet, ...useGreet], {
+      mode: "development"
+    })
+
+    expect([...new Set(result.traces.map(trace => trace.run))]).toEqual([1, 2])
+  })
+
+  it("says which run failed, so the Canvas marks the one being watched", async () => {
+    const result = await runProject(greetingProject(), useGreet, {
+      mode: "development",
+      replyFails: () => "the bot cannot write in this channel"
+    })
+
+    expect(result.failures[0]).toMatchObject({ run: 1, flow: "flow-greet", node: "node-reply" })
+  })
+
+  it("adds nothing at all to a Build", () => {
+    const build = compile(greetingProject(), { mode: "build" })
+
+    expect(build.source).not.toContain("trace")
+    expect(build.source).not.toContain("startRun")
+    expect(build.source).not.toContain("run:")
   })
 })
 

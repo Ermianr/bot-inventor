@@ -71,6 +71,7 @@ const en = {
   "flows.title": "Your flows",
   "canvas.label": "Canvas",
   "canvas.wire.remove": "Remove this wire",
+  "canvas.wire.carried": "Last run carried: {value}",
 
   "connections.rejected.direction":
     "Wires run from an output on the right of a node to an input on the left.",
@@ -167,6 +168,7 @@ const es: Record<MessageKey, string> = {
   "flows.title": "Tus flujos",
   "canvas.label": "Lienzo",
   "canvas.wire.remove": "Quitar este cable",
+  "canvas.wire.carried": "La última ejecución llevó: {value}",
 
   "connections.rejected.direction":
     "Los cables van de una salida a la derecha de un nodo a una entrada a la izquierda.",

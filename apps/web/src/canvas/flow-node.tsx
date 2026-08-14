@@ -10,6 +10,7 @@ import {
   type Node as ReactFlowNode
 } from "@xyflow/react"
 import { translateDefinitionKey } from "@/i18n/messages"
+import type { NodeRunState } from "@/session/trace"
 
 /**
  * A Node on the Canvas: what it is, the values typed into it, and the Ports
@@ -24,7 +25,20 @@ import { translateDefinitionKey } from "@/i18n/messages"
 export type FlowNodeData = {
   node: Node
   definition: NodeDefinition
+  /** How far the run being watched got in this Node, if it reached it at all. */
+  runState: NodeRunState | undefined
   setField: (fieldId: string, value: FieldValue) => void
+}
+
+/**
+ * How a Node reached by the run being watched is drawn. Running and done are
+ * told apart so that a Node the bot is stuck in is visible as such, and a
+ * failure is the one that has to be findable at a glance.
+ */
+const RUN_STATE_RING: Record<NodeRunState, string> = {
+  entered: "ring-2 ring-amber-500",
+  completed: "ring-2 ring-emerald-500",
+  failed: "ring-2 ring-destructive"
 }
 
 export type FlowNodeType = ReactFlowNode<FlowNodeData, "flowNode">
@@ -37,13 +51,15 @@ export type FlowNodeType = ReactFlowNode<FlowNodeData, "flowNode">
 const DRAWN_CONTROLS = new Set<FieldDefinition["control"]>(["text", "number", "switch"])
 
 export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
-  const { node, definition, setField } = data
+  const { node, definition, runState, setField } = data
   const inputs = definition.ports.filter(port => port.direction === "input")
   const outputs = definition.ports.filter(port => port.direction === "output")
+  const highlight = runState === undefined ? "" : ` ${RUN_STATE_RING[runState]}`
 
   return (
     <div
-      className="w-64 rounded-lg border bg-card text-card-foreground shadow-sm"
+      className={`w-64 rounded-lg border bg-card text-card-foreground shadow-sm${highlight}`}
+      data-run-state={runState}
       data-testid={`node-${id}`}
     >
       <header className="border-b px-3 py-2">

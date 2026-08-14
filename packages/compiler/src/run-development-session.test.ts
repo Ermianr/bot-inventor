@@ -109,6 +109,45 @@ describe("pressing Run", () => {
   })
 })
 
+describe("using the bot's command", () => {
+  it(
+    "reports the run to the application, Node by Node",
+    async () => {
+      await waitFor(message => message.kind === "status" && message.status === "ready")
+      discord.useSlashCommand({ name: "hello" })
+
+      // Tracing crossing the pipe is what the Canvas lights up from, and it can
+      // only be proven by a bot that is really running on the other end of it.
+      await waitFor(
+        message =>
+          message.kind === "trace" &&
+          message.event.kind === "node-completed" &&
+          message.event.node === "node-reply"
+      )
+
+      expect(traces()).toEqual([
+        "node-entered node-trigger",
+        "node-completed node-trigger",
+        "node-entered node-reply",
+        "node-completed node-reply"
+      ])
+    },
+    SLOW
+  )
+
+  it("answers the person who used it", () => {
+    expect(discord.replies).toEqual([{ content: "Hello!" }])
+  })
+
+  it("stamps every event of the run with the same run", () => {
+    const runs = new Set(
+      messages.filter(message => message.kind === "trace").map(message => message.event.run)
+    )
+
+    expect([...runs]).toEqual([1])
+  })
+})
+
 describe("pressing Stop", () => {
   it(
     "leaves no process behind",
@@ -144,6 +183,15 @@ async function waitFor(matches: (message: SessionMessage) => boolean): Promise<v
     await delay(50)
   }
   throw new Error(`the Session never said what was expected.\n${transcript()}`)
+}
+
+/** The Tracing the application received, in the order the bot reported it. */
+function traces(): string[] {
+  return messages
+    .filter(message => message.kind === "trace")
+    .map(message => message.event)
+    .filter(event => "node" in event)
+    .map(event => `${event.kind} ${event.node}`)
 }
 
 /** Everything the Session said, which is the only clue when it hangs. */

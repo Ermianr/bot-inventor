@@ -61,13 +61,9 @@ export const slashCommandTrigger: NodeDefinition = {
     const definition = declaration.join(", ")
 
     const body = [
-      `const ${context.output("user")} = ${context.event}.user`,
       context.trace({ kind: "node-entered" }),
-      context.trace({
-        kind: "value-produced",
-        port: "user",
-        expression: context.output("user")
-      }),
+      `const ${context.output("user")} = ${context.event}.user`,
+      context.trace({ kind: "node-completed" }),
       context.continuation("next")
     ]
 

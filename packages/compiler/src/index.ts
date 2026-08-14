@@ -1,4 +1,5 @@
 export type { CompilerMode } from "@bot-inventor/nodes"
+export type { TraceEvent } from "@bot-inventor/runtime"
 export { type CompiledProject, type CompileOptions, compile } from "./compile.js"
 export {
   type RenderDevelopmentSessionOptions,

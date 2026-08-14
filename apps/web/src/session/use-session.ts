@@ -12,6 +12,7 @@ import {
   type SessionOutputEvent
 } from "@/session/events"
 import { describeRefusal } from "@/session/refusal"
+import { type RunTrace, watchFailure, watchTrace } from "@/session/trace"
 
 /**
  * A Session, as the editor sees it: a status, and everything the bot has said.
@@ -48,6 +49,8 @@ const CONNECTING_LIMIT = 30_000
 export type Session = {
   status: SessionStatus
   entries: readonly SessionEntry[]
+  /** The run the Canvas is showing, or nothing when the bot has not run yet. */
+  trace: RunTrace | undefined
   /** Set whenever the status is `failed`, already translated for the user. */
   problem: string | undefined
   start(options: { testServerId: string; secret: string }): Promise<void>
@@ -58,6 +61,7 @@ export function useSession(project: Project): Session {
   const [status, setStatus] = useState<SessionStatus>("stopped")
   const [entries, setEntries] = useState<readonly SessionEntry[]>([])
   const [problem, setProblem] = useState<string | undefined>(undefined)
+  const [trace, setTrace] = useState<RunTrace | undefined>(undefined)
 
   /**
    * The token as it currently sits in the field. The Tauri side redacts what
@@ -119,10 +123,14 @@ export function useSession(project: Project): Session {
             }
             return
           case "flow-failed":
+            setTrace(current => watchFailure(current, message))
             say(
               translate("run.failure.flow", { flow: message.flow, message: message.message }),
               "problem"
             )
+            return
+          case "trace":
+            setTrace(current => watchTrace(current, message.event))
             return
         }
       }),
@@ -157,6 +165,9 @@ export function useSession(project: Project): Session {
       typed.current = secret
       setEntries([])
       setProblem(undefined)
+      // The Canvas belongs to the bot that is running: runs are numbered from
+      // one again, and what the last bot did is not this one's doing.
+      setTrace(undefined)
       setStatus("connecting")
 
       // A bot that spawns and then hangs on the gateway would otherwise leave
@@ -183,5 +194,5 @@ export function useSession(project: Project): Session {
     [project, settled, stop]
   )
 
-  return { status, entries, problem, start, stop }
+  return { status, entries, problem, trace, start, stop }
 }

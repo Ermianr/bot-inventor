@@ -15,6 +15,7 @@ import type {
   SlashCommandHandler
 } from "./discord.js"
 import type { FlowFailure, Runtime, TraceEvent } from "./runtime.js"
+import { createTracing } from "./tracing.js"
 
 export type DiscordRuntimeOptions = {
   /** The bot token. It comes from the OS keychain while editing and from the environment in an Export. */
@@ -123,15 +124,16 @@ export async function createDiscordRuntime(options: DiscordRuntimeOptions): Prom
     }
   }
 
+  const trace = (event: TraceEvent) => options.onTrace?.(event)
+
   return {
     discord,
     coerce: coercions,
+    ...createTracing(trace),
     reportFailure(failure) {
       options.onFailure?.(failure)
     },
-    trace(event) {
-      options.onTrace?.(event)
-    },
+    trace,
     async start() {
       const ready = new Promise<Client<true>>(resolve => {
         client.once(Events.ClientReady, resolve)

@@ -9,6 +9,7 @@ import { initialProject } from "@/project/initial-project"
 import { useCloseGuard } from "@/project/use-close-guard"
 import { useProject } from "@/project/use-project"
 import { useProjectFile } from "@/project/use-project-file"
+import { useSession } from "@/session/use-session"
 
 export const Route = createFileRoute("/")({
   component: HomeComponent
@@ -25,6 +26,10 @@ function HomeComponent() {
   const file = useProjectFile(editor, desktopProjectFiles)
   useCloseGuard(file.confirmDiscard)
 
+  // The Session is held here rather than in the panel that starts it, because
+  // watching the bot think happens on the Canvas: both sides read one run.
+  const session = useSession(editor.project)
+
   return (
     <div className="grid h-full grid-rows-[auto_1fr] overflow-hidden">
       <ProjectToolbar name={editor.project.name} file={file} />
@@ -35,11 +40,11 @@ function HomeComponent() {
         </aside>
 
         <main className="h-full">
-          <Canvas editor={editor} />
+          <Canvas editor={editor} trace={session.trace} />
         </main>
 
         <aside className="overflow-y-auto border-l p-4">
-          <RunPanel project={editor.project} />
+          <RunPanel project={editor.project} session={session} />
         </aside>
       </div>
     </div>
