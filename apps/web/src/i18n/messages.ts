@@ -43,6 +43,31 @@ const en = {
     "Your bot never finished connecting. Check your internet connection and press Run again.",
   "run.failure.flow": "The Flow {flow} stopped: {message}",
 
+  "project.untitled": "Untitled bot",
+  "project.flow.default": "Main",
+  "project.file.filter": "Bot Inventor Project",
+  "project.file.new": "New",
+  "project.file.open": "Open",
+  "project.file.save": "Save",
+  "project.file.saveAs": "Save as…",
+  "project.file.unsaved": "You have changes that are not saved yet.",
+  "project.file.unsavedMark": "Unsaved",
+  "project.file.location": "Saved in {path}",
+  "project.file.nowhere": "Not saved to a file yet.",
+  "project.discard.title": "Unsaved changes",
+  "project.discard.message":
+    "You have changes in {project} that are not saved. If you carry on, they are lost.",
+  "project.discard.confirm": "Discard my changes",
+  "project.discard.cancel": "Go back",
+  "project.problem.futureVersion":
+    "This Project was made with a newer version of Bot Inventor, so this one cannot open it. Nothing in the file was changed. Update the app and try again.",
+  "project.problem.malformed":
+    "This file is not a Project this version can read. It may be damaged, or it may not be a Project at all.",
+  "project.problem.migrationFailed":
+    "This Project could not be brought up to date, so nothing was changed. {message}",
+  "project.problem.read": "This Project could not be opened: {message}",
+  "project.problem.write": "This Project could not be saved: {message}",
+
   "flows.title": "Your flows",
   "canvas.label": "Canvas",
   "canvas.wire.remove": "Remove this wire",
@@ -113,6 +138,31 @@ const es: Record<MessageKey, string> = {
   "run.failure.timeout":
     "Tu bot nunca terminó de conectarse. Revisa tu conexión a internet y pulsa Ejecutar otra vez.",
   "run.failure.flow": "El Flow {flow} se detuvo: {message}",
+
+  "project.untitled": "Bot sin nombre",
+  "project.flow.default": "Principal",
+  "project.file.filter": "Proyecto de Bot Inventor",
+  "project.file.new": "Nuevo",
+  "project.file.open": "Abrir",
+  "project.file.save": "Guardar",
+  "project.file.saveAs": "Guardar como…",
+  "project.file.unsaved": "Tienes cambios sin guardar.",
+  "project.file.unsavedMark": "Sin guardar",
+  "project.file.location": "Guardado en {path}",
+  "project.file.nowhere": "Todavía no está guardado en ningún archivo.",
+  "project.discard.title": "Cambios sin guardar",
+  "project.discard.message":
+    "Tienes cambios en {project} que no están guardados. Si sigues, se pierden.",
+  "project.discard.confirm": "Descartar mis cambios",
+  "project.discard.cancel": "Volver",
+  "project.problem.futureVersion":
+    "Este Proyecto se hizo con una versión más nueva de Bot Inventor, así que esta no puede abrirlo. No se cambió nada del archivo. Actualiza la aplicación e inténtalo de nuevo.",
+  "project.problem.malformed":
+    "Este archivo no es un Proyecto que esta versión pueda leer. Puede estar dañado, o puede no ser un Proyecto.",
+  "project.problem.migrationFailed":
+    "Este Proyecto no se pudo poner al día, así que no se cambió nada. {message}",
+  "project.problem.read": "Este Proyecto no se pudo abrir: {message}",
+  "project.problem.write": "Este Proyecto no se pudo guardar: {message}",
 
   "flows.title": "Tus flujos",
   "canvas.label": "Lienzo",
