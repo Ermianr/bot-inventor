@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager};
@@ -49,11 +49,8 @@ pub async fn export_project(app: AppHandle, request: String) -> Result<String, S
         .shell()
         .sidecar("node")
         .map_err(|error| format!("the Node.js that Exports could not be started: {error}"))?
-        .env(BUNDLER_PATH_VARIABLE, bundler.to_string_lossy().into_owned())
-        .args([
-            exporter.to_string_lossy().into_owned(),
-            asked.to_string_lossy().into_owned(),
-        ])
+        .env(BUNDLER_PATH_VARIABLE, plain(&bundler))
+        .args([plain(&exporter), plain(&asked)])
         .spawn();
 
     let (mut events, _child) = match spawned {
@@ -102,6 +99,48 @@ fn request_path(app: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|error| format!("{}: {error}", directory.display()))?;
 
     Ok(directory.join("request.json"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::plain;
+    use std::path::Path;
+
+    #[test]
+    fn strips_the_extended_length_prefix_windows_resolves_resources_with() {
+        assert_eq!(
+            plain(Path::new(r"\\?\C:\Program Files\Bot Inventor\resources\exporter.mjs")),
+            r"C:\Program Files\Bot Inventor\resources\exporter.mjs"
+        );
+    }
+
+    #[test]
+    fn leaves_an_ordinary_path_as_it_is() {
+        assert_eq!(plain(Path::new(r"C:\bots\exporter.mjs")), r"C:\bots\exporter.mjs");
+    }
+
+    #[test]
+    fn leaves_a_real_network_share_alone() {
+        // `\\server\share` is somebody's actual machine, not the prefix. Taking
+        // two backslashes off it would point the exporter somewhere else.
+        assert_eq!(plain(Path::new(r"\\server\share\exporter.mjs")), r"\\server\share\exporter.mjs");
+    }
+}
+
+/// A path as an ordinary program expects to be handed one.
+///
+/// Tauri resolves a resource through the executable's own location, which on
+/// Windows comes back canonicalised: `\\?\C:\...`, the extended-length form.
+/// Rust's file APIs take it happily, and so this goes unnoticed everywhere it
+/// is only read or copied — which is why a Session, which hands the sidecar a
+/// bare `bot.mjs` and a working directory, never met it.
+///
+/// Node.js is where it stops being harmless. Given one as the module to run, it
+/// resolves the main path down to `C:` and dies on a directory it was never
+/// pointed at. Stripping the prefix is what makes the argument a path again.
+fn plain(path: &Path) -> String {
+    let text = path.to_string_lossy();
+    text.strip_prefix(r"\\?\").unwrap_or(&text).to_owned()
 }
 
 /// One of the files that ship beside the sidecar.
