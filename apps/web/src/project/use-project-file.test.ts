@@ -124,6 +124,31 @@ describe("saving a Project", () => {
     expect(result.current.editor.project.flows.map(flow => flow.id)).toContain(created)
   })
 
+  it("does not bring back a Flow the user removed", async () => {
+    const { gateway, files } = fakeGateway(
+      {},
+      { savePath: "C:/bots/hello.botinv", openPath: "C:/bots/hello.botinv", discard: true }
+    )
+    const { result } = editorWith(gateway)
+
+    let created = ""
+    act(() => {
+      created = result.current.editor.createFlow()
+    })
+    await act(() => result.current.file.save())
+
+    act(() => {
+      result.current.editor.removeFlow(created)
+    })
+    expect(result.current.file.saved).toBe(false)
+
+    await act(() => result.current.file.save())
+    expect(files["C:/bots/hello.botinv"]).not.toContain(created)
+
+    await act(() => result.current.file.open())
+    expect(result.current.editor.project.flows.map(flow => flow.id)).not.toContain(created)
+  })
+
   it("says so when the file could not be written", async () => {
     const { gateway } = fakeGateway({}, { savePath: "C:/bots/hello.botinv" })
     gateway.write = async () => {

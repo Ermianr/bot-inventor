@@ -13,8 +13,10 @@ import {
   connectWire,
   createFlow,
   disconnectWire,
+  type FlowRemoval,
   type FlowRename,
   moveNode,
+  removeFlow,
   renameFlow,
   renameProject,
   setNodeField,
@@ -48,6 +50,11 @@ export type ProjectEditor = {
    * leaves the Project untouched when it was.
    */
   renameFlow(flowId: string, name: string): FlowRename
+  /**
+   * Removes a Flow and opens whichever one the rule says comes next. Says when
+   * it refused, so the list can tell the user why nothing happened.
+   */
+  removeFlow(flowId: string): FlowRemoval
   moveNode(nodeId: string, position: Position): void
   setNodeField(nodeId: string, fieldId: string, value: FieldValue): void
   connectWire(wire: { kind: WireKind; from: PortReference; to: PortReference }): void
@@ -137,6 +144,33 @@ export function useProject(createInitial: () => Project): ProjectEditor {
         return rename
       },
       [project]
+    ),
+    /**
+     * Which Flow opens next is the rule's answer, not this hook's: it is
+     * decided in `edits.ts` and only obeyed here. The Canvas is moved before
+     * the Project loses the Flow so that no render is left pointing at one that
+     * is not there — React applies both in the same pass either way.
+     */
+    removeFlow: useCallback(
+      (flowId: string) => {
+        const removal = removeFlow(project, flowId, flow.id)
+        if (removal.removed) {
+          // Moved only when the Flow that went is the one on screen, read from
+          // the id the state is holding rather than from this render: a removal
+          // batched behind another one must not move a Canvas that has already
+          // moved somewhere else.
+          setOpenFlowId(current => (current === flowId ? removal.open : current))
+          // Applied to whatever Project the state is holding by the time React
+          // gets here, the same as the other edits, so a removal batched behind
+          // one of them does not put that edit back.
+          setProject(previous => {
+            const applied = removeFlow(previous, flowId, flow.id)
+            return applied.removed ? applied.project : previous
+          })
+        }
+        return removal
+      },
+      [project, flow.id]
     ),
     moveNode: useCallback(
       (nodeId, position) => edit(current => moveNode(current, nodeId, position)),
