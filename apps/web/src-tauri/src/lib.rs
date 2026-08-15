@@ -1,3 +1,4 @@
+mod export;
 mod jail;
 mod project_file;
 mod secrets;
@@ -11,6 +12,7 @@ pub fn run() {
     .plugin(tauri_plugin_dialog::init())
     .manage(session::Sessions::default())
     .invoke_handler(tauri::generate_handler![
+      export::export_project,
       project_file::back_up_project_file,
       project_file::read_project_file,
       project_file::write_project_file,

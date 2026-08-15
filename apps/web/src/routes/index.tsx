@@ -4,12 +4,18 @@ import { Canvas } from "@/canvas/canvas"
 import { FlowList } from "@/canvas/flow-list"
 import { ProjectToolbar } from "@/components/project-toolbar"
 import { RunPanel } from "@/components/run-panel"
+import { desktopExports } from "@/project/desktop-exports"
 import { desktopProjectFiles } from "@/project/desktop-project-files"
 import { initialProject } from "@/project/initial-project"
 import { useCloseGuard } from "@/project/use-close-guard"
+import { useExport } from "@/project/use-export"
 import { useProject } from "@/project/use-project"
 import { useProjectFile } from "@/project/use-project-file"
+import { sessionGateway } from "@/session/desktop-session"
 import { useSession } from "@/session/use-session"
+
+/** Which shell this build runs a bot through. It does not change while it runs. */
+const shell = sessionGateway()
 
 export const Route = createFileRoute("/")({
   component: HomeComponent
@@ -28,11 +34,12 @@ function HomeComponent() {
 
   // The Session is held here rather than in the panel that starts it, because
   // watching the bot think happens on the Canvas: both sides read one run.
-  const session = useSession(editor.project)
+  const session = useSession(editor.project, shell)
+  const exporting = useExport(editor.project, desktopExports)
 
   return (
     <div className="grid h-full grid-rows-[auto_1fr] overflow-hidden">
-      <ProjectToolbar name={editor.project.name} file={file} />
+      <ProjectToolbar name={editor.project.name} file={file} exporting={exporting} />
 
       <div className="grid grid-cols-[14rem_1fr_24rem] overflow-hidden">
         <aside className="overflow-y-auto border-r">

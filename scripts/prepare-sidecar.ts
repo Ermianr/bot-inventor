@@ -3,16 +3,17 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { bundleDevelopmentRuntime } from "@bot-inventor/compiler/export"
+import { bundleDevelopmentRuntime, bundleExporter } from "@bot-inventor/compiler/export"
 
 /**
- * Everything the Tauri side needs on disk before it can run a bot: the pinned
- * Node.js sidecar, and the Runtime a Session runs against.
+ * Everything the Tauri side needs on disk before it can run or Export a bot:
+ * the pinned Node.js sidecar, the Runtime a Session runs against, and the
+ * exporter with its bundler.
  *
- * Both are inputs to packaging rather than things built at Run time, and both
- * are deliberately kept out of git — one is 50MB of somebody else's binary, the
- * other is a build artifact. Running this before `tauri dev` or `tauri build`
- * is what puts them there.
+ * All of it is an input to packaging rather than something built when the user
+ * presses a button, and all of it is deliberately kept out of git — one is 50MB
+ * of somebody else's binary, the rest are build artifacts. Running this before
+ * `tauri dev` or `tauri build` is what puts them there.
  */
 
 /**
@@ -33,6 +34,7 @@ await main()
 async function main(): Promise<void> {
   await ensureNodeSidecar()
   await ensureDevelopmentRuntime()
+  await ensureExporter()
 }
 
 /**
@@ -115,6 +117,19 @@ async function ensureDevelopmentRuntime(): Promise<void> {
     outputDirectory: join(tauri, "resources")
   })
   console.log(`The Runtime for Development Mode is at ${bundle.path} (${bundle.bytes} bytes).`)
+}
+
+/**
+ * Bundles the exporter and puts esbuild's binary beside it.
+ *
+ * An installed Bot Inventor has no repository under it — no Runtime build to
+ * copy, no `node_modules` to resolve against, no bundler to run — so all three
+ * are carried, and this is where they are picked up (ADR 0007).
+ */
+async function ensureExporter(): Promise<void> {
+  const bundle = await bundleExporter({ outputDirectory: join(tauri, "resources") })
+  console.log(`The exporter is at ${bundle.path} (${bundle.bytes} bytes).`)
+  console.log(`Its bundler is at ${bundle.bundlerPath}.`)
 }
 
 /**

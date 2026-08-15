@@ -1,16 +1,27 @@
 import { Button } from "@bot-inventor/ui/components/button"
 
+import { ExportButton } from "@/components/export-button"
 import { translate } from "@/i18n/messages"
+import type { Exporting } from "@/project/use-export"
 import type { ProjectFileEditor } from "@/project/use-project-file"
 
 /**
  * What the user does with their Project as a whole: start a new one, open one
- * they saved, and save the one they are on.
+ * they saved, save the one they are on, and take it away as code that runs
+ * without Bot Inventor.
  *
  * It says where the Project lives and whether the file is behind, because those
  * are the two things somebody about to close the application wants to know.
  */
-export function ProjectToolbar({ name, file }: { name: string; file: ProjectFileEditor }) {
+export function ProjectToolbar({
+  name,
+  file,
+  exporting
+}: {
+  name: string
+  file: ProjectFileEditor
+  exporting: Exporting
+}) {
   return (
     <div className="flex flex-col gap-1 border-b px-3 py-2">
       <div className="flex items-center gap-2">
@@ -26,6 +37,7 @@ export function ProjectToolbar({ name, file }: { name: string; file: ProjectFile
         <Button size="sm" variant="outline" onClick={() => void file.saveAs()}>
           {translate("project.file.saveAs")}
         </Button>
+        <ExportButton exporting={exporting} />
 
         <span className="ml-2 font-medium text-sm">{name}</span>
         {file.saved ? null : (
@@ -44,6 +56,18 @@ export function ProjectToolbar({ name, file }: { name: string; file: ProjectFile
       {file.problem === undefined ? null : (
         <p role="alert" className="text-destructive text-xs">
           {file.problem}
+        </p>
+      )}
+
+      {exporting.problem === undefined ? null : (
+        <p role="alert" className="text-destructive text-xs">
+          {exporting.problem}
+        </p>
+      )}
+
+      {exporting.written === undefined ? null : (
+        <p role="status" className="text-muted-foreground text-xs">
+          {exporting.written}
         </p>
       )}
     </div>

@@ -24,12 +24,21 @@ export {
   type ExportSingleFileOptions,
   exportSingleFile,
   SINGLE_FILE_NAME,
-  SINGLE_FILE_TARGET,
   type SingleFileExport
 } from "./export-single-file.js"
+export { SINGLE_FILE_TARGET } from "./export-target.js"
+export {
+  BUNDLER_PATH_VARIABLE,
+  type BundleExporterOptions,
+  bundleExporter,
+  EXPORTER_BUNDLER_NAME,
+  EXPORTER_NAME,
+  type ExporterBundle
+} from "./exporter-bundle.js"
 export {
   ENTRY_FILE_NAME,
   FLOWS_DIRECTORY,
   RUNTIME_DIRECTORY,
   TOKEN_VARIABLE
 } from "./node-project.js"
+export { readVendoredRuntime, type VendoredRuntime } from "./vendored-runtime.js"

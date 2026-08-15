@@ -38,10 +38,14 @@ const en = {
   "run.deleted": "No longer on Discord: {commands}",
   "run.failure.token": "Discord did not accept that token. Check it and paste it again.",
   "run.failure.missingSecret": "Paste your bot token first, then press Run.",
+  "run.failure.noDesktop": "Bot Inventor can only run your bot in the desktop app.",
   "run.failure.unknown": "Your bot could not start: {message}",
   "run.failure.timeout":
     "Your bot never finished connecting. Check your internet connection and press Run again.",
   "run.failure.flow": "The Flow {flow} stopped: {message}",
+  "run.failure.build":
+    "Your change could not be built, so your bot is still running the last version that worked. {message}",
+  "run.reloading": "You changed something. Restarting your bot…",
 
   "project.untitled": "Untitled bot",
   "project.flow.default": "Main",
@@ -67,6 +71,24 @@ const en = {
     "This Project could not be brought up to date, so nothing was changed. {message}",
   "project.problem.read": "This Project could not be opened: {message}",
   "project.problem.write": "This Project could not be saved: {message}",
+
+  "export.title": "Export",
+  "export.singleFile": "One file",
+  "export.singleFile.help": "One .mjs file you upload anywhere Node.js runs. No install step.",
+  "export.nodeProject": "A folder of code",
+  "export.nodeProject.help":
+    "Readable source with a README, for version control or to hand to a developer.",
+  "export.working": "Building your bot…",
+  "export.destination.file": "Where should the file go?",
+  "export.destination.folder": "Which folder should your bot go in?",
+  "export.written.file": "Written to {path}",
+  "export.written.folder": "Written to {path}. Run npm install there, then start it.",
+  "export.overwrite.title": "There is already an export here",
+  "export.overwrite.message":
+    "{path} already holds an export. Exporting again replaces it, including any changes you made to it by hand.",
+  "export.overwrite.confirm": "Replace it",
+  "export.overwrite.cancel": "Go back",
+  "export.problem.failed": "Your bot could not be exported: {message}",
 
   "flows.title": "Your flows",
   "canvas.label": "Canvas",
@@ -135,10 +157,15 @@ const es: Record<MessageKey, string> = {
   "run.deleted": "Ya no están en Discord: {commands}",
   "run.failure.token": "Discord no aceptó ese token. Revísalo y pégalo de nuevo.",
   "run.failure.missingSecret": "Pega el token de tu bot antes de pulsar Ejecutar.",
+  "run.failure.noDesktop":
+    "Bot Inventor solo puede ejecutar tu bot en la aplicación de escritorio.",
   "run.failure.unknown": "Tu bot no pudo arrancar: {message}",
   "run.failure.timeout":
     "Tu bot nunca terminó de conectarse. Revisa tu conexión a internet y pulsa Ejecutar otra vez.",
   "run.failure.flow": "El Flow {flow} se detuvo: {message}",
+  "run.failure.build":
+    "Tu cambio no se pudo construir, así que tu bot sigue con la última versión que funcionó. {message}",
+  "run.reloading": "Cambiaste algo. Reiniciando tu bot…",
 
   "project.untitled": "Bot sin nombre",
   "project.flow.default": "Principal",
@@ -164,6 +191,25 @@ const es: Record<MessageKey, string> = {
     "Este Proyecto no se pudo poner al día, así que no se cambió nada. {message}",
   "project.problem.read": "Este Proyecto no se pudo abrir: {message}",
   "project.problem.write": "Este Proyecto no se pudo guardar: {message}",
+
+  "export.title": "Exportar",
+  "export.singleFile": "Un solo archivo",
+  "export.singleFile.help":
+    "Un archivo .mjs que subes a donde haya Node.js. Sin paso de instalación.",
+  "export.nodeProject": "Una carpeta de código",
+  "export.nodeProject.help":
+    "Código legible con un README, para control de versiones o para pasárselo a alguien que programe.",
+  "export.working": "Construyendo tu bot…",
+  "export.destination.file": "¿Dónde quieres el archivo?",
+  "export.destination.folder": "¿En qué carpeta quieres tu bot?",
+  "export.written.file": "Escrito en {path}",
+  "export.written.folder": "Escrito en {path}. Ejecuta npm install ahí y luego inícialo.",
+  "export.overwrite.title": "Ya hay una exportación aquí",
+  "export.overwrite.message":
+    "{path} ya tiene una exportación. Exportar de nuevo la reemplaza, incluyendo los cambios que le hayas hecho a mano.",
+  "export.overwrite.confirm": "Reemplazarla",
+  "export.overwrite.cancel": "Volver",
+  "export.problem.failed": "Tu bot no se pudo exportar: {message}",
 
   "flows.title": "Tus flujos",
   "canvas.label": "Lienzo",

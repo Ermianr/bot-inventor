@@ -31,6 +31,20 @@ pub const OUTPUT_EVENT: &str = "session://output";
 /// The bot's process is gone, for any reason including Stop.
 pub const EXIT_EVENT: &str = "session://exited";
 
+/// Which bot an event came from: the number the editor gave when it asked for
+/// this one, carried back on everything the process says.
+///
+/// Hot reload is why it exists. Restarting kills the running bot and spawns
+/// another, and the dying one keeps talking for a moment afterwards. Without a
+/// number on each event its exit reads as the new bot stopping and its last
+/// lines read as the new bot's output, which is the difference between a reload
+/// the user does not notice and a panel announcing a bot that is running fine.
+///
+/// The editor numbers them rather than this side, so that it can start ignoring
+/// the old bot before it asks for the new one — there is no moment in between
+/// where an event belongs to neither.
+type SessionId = u64;
+
 /// The entry point the sidecar is pointed at, and the Runtime beside it. Both
 /// names come from the Compiler; they are repeated here because Rust cannot
 /// read them from it.
@@ -49,6 +63,8 @@ pub struct Sessions {
 
 #[derive(Clone, Serialize)]
 struct Output {
+    /// Which bot wrote this. The editor drops anything but the one it started.
+    session: SessionId,
     /// `stderr` is what the panel shows as a problem rather than as news.
     stream: &'static str,
     line: String,
@@ -56,40 +72,67 @@ struct Output {
 
 #[derive(Clone, Serialize)]
 struct Exit {
+    /// Which bot is gone. A restart kills one and starts another, and only the
+    /// editor's own bot going means the bot stopped.
+    session: SessionId,
     code: Option<i32>,
 }
 
 /// Compiles nothing and decides nothing: it is handed the entry point the
 /// Compiler rendered, and runs it.
+///
+/// `session` is the caller's own number for this bot, and every event from it
+/// carries that number back. Starting again — which is what a hot reload does —
+/// stops whatever was running first, so the caller's previous number goes dead
+/// the moment it asks for a new one.
 #[tauri::command]
 pub async fn start_session(
     app: AppHandle,
     sessions: State<'_, Sessions>,
     project_id: String,
     entry: String,
+    session: SessionId,
 ) -> Result<(), Refusal> {
     let token = secrets::read(&project_id)
         .map_err(Refusal::failed)?
         .ok_or(Refusal::MissingSecret)?;
 
-    // Running two bots for one Project would register the same commands twice
-    // and answer every interaction twice with it.
-    stop_running(&sessions);
-
     let directory = prepare(&app, &project_id, &entry).map_err(Refusal::failed)?;
 
-    let (mut events, child) = app
-        .shell()
-        .sidecar("node")
-        .map_err(Refusal::failed)?
-        .current_dir(directory.clone())
-        .env(TOKEN_VARIABLE, token.clone())
-        .args([ENTRY_NAME])
-        .spawn()
-        .map_err(Refusal::failed)?;
+    // Killing the running bot and putting its replacement in its place happen
+    // under one lock, held across both.
+    //
+    // Two of these can be in flight at once — Tauri runs commands concurrently,
+    // and a hot reload asks for a bot without waiting for the last answer. Taken
+    // and released twice, both calls could get past the kill before either
+    // recorded its child, and the bot nobody is holding any more goes on
+    // answering every interaction a second time. There is no `.await` between
+    // here and the end of the block, which is what makes holding it safe.
+    let mut events = {
+        let mut running = sessions.running.lock().unwrap();
 
-    sessions.jail.hold(child.pid());
-    *sessions.running.lock().unwrap() = Some(child);
+        // Running two bots for one Project would register the same commands
+        // twice and answer every interaction twice with it.
+        if let Some(previous) = running.take() {
+            // The process is being told to go, so failing to kill one that has
+            // already gone is the outcome we wanted.
+            let _ = previous.kill();
+        }
+
+        let (events, child) = app
+            .shell()
+            .sidecar("node")
+            .map_err(Refusal::failed)?
+            .current_dir(directory.clone())
+            .env(TOKEN_VARIABLE, token.clone())
+            .args([ENTRY_NAME])
+            .spawn()
+            .map_err(Refusal::failed)?;
+
+        sessions.jail.hold(child.pid());
+        *running = Some(child);
+        events
+    };
 
     // The token is redacted here rather than in the editor, because here is the
     // last place that has it: the webview is never sent one, so nothing it does
@@ -100,12 +143,18 @@ pub async fn start_session(
         while let Some(event) = events.recv().await {
             let emitted = match event {
                 CommandEvent::Stdout(bytes) => {
-                    app.emit(OUTPUT_EVENT, Output::of("stdout", bytes, &secret))
+                    app.emit(OUTPUT_EVENT, Output::of(session, "stdout", bytes, &secret))
                 }
                 CommandEvent::Stderr(bytes) => {
-                    app.emit(OUTPUT_EVENT, Output::of("stderr", bytes, &secret))
+                    app.emit(OUTPUT_EVENT, Output::of(session, "stderr", bytes, &secret))
                 }
-                CommandEvent::Terminated(payload) => app.emit(EXIT_EVENT, Exit { code: payload.code }),
+                CommandEvent::Terminated(payload) => app.emit(
+                    EXIT_EVENT,
+                    Exit {
+                        session,
+                        code: payload.code,
+                    },
+                ),
                 _ => Ok(()),
             };
             // The window can be gone before the process is. Losing an event
@@ -196,9 +245,10 @@ impl Output {
     /// This is where it happens because this is the last place that has the
     /// stored token: the webview is never sent one, so nothing it does with
     /// what it receives could put a token on the screen.
-    fn of(stream: &'static str, bytes: Vec<u8>, secret: &str) -> Self {
+    fn of(session: SessionId, stream: &'static str, bytes: Vec<u8>, secret: &str) -> Self {
         let line = String::from_utf8_lossy(&bytes).trim_end().to_string();
         Self {
+            session,
             stream,
             line: if secret.is_empty() {
                 line

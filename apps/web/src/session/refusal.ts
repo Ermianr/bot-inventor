@@ -12,6 +12,12 @@ export type Refusal =
   | { kind: "missing-secret" }
   | { kind: "rejected" }
   | { kind: "failed"; message: string }
+  /**
+   * The one that does not come from Rust: there is no desktop shell to refuse.
+   * The Canvas runs in a plain browser too, and pressing Run there has to say
+   * so rather than throw somewhere the user never sees.
+   */
+  | { kind: "no-desktop" }
 
 /** Turns a refusal into something the user can act on. */
 export function describeRefusal(error: unknown): string {
@@ -24,6 +30,8 @@ export function describeRefusal(error: unknown): string {
       return translate("run.failure.token")
     case "failed":
       return translate("run.failure.unknown", { message: refusal.message })
+    case "no-desktop":
+      return translate("run.failure.noDesktop")
     default:
       // Something that is not a refusal at all: the command is not there, the
       // arguments did not match. The user cannot fix it, but hiding it would
