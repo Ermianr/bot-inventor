@@ -102,7 +102,7 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
                 onSelect={() => editor.openFlow(flow.id)}
                 onRename={name => renameOrExplain(editor, flow.id, name)}
               />
-              {hasTrigger(flow, catalogue) || (
+              {hasTrigger(flow, catalogue) ? null : (
                 // A sentence would not fit a row this narrow, so the mark is an
                 // icon carrying the sentence: `title` for the pointer, the same
                 // words as its accessible name for everyone else. It stays put
@@ -114,7 +114,10 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
                   aria-label={translate("flows.neverRuns")}
                   title={translate("flows.neverRuns")}
                   data-testid={`flow-${flow.id}-never-runs`}
-                  className="shrink-0 px-1 text-muted-foreground"
+                  // Not muted: it is the same kind of statement the run panel
+                  // makes when something is wrong, and a mark nobody notices is
+                  // one the user still spends their afternoon on.
+                  className="shrink-0 px-1 text-destructive"
                 >
                   <CircleAlertIcon className="size-3.5" />
                 </span>
