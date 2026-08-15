@@ -1,3 +1,6 @@
+import { Button } from "@bot-inventor/ui/components/button"
+import { PlusIcon } from "lucide-react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { InlineName } from "@/components/inline-name"
@@ -12,13 +15,34 @@ import type { ProjectEditor } from "@/project/use-project"
  * gesture the Project name uses. The pencil is out of the way until the row is
  * hovered or the keyboard reaches it, except on the Flow that is open: that one
  * is where the user already is.
+ *
+ * The "+" adds a Flow and hands the user its name as a field, so calling it
+ * something is part of making it rather than a second thing to remember.
  */
 export function FlowList({ editor }: { editor: ProjectEditor }) {
+  /**
+   * The Flow that was just created, so its row opens on its name. Which Flow it
+   * was is remembered rather than a plain flag, because the list is redrawn for
+   * every edit and only that one row starts as a field.
+   */
+  const [created, setCreated] = useState<string | undefined>(undefined)
+
   return (
     <nav aria-label={translate("flows.title")} className="grid gap-1 p-2">
-      <p className="px-2 py-1 font-medium text-muted-foreground text-xs uppercase">
-        {translate("flows.title")}
-      </p>
+      <div className="flex items-center justify-between gap-1 px-2 py-1">
+        <p className="font-medium text-muted-foreground text-xs uppercase">
+          {translate("flows.title")}
+        </p>
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          aria-label={translate("flows.create")}
+          data-testid="flow-create"
+          onClick={() => setCreated(editor.createFlow())}
+        >
+          <PlusIcon />
+        </Button>
+      </div>
       <ul className="grid gap-1">
         {editor.project.flows.map(flow => {
           const open = flow.id === editor.flow.id
@@ -45,6 +69,7 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
                   // is what reveals it.
                   open ? undefined : "invisible group-focus-within:visible group-hover:visible"
                 }
+                startEditing={flow.id === created}
                 testId={`flow-${flow.id}`}
                 onSelect={() => editor.openFlow(flow.id)}
                 onRename={name => renameOrExplain(editor, flow.id, name)}

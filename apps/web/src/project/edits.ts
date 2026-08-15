@@ -69,6 +69,37 @@ export function renameFlow(project: Project, flowId: string, name: string): Flow
   }
 }
 
+/**
+ * Adds an empty Flow to a Project.
+ *
+ * `defaultName` is the same translated word the first Flow of a new Project is
+ * given. It is numbered when the Project already has it, so creating a Flow
+ * never lands on a name the user cannot keep — the rename this drops them into
+ * would refuse it as a duplicate before they had typed anything. Which number
+ * is free is read off the Project it is being added to, so two Flows made one
+ * after the other are not both called the same thing.
+ *
+ * The id is the caller's, and the caller makes it a fresh UUID rather than a
+ * count: Flows outlive the session that made them, and a Project opened beside
+ * another must not hold a Flow answering to the same id as one of theirs. It is
+ * passed in because the editor has to open the Flow it just made, and because
+ * a function that invents its own id is one no test can pin down.
+ */
+export function createFlow(project: Project, id: string, defaultName: string): Project {
+  const flow: Flow = { id, name: freeFlowName(project, defaultName), nodes: [], wires: [] }
+  return { ...project, flows: [...project.flows, flow] }
+}
+
+/** `base`, or `base 2`, `base 3`… — the first of those no Flow is called. */
+function freeFlowName(project: Project, base: string): string {
+  const taken = new Set(project.flows.map(flow => flow.name))
+  if (!taken.has(base)) return base
+
+  let number = 2
+  while (taken.has(`${base} ${number}`)) number += 1
+  return `${base} ${number}`
+}
+
 /** Replaces one Flow of a Project, leaving the others as they were. */
 export function updateFlow(
   project: Project,

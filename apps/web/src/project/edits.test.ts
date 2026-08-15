@@ -3,6 +3,7 @@ import { echoParameterProject, helloProject } from "@bot-inventor/schema/fixture
 import { describe, expect, it } from "vitest"
 import {
   connectWire,
+  createFlow,
   disconnectWire,
   moveNode,
   renameFlow,
@@ -90,6 +91,44 @@ describe("naming a Flow", () => {
 
     expect(renameFlow(project, "flow-hello", "")).toEqual({ renamed: false, refusal: "empty" })
     expect(renameFlow(project, "flow-hello", "   ")).toEqual({ renamed: false, refusal: "empty" })
+  })
+})
+
+describe("creating a Flow", () => {
+  it("adds an empty Flow at the end, leaving the ones the Project had", () => {
+    const project = twoFlowProject()
+    const created = createFlow(project, "flow-new", "Main")
+
+    expect(created.flows).toHaveLength(3)
+    expect(created.flows.slice(0, 2)).toEqual(project.flows)
+    expect(created.flows.at(-1)).toEqual({ id: "flow-new", name: "Main", nodes: [], wires: [] })
+    expect(project.flows).toHaveLength(2)
+  })
+
+  it("numbers the default name to the first value no Flow is called", () => {
+    const first = createFlow(twoFlowProject(), "flow-1", "Main")
+    const second = createFlow(first, "flow-2", "Main")
+    const third = createFlow(second, "flow-3", "Main")
+
+    expect(third.flows.map(flow => flow.name)).toEqual([
+      "Hello",
+      "Goodbye",
+      "Main",
+      "Main 2",
+      "Main 3"
+    ])
+  })
+
+  it("steps over a numbered name the user has taken for themselves", () => {
+    const project = {
+      ...twoFlowProject(),
+      flows: [
+        { id: "flow-main", name: "Main", nodes: [], wires: [] },
+        { id: "flow-second", name: "Main 2", nodes: [], wires: [] }
+      ]
+    }
+
+    expect(createFlow(project, "flow-new", "Main").flows.at(-1)?.name).toBe("Main 3")
   })
 })
 

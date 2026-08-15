@@ -102,6 +102,28 @@ describe("saving a Project", () => {
     expect(result.current.file.saved).toBe(true)
   })
 
+  it("carries a Flow the user created through a save and back", async () => {
+    const { gateway, files } = fakeGateway(
+      {},
+      { savePath: "C:/bots/hello.botinv", openPath: "C:/bots/hello.botinv", discard: true }
+    )
+    const { result } = editorWith(gateway)
+
+    let created = ""
+    act(() => {
+      created = result.current.editor.createFlow()
+    })
+    expect(result.current.file.saved).toBe(false)
+
+    await act(() => result.current.file.save())
+    expect(files["C:/bots/hello.botinv"]).toContain(created)
+
+    // Reopened from the file, the Flow is one of the Project's own: nothing
+    // about it was only ever in the editor's memory.
+    await act(() => result.current.file.open())
+    expect(result.current.editor.project.flows.map(flow => flow.id)).toContain(created)
+  })
+
   it("says so when the file could not be written", async () => {
     const { gateway } = fakeGateway({}, { savePath: "C:/bots/hello.botinv" })
     gateway.write = async () => {
