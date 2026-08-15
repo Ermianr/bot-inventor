@@ -13,6 +13,23 @@ test.describe("a Flow name", () => {
     await flows.open()
   })
 
+  test("shows the pencil on the open Flow, and on any other only once it is reached", async () => {
+    await expect(flows.editName("flow-hello")).toBeVisible()
+    await expect(flows.editName("flow-goodbye")).toBeHidden()
+
+    await flows.name("flow-goodbye").hover()
+    await expect(flows.editName("flow-goodbye")).toBeVisible()
+  })
+
+  test("shows the pencil of a Flow the keyboard has reached", async ({ page }) => {
+    await flows.name("flow-goodbye").focus()
+
+    await expect(flows.editName("flow-goodbye")).toBeVisible()
+    // Tab carries on from the name into the pencil that has just appeared.
+    await page.keyboard.press("Tab")
+    await expect(flows.editName("flow-goodbye")).toBeFocused()
+  })
+
   test("takes the name the user types and shows it in the list", async () => {
     await flows.editName("flow-hello").click()
     await flows.nameField("flow-hello").fill("Welcome")

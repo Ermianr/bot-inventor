@@ -39,13 +39,15 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
                 editLabel={translate("flows.name.edit")}
                 fieldLabel={translate("flows.name.field")}
                 editClassName={
-                  open
-                    ? undefined
-                    : "opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+                  // Hidden rather than merely transparent: a pencil nobody can
+                  // see is not one they should be able to click by accident.
+                  // The keyboard still reaches it — tabbing to the row's name
+                  // is what reveals it.
+                  open ? undefined : "invisible group-focus-within:visible group-hover:visible"
                 }
                 testId={`flow-${flow.id}`}
                 onSelect={() => editor.openFlow(flow.id)}
-                onRename={name => rename(editor, flow.id, name)}
+                onRename={name => renameOrExplain(editor, flow.id, name)}
               />
             </li>
           )
@@ -62,7 +64,7 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
  * the only refusal with something to say is the duplicate, and it is said in a
  * toast because the row has no room to hold a sentence.
  */
-function rename(editor: ProjectEditor, flowId: string, name: string): boolean {
+function renameOrExplain(editor: ProjectEditor, flowId: string, name: string): boolean {
   const result = editor.renameFlow(flowId, name)
   if (result.renamed) return true
 

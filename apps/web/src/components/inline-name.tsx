@@ -147,6 +147,11 @@ export function InlineName({
       // Clicking away confirms. The value is read off the field rather than
       // from state because a blur can arrive after the field is already gone,
       // and `settled` is what stops that one from renaming a second time.
+      //
+      // A name refused here closes the field all the same: the user is already
+      // somewhere else on the screen, and a field that follows them around is
+      // worse than a rename they can start again. The name they had is what
+      // stays, and whoever refused it has said why.
       onBlur={event => {
         if (settled.current) return
         confirm(event.target.value)

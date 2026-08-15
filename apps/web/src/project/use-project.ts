@@ -99,7 +99,16 @@ export function useProject(createInitial: () => Project): ProjectEditor {
     renameFlow: useCallback(
       (flowId: string, name: string) => {
         const rename = renameFlow(project, flowId, name)
-        if (rename.renamed) setProject(rename.project)
+        // Decided on the Project this render is showing, since the caller is
+        // told there and then whether the name was taken; applied to whatever
+        // Project the state is holding by the time React gets here, so a rename
+        // batched behind another edit does not put that edit back.
+        if (rename.renamed) {
+          setProject(previous => {
+            const applied = renameFlow(previous, flowId, name)
+            return applied.renamed ? applied.project : previous
+          })
+        }
         return rename
       },
       [project]

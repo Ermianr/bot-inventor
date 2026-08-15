@@ -140,6 +140,24 @@ describe("renaming in place", () => {
     expect((field as HTMLInputElement).value).toBe("Goodbye")
   })
 
+  it("closes on a refused name clicked away, rather than following the user", () => {
+    render(
+      <InlineName
+        name="Hello bot"
+        editLabel="Rename this bot"
+        fieldLabel="The name of this bot"
+        testId="project-name"
+        onRename={() => false}
+      />
+    )
+    const field = startEditing()
+
+    fireEvent.change(field, { target: { value: "Goodbye" } })
+    fireEvent.blur(field)
+
+    expect(screen.getByTestId("project-name").textContent).toBe("Hello bot")
+  })
+
   it("makes the name a button of its own when the caller can be chosen", () => {
     const chosen: string[] = []
     render(
