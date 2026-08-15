@@ -1,15 +1,10 @@
-import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises"
-import { createRequire } from "node:module"
+import { mkdir, rm, stat, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import type { NodeCatalogue } from "@bot-inventor/nodes"
 import type { Project } from "@bot-inventor/schema"
 import { ExportError } from "./export-error.js"
-import {
-  FLOWS_DIRECTORY,
-  type GeneratedFile,
-  RUNTIME_DIRECTORY,
-  renderNodeProject
-} from "./node-project.js"
+import { FLOWS_DIRECTORY, RUNTIME_DIRECTORY, renderNodeProject } from "./node-project.js"
+import { readVendoredRuntime, type VendoredRuntime } from "./vendored-runtime.js"
 
 /**
  * The Node Project Export: a folder of readable source with a `package.json`,
@@ -24,25 +19,6 @@ import {
  * It is reached through `@bot-inventor/compiler/export`, which is where both
  * formats live.
  */
-
-/**
- * The Runtime is copied into the Export rather than installed from npm, because
- * it is not published: the Export must keep running long after the Bot Inventor
- * that wrote it is gone. See ADR 0005.
- *
- * `testing.js` is left out — it is the fake Runtime our own tests run against,
- * and it has no business in a bot someone hosts.
- */
-const RUNTIME_FILES_TO_SKIP = new Set(["testing.js"])
-
-/** TypeScript's own by-products: they are for this repository, not for the Export. */
-const RUNTIME_FILES_LEFT_BEHIND = /\.(d\.ts|map)$/
-
-/**
- * The one package the Export needs that the Runtime does not: the generated
- * entry point reads `.env`, which is what makes `.env.example` worth documenting.
- */
-const ENTRY_POINT_DEPENDENCY = "dotenv"
 
 /**
  * The file whose presence says a folder already holds an Export. It is written
@@ -68,6 +44,13 @@ export type ExportNodeProjectOptions = {
    * destroy hand-edits to the first one without them hearing about it.
    */
   overwrite?: boolean
+  /**
+   * The Runtime this Export vendors. It defaults to the one built in this
+   * repository, which is what the tests and the packaging scripts want; the
+   * installed application has no build to read and hands in the one baked into
+   * it instead.
+   */
+  runtime?: VendoredRuntime
 }
 
 export type NodeProjectExport = {
@@ -91,18 +74,19 @@ export async function exportNodeProject(
   const marker = join(options.outputDirectory, MARKER_FILE)
   if (options.overwrite !== true && (await exists(marker))) {
     throw new ExportError(
-      `An Export already exists at ${options.outputDirectory}. Exporting again would replace it.`
+      `An Export already exists at ${options.outputDirectory}. Exporting again would replace it.`,
+      { alreadyExists: true }
     )
   }
 
-  const runtimeEntry = resolveRuntime()
+  const runtime = options.runtime ?? (await readVendoredRuntime())
   // The Flows are rendered in Build mode, which is the whole point of the
   // format: no Tracing reaches the folder the user hosts.
   const generated = renderNodeProject(project, {
     catalogue: options.catalogue,
-    dependencies: await resolveDependencies(runtimeEntry)
+    dependencies: runtime.dependencies
   })
-  const files = [...generated, ...(await readRuntime(runtimeEntry))]
+  const files = [...generated, ...runtime.files]
 
   // Both directories are ours entirely, so emptying them is what makes the
   // README's promise true: a Flow the user renamed leaves no file behind
@@ -124,129 +108,6 @@ export async function exportNodeProject(
   }
 
   return { path: options.outputDirectory, files: files.map(file => file.path) }
-}
-
-/**
- * The Runtime's compiled JavaScript, read from the build this Bot Inventor
- * ships. It is already plain ESM with its comments intact, so it goes into the
- * Export as it is rather than being bundled or minified.
- */
-async function readRuntime(runtimeEntry: string): Promise<readonly GeneratedFile[]> {
-  const directory = dirname(runtimeEntry)
-  const entries = await readdir(directory, { withFileTypes: true })
-  const names: string[] = []
-
-  for (const entry of entries) {
-    if (RUNTIME_FILES_TO_SKIP.has(entry.name)) continue
-    if (entry.isFile() && entry.name.endsWith(".js")) {
-      names.push(entry.name)
-      continue
-    }
-    // The declarations and the source maps belong to this repository and stay
-    // behind. Anything else is a Runtime build we do not know how to copy, and
-    // guessing would ship a folder that fails on `npm start` in the user's
-    // hands rather than here.
-    if (entry.isFile() && RUNTIME_FILES_LEFT_BEHIND.test(entry.name)) continue
-    throw new ExportError(
-      `The Runtime's build contains ${entry.name}, which this Export does not know how to copy. Teach exportNodeProject about it before Exporting.`
-    )
-  }
-
-  return Promise.all(
-    names.map(async name => ({
-      path: `${RUNTIME_DIRECTORY}/${name}`,
-      // The source maps stay behind, so the reference to them would dangle.
-      contents: stripSourceMapComment(await readFile(join(directory, name), "utf8"))
-    }))
-  )
-}
-
-function stripSourceMapComment(source: string): string {
-  return source.replace(/^\/\/# sourceMappingURL=.*$\n?/gm, "")
-}
-
-/**
- * What the exported `package.json` asks npm for: whatever the vendored Runtime
- * itself depends on, plus the entry point's own. Copying the Runtime's ranges
- * rather than writing our own down here is what stops an Export from asking for
- * a discord.js the code beside it has never run on.
- */
-async function resolveDependencies(runtimeEntry: string): Promise<Record<string, string>> {
-  // The Runtime's manifest sits above its build output, and its `exports` does
-  // not offer it, so it is reached by path rather than by resolution.
-  const runtime = await readManifest(join(dirname(runtimeEntry), "..", "package.json"))
-  const dependencies: Record<string, string> = { ...runtime.dependencies }
-
-  if (Object.keys(dependencies).length === 0) {
-    // The Runtime is a layer over discord.js, so a Runtime that depends on
-    // nothing is a manifest that was not read, not a leaner bot. Shipped, it
-    // installs cleanly and then dies on its first import.
-    throw new ExportError(
-      "The Runtime declares no dependencies, so an Export would install nothing for it to run on."
-    )
-  }
-
-  for (const [name, range] of Object.entries(dependencies)) {
-    // `workspace:`, `catalog:` and friends mean something only inside this
-    // repository. Left in, npm install would fail in the user's folder rather
-    // than here, where the mistake actually is.
-    if (range.includes(":")) {
-      throw new ExportError(
-        `The Runtime depends on ${name} at "${range}", which no exported bot can install.`
-      )
-    }
-  }
-
-  // dotenv is the Compiler's contribution rather than the Runtime's, and the
-  // version installed beside us is the one the entry point has been run against.
-  const dotenv = await readManifest(resolvePackage(`${ENTRY_POINT_DEPENDENCY}/package.json`))
-  if (dotenv.version === undefined) {
-    throw new ExportError(
-      `${ENTRY_POINT_DEPENDENCY} is installed without a version, so no Export can ask for it.`
-    )
-  }
-  dependencies[ENTRY_POINT_DEPENDENCY] = `^${dotenv.version}`
-
-  return dependencies
-}
-
-type Manifest = { version?: string; dependencies?: Record<string, string> }
-
-async function readManifest(path: string): Promise<Manifest> {
-  try {
-    return JSON.parse(await readFile(path, "utf8")) as Manifest
-  } catch {
-    throw new ExportError(
-      `The manifest at ${path} could not be read, so there is nothing to Export.`
-    )
-  }
-}
-
-const resolveFrom = createRequire(import.meta.url)
-
-function resolvePackage(specifier: string): string {
-  try {
-    return resolveFrom.resolve(specifier)
-  } catch {
-    throw new ExportError(
-      `${specifier} cannot be found next to the Compiler, so there is nothing to Export.`
-    )
-  }
-}
-
-/**
- * The Runtime's build output, which is what an Export copies. Resolution is
- * what fails when it has not been built — its `exports` points into `dist` —
- * so that is the failure worth naming, rather than a missing dependency.
- */
-function resolveRuntime(): string {
-  try {
-    return resolveFrom.resolve("@bot-inventor/runtime")
-  } catch {
-    throw new ExportError(
-      "The Runtime has not been built, so there is nothing to copy into an Export. Build @bot-inventor/runtime and Export again."
-    )
-  }
 }
 
 async function exists(path: string): Promise<boolean> {

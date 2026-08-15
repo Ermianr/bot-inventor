@@ -1,25 +1,22 @@
 import { readSessionLine, redactSecret, renderDevelopmentSession } from "@bot-inventor/compiler"
 import type { Project } from "@bot-inventor/schema"
-import { invoke } from "@tauri-apps/api/core"
-import { listen } from "@tauri-apps/api/event"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { type MessageKey, translate } from "@/i18n/messages"
-import { inDesktopShell } from "@/session/desktop"
-import {
-  EXIT_EVENT,
-  OUTPUT_EVENT,
-  type SessionExitEvent,
-  type SessionOutputEvent
-} from "@/session/events"
+import type { SessionId } from "@/session/events"
 import { describeRefusal } from "@/session/refusal"
+import type { SessionGateway } from "@/session/session-gateway"
 import { type RunTrace, watchFailure, watchTrace } from "@/session/trace"
 
 /**
  * A Session, as the editor sees it: a status, and everything the bot has said.
  *
  * The Compiler renders the entry point here, in the webview, because compiling
- * is a pure function of the Project; the Tauri side is handed the result and
- * owns everything after that — the process, its lifetime and its output.
+ * is a pure function of the Project; the gateway is handed the result and owns
+ * everything after that — the process, its lifetime and its output.
+ *
+ * The Project is watched while the bot runs, and an edit that changes the bot
+ * puts a new one in its place. That is the whole of hot reload, and it is here
+ * rather than on a button because the user is meant to never think about it.
  */
 
 /**
@@ -46,18 +43,40 @@ export type SessionEntry = {
  */
 const CONNECTING_LIMIT = 30_000
 
+/**
+ * How long an edit waits before the bot is rebuilt around it.
+ *
+ * It is a pause, not a throttle: every edit pushes it back, so typing a command
+ * name restarts the bot once, when the typing stops, rather than once per
+ * letter. Short enough that the user is still looking at the screen when the
+ * bot comes back, long enough that a normal burst of typing is one restart.
+ */
+export const RELOAD_DELAY = 400
+
+/** What a bot needs to be started, kept so the next one can be started the same. */
+type Running = {
+  testServerId: string
+  secret: string
+  /** The entry point the running bot was started on: what an edit is compared to. */
+  entry: string
+}
+
 export type Session = {
   status: SessionStatus
   entries: readonly SessionEntry[]
   /** The run the Canvas is showing, or nothing when the bot has not run yet. */
   trace: RunTrace | undefined
-  /** Set whenever the status is `failed`, already translated for the user. */
+  /**
+   * What went wrong, already translated for the user. It is usually a bot that
+   * would not start, but an edit that does not compile also lands here while
+   * the previous bot keeps running.
+   */
   problem: string | undefined
   start(options: { testServerId: string; secret: string }): Promise<void>
   stop(): Promise<void>
 }
 
-export function useSession(project: Project): Session {
+export function useSession(project: Project, shell: SessionGateway): Session {
   const [status, setStatus] = useState<SessionStatus>("stopped")
   const [entries, setEntries] = useState<readonly SessionEntry[]>([])
   const [problem, setProblem] = useState<string | undefined>(undefined)
@@ -71,6 +90,17 @@ export function useSession(project: Project): Session {
   const typed = useRef("")
   const nextId = useRef(0)
   const givingUp = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  /**
+   * The bot the editor is listening to. A reload starts another one while this
+   * one is still dying, and everything the dead one says afterwards carries its
+   * own number and is dropped here.
+   */
+  const current = useRef<SessionId>(0)
+  const nextSession = useRef(1)
+
+  /** What is on the sidecar, or nothing when no bot is meant to be running. */
+  const running = useRef<Running | undefined>(undefined)
 
   /** Nothing is waiting on the bot to connect any more, either way. */
   const settled = useCallback(() => {
@@ -90,17 +120,17 @@ export function useSession(project: Project): Session {
   )
 
   useEffect(() => {
-    if (!inDesktopShell()) return
+    const stopListening = [
+      shell.onOutput(event => {
+        if (event.session !== current.current) return
 
-    const listeners = [
-      listen<SessionOutputEvent>(OUTPUT_EVENT, event => {
-        const line = redactSecret(event.payload.line, typed.current)
+        const line = redactSecret(event.line, typed.current)
         const message = readSessionLine(line)
         if (message === undefined) return
 
         switch (message.kind) {
           case "output":
-            say(message.text, event.payload.stream === "stderr" ? "problem" : "output")
+            say(message.text, event.stream === "stderr" ? "problem" : "output")
             return
           case "status":
             settled()
@@ -110,6 +140,7 @@ export function useSession(project: Project): Session {
               return
             }
             setStatus("failed")
+            running.current = undefined
             setProblem(
               message.reason === "token"
                 ? translate("run.failure.token")
@@ -123,19 +154,25 @@ export function useSession(project: Project): Session {
             }
             return
           case "flow-failed":
-            setTrace(current => watchFailure(current, message))
+            setTrace(watching => watchFailure(watching, message))
             say(
               translate("run.failure.flow", { flow: message.flow, message: message.message }),
               "problem"
             )
             return
           case "trace":
-            setTrace(current => watchTrace(current, message.event))
+            setTrace(watching => watchTrace(watching, message.event))
             return
         }
       }),
-      listen<SessionExitEvent>(EXIT_EVENT, () => {
+
+      shell.onExit(event => {
+        // The bot a reload replaced dies after its replacement is up. Only the
+        // one being listened to going means the bot stopped.
+        if (event.session !== current.current) return
+
         settled()
+        running.current = undefined
         // A start that failed has already said why, and that is more useful
         // than reporting that the process it left behind is gone.
         setStatus(previous => (previous === "failed" ? previous : "stopped"))
@@ -144,26 +181,24 @@ export function useSession(project: Project): Session {
 
     return () => {
       settled()
-      for (const listener of listeners) listener.then(remove => remove()).catch(() => {})
+      for (const stop of stopListening) stop()
     }
-  }, [say, note, settled])
+  }, [shell, say, note, settled])
 
-  const stop = useCallback(async () => {
-    settled()
-    try {
-      await invoke("stop_session")
-    } finally {
-      // The button says Stop, so the panel says stopped. Leaving the status on
-      // `ready` because the call itself failed would leave the user looking at
-      // a bot they cannot stop and cannot restart.
-      setStatus("stopped")
-    }
-  }, [settled])
+  /**
+   * Puts a bot on the sidecar, whether it is the first one or the one an edit
+   * asked for. The panel is only emptied for a first Run: a reload is meant to
+   * be something the user reads straight through.
+   */
+  const launch = useCallback(
+    async (entry: string, options: { testServerId: string; secret: string }) => {
+      // Taking the number first is what closes the gap: from here on the bot
+      // being replaced is already somebody the editor does not listen to.
+      const session = nextSession.current++
+      current.current = session
+      running.current = { ...options, entry }
 
-  const start = useCallback(
-    async ({ testServerId, secret }: { testServerId: string; secret: string }) => {
-      typed.current = secret
-      setEntries([])
+      typed.current = options.secret
       setProblem(undefined)
       // The Canvas belongs to the bot that is running: runs are numbered from
       // one again, and what the last bot did is not this one's doing.
@@ -175,24 +210,111 @@ export function useSession(project: Project): Session {
       // look at it. Stopping is what makes Run pressable again.
       settled()
       givingUp.current = setTimeout(() => {
-        void stop()
+        if (current.current !== session) return
+        void shell.stop().catch(() => {})
+        running.current = undefined
         setStatus("failed")
         setProblem(translate("run.failure.timeout"))
       }, CONNECTING_LIMIT)
 
       try {
-        await invoke("start_session", {
-          projectId: project.id,
-          entry: renderDevelopmentSession(project, { testServerId })
-        })
+        await shell.start({ projectId: project.id, entry, session })
       } catch (error) {
+        if (current.current !== session) return
         settled()
+        running.current = undefined
         setStatus("failed")
         setProblem(describeRefusal(error))
       }
     },
-    [project, settled, stop]
+    [project.id, settled, shell]
   )
 
+  const stop = useCallback(async () => {
+    settled()
+    // Nothing is meant to be running, so nothing is listened to and no edit
+    // brings the bot back on its own.
+    running.current = undefined
+    current.current = 0
+    try {
+      await shell.stop()
+    } finally {
+      // The button says Stop, so the panel says stopped. Leaving the status on
+      // `ready` because the call itself failed would leave the user looking at
+      // a bot they cannot stop and cannot restart.
+      setStatus("stopped")
+    }
+  }, [settled, shell])
+
+  const start = useCallback(
+    async (options: { testServerId: string; secret: string }) => {
+      setEntries([])
+
+      let entry: string
+      try {
+        entry = renderDevelopmentSession(project, { testServerId: options.testServerId })
+      } catch (error) {
+        setStatus("failed")
+        setProblem(translate("run.failure.build", { message: describeCompilerError(error) }))
+        return
+      }
+
+      await launch(entry, options)
+    },
+    [launch, project]
+  )
+
+  /**
+   * Hot reload: an edit made while the bot runs puts a new bot in its place.
+   *
+   * The restart is a whole process, deliberately — no code is swapped under a
+   * bot that is mid-run, because half-replaced code with live state produces
+   * bugs nobody can explain, and a Discord bot reconnects on its own in about a
+   * second. What is compared is the generated entry point rather than the
+   * Project, so moving a Node on the Canvas costs nothing and changing a field
+   * or a Wire costs exactly one restart.
+   */
+  useEffect(() => {
+    const bot = running.current
+    if (bot === undefined) return
+
+    const reload = setTimeout(() => {
+      // It can have been stopped in the meantime, and a bot nobody asked for is
+      // worse than an edit that did not take.
+      if (running.current === undefined) return
+
+      let entry: string
+      try {
+        entry = renderDevelopmentSession(project, { testServerId: bot.testServerId })
+      } catch (error) {
+        // The bot on the sidecar is the last version that compiled, and it is
+        // left running: taking away a working bot because of a half-finished
+        // edit is the opposite of keeping the user's train of thought.
+        setProblem(translate("run.failure.build", { message: describeCompilerError(error) }))
+        return
+      }
+
+      if (entry === bot.entry) {
+        // The edit changed the Canvas but not the bot. Restarting for it would
+        // drop the user's connection for nothing.
+        return
+      }
+
+      note("run.reloading")
+      void launch(entry, { testServerId: bot.testServerId, secret: bot.secret })
+    }, RELOAD_DELAY)
+
+    return () => clearTimeout(reload)
+  }, [project, launch, note])
+
   return { status, entries, problem, trace, start, stop }
+}
+
+/**
+ * What the user is told about a Project that will not compile. The Compiler's
+ * message names the Flow and the Node at fault, which is as close to actionable
+ * as this gets without the Canvas pointing at it.
+ */
+function describeCompilerError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }

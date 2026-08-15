@@ -2,10 +2,12 @@ import { mkdir, stat, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import type { NodeCatalogue } from "@bot-inventor/nodes"
 import type { Project } from "@bot-inventor/schema"
-import { build } from "esbuild"
+import { build, type Plugin } from "esbuild"
 import { NATIVE_ADDON_EXTERNALS, NODE_BUNDLE_BANNER } from "./bundle.js"
 import { compile } from "./compile.js"
 import { ExportError } from "./export-error.js"
+import { SINGLE_FILE_TARGET } from "./export-target.js"
+import { RUNTIME_PACKAGE, readVendoredRuntime, type VendoredRuntime } from "./vendored-runtime.js"
 
 /**
  * The Single File Export: a Build bundled with esbuild into one `.mjs` that
@@ -23,13 +25,6 @@ import { ExportError } from "./export-error.js"
 /** The name of the file an Export writes. The extension is part of ADR 0004. */
 export const SINGLE_FILE_NAME = "bot.mjs"
 
-/**
- * The Node.js the Export is compiled down to. It is the floor we support rather
- * than the version the sidecar pins, because an Export runs on the user's host,
- * which we do not control.
- */
-export const SINGLE_FILE_TARGET = "node20"
-
 export type ExportSingleFileOptions = {
   /** The directory the file is written into. It is created when it does not exist. */
   outputDirectory: string
@@ -41,6 +36,13 @@ export type ExportSingleFileOptions = {
    * first one without them hearing about it.
    */
   overwrite?: boolean
+  /**
+   * The Runtime this Export is built around. It defaults to the one built in
+   * this repository, which is what the tests and the packaging scripts want;
+   * the installed application has no build to read and hands in the one baked
+   * into it instead.
+   */
+  runtime?: VendoredRuntime
 }
 
 export type SingleFileExport = {
@@ -63,8 +65,15 @@ export async function exportSingleFile(
   const path = join(options.outputDirectory, SINGLE_FILE_NAME)
 
   if (options.overwrite !== true && (await exists(path))) {
-    throw new ExportError(`An Export already exists at ${path}. Exporting again would replace it.`)
+    throw new ExportError(
+      `An Export already exists at ${path}. Exporting again would replace it.`,
+      {
+        alreadyExists: true
+      }
+    )
   }
+
+  const runtime = options.runtime ?? (await readVendoredRuntime())
 
   // Build mode is the whole point of the format: no Tracing reaches the file
   // the user hosts.
@@ -75,8 +84,6 @@ export async function exportSingleFile(
       contents: built.source,
       sourcefile: SINGLE_FILE_NAME,
       loader: "js",
-      // The Build imports `@bot-inventor/runtime`, which is resolved from this
-      // package rather than from wherever the Export is being written.
       resolveDir: import.meta.dirname
     },
     bundle: true,
@@ -87,6 +94,12 @@ export async function exportSingleFile(
     target: SINGLE_FILE_TARGET,
     external: [...NATIVE_ADDON_EXTERNALS],
     banner: { js: NODE_BUNDLE_BANNER },
+    plugins: [vendoredRuntime(runtime)],
+    // The vendored Runtime is already-bundled output rather than source, and
+    // re-reading it turns discord.js's own `eval` into a warning on every
+    // Export. It is not the user's code and there is nothing for them to do
+    // about it, so it is not worth a line in the panel.
+    logOverride: { "direct-eval": "silent" },
     write: false
   })
 
@@ -99,6 +112,32 @@ export async function exportSingleFile(
   await writeFile(path, output.contents)
 
   return { path, bytes: output.contents.byteLength }
+}
+
+/**
+ * Answers the Build's one import with the Runtime that was bundled ahead of
+ * time, rather than letting esbuild go looking for a package.
+ *
+ * Nothing is resolved from disk here on purpose: an installed Bot Inventor has
+ * no `node_modules` to resolve against, and a route that only works inside this
+ * repository is a format that quietly stops working once it ships.
+ */
+function vendoredRuntime(runtime: VendoredRuntime): Plugin {
+  const namespace = "bot-inventor-runtime"
+
+  return {
+    name: namespace,
+    setup(bundler) {
+      bundler.onResolve({ filter: new RegExp(`^${RUNTIME_PACKAGE}$`) }, () => ({
+        path: RUNTIME_PACKAGE,
+        namespace
+      }))
+      bundler.onLoad({ filter: /.*/, namespace }, () => ({
+        contents: runtime.bundled,
+        loader: "js"
+      }))
+    }
+  }
 }
 
 async function exists(path: string): Promise<boolean> {

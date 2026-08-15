@@ -1,0 +1,18 @@
+# An Export runs on the sidecar, from a bundle that carries everything
+
+Both Export formats need three things the application does not have: a bundler, a file system, and the Runtime's own source. The webview has none of them, and neither does an installed Bot Inventor — there is no repository under it, no `node_modules` to resolve against, and no esbuild on the machine. Exporting from the interface is therefore not a matter of calling `exportSingleFile` from a button.
+
+**An Export runs on the Node.js sidecar**, the one ADR 0002 pins and ADR 0006 already runs a Session on. The Tauri side writes the request to a file, spawns the sidecar on `exporter.mjs`, and hands back what it wrote; it reads neither the request nor the answer, because both are the Compiler's protocol and a third copy of it in Rust is a third thing to keep in step. The request is a file rather than standard input because a Project is as large as the user made it, and because a file spares both sides the question of who closes the pipe.
+
+**The exporter is bundled when the application is packaged, and carries what it cannot resolve.** `bundleExporter` produces two resources. `exporter.mjs` has esbuild's JavaScript, both Export formats and the vendored Runtime baked into it as data. `esbuild.exe` travels beside it, because a bundler is a program and cannot be bundled into the thing that runs it; `ESBUILD_BINARY_PATH` is how the bundled JavaScript is told where it went.
+
+**The Runtime is bundled once, ahead of time, and both formats are built around that one artifact.** This is the part worth being deliberate about. A Node Project vendors the Runtime's readable source (ADR 0005); a Single File needs the Runtime *and* discord.js flattened into one module, and in a packaged application there is nothing to flatten them from. The temptation is to bundle from source in the repository and from something else once installed — which would mean the route the tests exercise is not the route users get, and that is how a format quietly stops working. So there is one route: `readVendoredRuntime` produces the Runtime as source, as npm ranges, and as one pre-bundled module, and an Export answers the Build's single `@bot-inventor/runtime` import from that module rather than letting esbuild go looking.
+
+## Consequences
+
+- The installer carries the exporter and esbuild's binary as well as the sidecar and the Runtime. `bun run sidecar` builds both, and `desktop:dev` and `desktop:build` run it first.
+- The vendored Runtime bundle carries no banner of its own. It is inlined into an Export that puts one at the top of the whole file, and two copies of that banner in one file is a redeclaration Node.js refuses to load — which is exactly the failure the spawn tests caught.
+- Exporting is one question and one answer, not a stream: the exporter says one thing and stops. There is no prefix to look for, unlike a Session, and anything a bundler prints goes to standard error where it cannot be mistaken for the answer.
+- A refusal is an answer rather than a crash. `already-exists` is kept apart from every other failure because it is the only one the user can act on, and answering it re-sends the same Export with permission to replace.
+- `exporter-bundle.test.ts` runs the bundle as it ships, from a directory with nothing of this repository in it. It is slow and there is little of it, for the same reason ADR 0004's tests are: it is the only seam that can see a bundler that cannot find its binary or a Runtime that was never carried.
+- Only Windows is covered. The esbuild binary is copied from `@esbuild/win32-x64`, which is the one platform v1 ships on and the only one there is a sidecar for.

@@ -13,5 +13,15 @@ export {
   type SessionOutput
 } from "./development-session.js"
 export { CompilerError } from "./errors.js"
+export {
+  EXPORT_FORMATS,
+  type ExportFormat,
+  type ExportRequest,
+  type ExportResult,
+  exportRequestSchema,
+  exportResultSchema,
+  readExportResult,
+  writeExportResult
+} from "./export-protocol.js"
 export { DEFINE_BOT } from "./module.js"
 export { TOKEN_VARIABLE } from "./node-project.js"

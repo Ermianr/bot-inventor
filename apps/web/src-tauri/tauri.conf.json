@@ -37,6 +37,6 @@
       "debugApplicationIdSuffix": ".debug"
     },
     "externalBin": ["binaries/node"],
-    "resources": ["resources/runtime.mjs"]
+    "resources": ["resources/runtime.mjs", "resources/exporter.mjs", "resources/esbuild.exe"]
   }
 }
