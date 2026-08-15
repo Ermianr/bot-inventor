@@ -28,7 +28,7 @@ export function ExportButton({ exporting }: { exporting: Exporting }) {
       <DropdownMenuContent align="start" className="max-w-80">
         <DropdownMenuItem
           className="flex-col items-start gap-0.5"
-          onSelect={() => void exporting.exportAs("single-file")}
+          onClick={() => void exporting.exportAs("single-file")}
         >
           <span className="font-medium">{translate("export.singleFile")}</span>
           <span className="text-muted-foreground text-xs">
@@ -38,7 +38,7 @@ export function ExportButton({ exporting }: { exporting: Exporting }) {
 
         <DropdownMenuItem
           className="flex-col items-start gap-0.5"
-          onSelect={() => void exporting.exportAs("node-project")}
+          onClick={() => void exporting.exportAs("node-project")}
         >
           <span className="font-medium">{translate("export.nodeProject")}</span>
           <span className="text-muted-foreground text-xs">
