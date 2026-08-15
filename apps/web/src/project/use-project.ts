@@ -8,7 +8,14 @@ import type {
   WireKind
 } from "@bot-inventor/schema"
 import { useCallback, useMemo, useState } from "react"
-import { connectWire, disconnectWire, moveNode, setNodeField, updateFlow } from "@/project/edits"
+import {
+  connectWire,
+  disconnectWire,
+  moveNode,
+  renameProject,
+  setNodeField,
+  updateFlow
+} from "@/project/edits"
 
 /**
  * The Project the editor is holding, and every change the Canvas can make to
@@ -25,6 +32,8 @@ export type ProjectEditor = {
   openFlow(flowId: string): void
   /** Puts another Project on the Canvas: opening a file, or starting a new one. */
   replace(project: Project): void
+  /** Names the Project. A blank name is refused and the old one kept. */
+  renameProject(name: string): void
   moveNode(nodeId: string, position: Position): void
   setNodeField(nodeId: string, fieldId: string, value: FieldValue): void
   connectWire(wire: { kind: WireKind; from: PortReference; to: PortReference }): void
@@ -66,6 +75,14 @@ export function useProject(createInitial: () => Project): ProjectEditor {
     replace: useCallback((next: Project) => {
       setProject(pruneProjectWires(next, catalogue))
       setOpenFlowId(next.flows[0]?.id ?? "")
+    }, []),
+    /**
+     * The name is the Project's, not the file's: the `.botinv` on disk keeps
+     * the name it was saved under, and only the next Save As is offered this
+     * one as a suggestion.
+     */
+    renameProject: useCallback((name: string) => {
+      setProject(previous => renameProject(previous, name))
     }, []),
     moveNode: useCallback(
       (nodeId, position) => edit(current => moveNode(current, nodeId, position)),

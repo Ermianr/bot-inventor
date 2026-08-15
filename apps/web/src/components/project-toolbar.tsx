@@ -1,6 +1,7 @@
 import { Button } from "@bot-inventor/ui/components/button"
 
 import { ExportButton } from "@/components/export-button"
+import { InlineName } from "@/components/inline-name"
 import { translate } from "@/i18n/messages"
 import type { Exporting } from "@/project/use-export"
 import type { ProjectFileEditor } from "@/project/use-project-file"
@@ -15,10 +16,12 @@ import type { ProjectFileEditor } from "@/project/use-project-file"
  */
 export function ProjectToolbar({
   name,
+  onRename,
   file,
   exporting
 }: {
   name: string
+  onRename: (name: string) => void
   file: ProjectFileEditor
   exporting: Exporting
 }) {
@@ -39,9 +42,20 @@ export function ProjectToolbar({
         </Button>
         <ExportButton exporting={exporting} />
 
-        <span className="ml-2 font-medium text-sm">{name}</span>
+        <InlineName
+          name={name}
+          className="ml-2 font-medium text-sm"
+          editLabel={translate("project.name.edit")}
+          fieldLabel={translate("project.name.field")}
+          testId="project-name"
+          onRename={onRename}
+        />
         {file.saved ? null : (
-          <span className="text-muted-foreground text-xs" title={translate("project.file.unsaved")}>
+          <span
+            className="text-muted-foreground text-xs"
+            data-testid="project-unsaved"
+            title={translate("project.file.unsaved")}
+          >
             {translate("project.file.unsavedMark")}
           </span>
         )}

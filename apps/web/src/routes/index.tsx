@@ -39,7 +39,12 @@ function HomeComponent() {
 
   return (
     <div className="grid h-full grid-rows-[auto_1fr] overflow-hidden">
-      <ProjectToolbar name={editor.project.name} file={file} exporting={exporting} />
+      <ProjectToolbar
+        name={editor.project.name}
+        onRename={editor.renameProject}
+        file={file}
+        exporting={exporting}
+      />
 
       <div className="grid grid-cols-[14rem_1fr_24rem] overflow-hidden">
         <aside className="overflow-y-auto border-r">
