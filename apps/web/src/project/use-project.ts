@@ -11,7 +11,9 @@ import { useCallback, useMemo, useState } from "react"
 import {
   connectWire,
   disconnectWire,
+  type FlowRename,
   moveNode,
+  renameFlow,
   renameProject,
   setNodeField,
   updateFlow
@@ -34,6 +36,11 @@ export type ProjectEditor = {
   replace(project: Project): void
   /** Names the Project. A blank name is refused and the old one kept. */
   renameProject(name: string): void
+  /**
+   * Names a Flow. Says why a name was refused so the list can explain it, and
+   * leaves the Project untouched when it was.
+   */
+  renameFlow(flowId: string, name: string): FlowRename
   moveNode(nodeId: string, position: Position): void
   setNodeField(nodeId: string, fieldId: string, value: FieldValue): void
   connectWire(wire: { kind: WireKind; from: PortReference; to: PortReference }): void
@@ -84,6 +91,19 @@ export function useProject(createInitial: () => Project): ProjectEditor {
     renameProject: useCallback((name: string) => {
       setProject(previous => renameProject(previous, name))
     }, []),
+    /**
+     * The rule lives in `edits.ts`, so what happens to a refused rename is
+     * decided in one place: nothing. The refusal is handed back rather than
+     * shown here, because the words belong to the list the user is looking at.
+     */
+    renameFlow: useCallback(
+      (flowId: string, name: string) => {
+        const rename = renameFlow(project, flowId, name)
+        if (rename.renamed) setProject(rename.project)
+        return rename
+      },
+      [project]
+    ),
     moveNode: useCallback(
       (nodeId, position) => edit(current => moveNode(current, nodeId, position)),
       [edit]

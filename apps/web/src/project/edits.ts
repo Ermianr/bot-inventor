@@ -31,6 +31,44 @@ export function renameProject(project: Project, name: string): Project {
   return { ...project, name: trimmed }
 }
 
+/**
+ * Why a rename was refused, or the Project it produced.
+ *
+ * A refusal says which rule it broke rather than handing back the Project
+ * unchanged: the editor has to tell the user what to do about it, and "nothing
+ * happened" is not something a screen can explain.
+ */
+export type FlowRename =
+  | { renamed: true; project: Project }
+  | { renamed: false; refusal: "empty" | "duplicate" }
+
+/**
+ * Names a Flow.
+ *
+ * Two Flows of one Project cannot share a name: the Flow list is how the user
+ * tells them apart, and the export writes one file per Flow. A name already
+ * taken is refused rather than quietly given a suffix — the user chose that
+ * name, and a Project that renames things behind their back is one they stop
+ * trusting. A blank name is refused for the same reason it is on a Project, and
+ * because the schema would reject it on save.
+ *
+ * The Flow keeping its own name is not a duplicate: confirming the field
+ * without changing anything is an accepted rename that leaves the Project as it
+ * was apart from the trimming.
+ */
+export function renameFlow(project: Project, flowId: string, name: string): FlowRename {
+  const trimmed = name.trim()
+  if (trimmed.length === 0) return { renamed: false, refusal: "empty" }
+
+  const taken = project.flows.some(flow => flow.id !== flowId && flow.name === trimmed)
+  if (taken) return { renamed: false, refusal: "duplicate" }
+
+  return {
+    renamed: true,
+    project: updateFlow(project, flowId, flow => ({ ...flow, name: trimmed }))
+  }
+}
+
 /** Replaces one Flow of a Project, leaving the others as they were. */
 export function updateFlow(
   project: Project,

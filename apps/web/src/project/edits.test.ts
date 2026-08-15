@@ -5,6 +5,7 @@ import {
   connectWire,
   disconnectWire,
   moveNode,
+  renameFlow,
   renameProject,
   setNodeField,
   updateFlow
@@ -42,6 +43,53 @@ describe("naming a Project", () => {
 
     expect(renameProject(project, "").name).toBe(project.name)
     expect(renameProject(project, "   ").name).toBe(project.name)
+  })
+})
+
+/** `helloProject` with a second, empty Flow, so a name can already be taken. */
+function twoFlowProject() {
+  const project = helloProject()
+  return {
+    ...project,
+    flows: [...project.flows, { id: "flow-goodbye", name: "Goodbye", nodes: [], wires: [] }]
+  }
+}
+
+describe("naming a Flow", () => {
+  it("takes the name the user typed, leaving the other Flows alone", () => {
+    const project = twoFlowProject()
+    const rename = renameFlow(project, "flow-hello", "  Welcome  ")
+
+    if (!rename.renamed) throw new Error("the rename was refused")
+    expect(rename.project.flows.map(flow => flow.name)).toEqual(["Welcome", "Goodbye"])
+    expect(project.flows.map(flow => flow.name)).toEqual(["Hello", "Goodbye"])
+  })
+
+  it("refuses a name another Flow of the same Project already has", () => {
+    const project = twoFlowProject()
+
+    expect(renameFlow(project, "flow-hello", "Goodbye")).toEqual({
+      renamed: false,
+      refusal: "duplicate"
+    })
+    expect(renameFlow(project, "flow-hello", "  Goodbye  ")).toEqual({
+      renamed: false,
+      refusal: "duplicate"
+    })
+  })
+
+  it("lets a Flow keep the name it already has", () => {
+    const rename = renameFlow(twoFlowProject(), "flow-hello", "Hello")
+
+    if (!rename.renamed) throw new Error("the rename was refused")
+    expect(rename.project.flows.map(flow => flow.name)).toEqual(["Hello", "Goodbye"])
+  })
+
+  it("refuses a blank name", () => {
+    const project = twoFlowProject()
+
+    expect(renameFlow(project, "flow-hello", "")).toEqual({ renamed: false, refusal: "empty" })
+    expect(renameFlow(project, "flow-hello", "   ")).toEqual({ renamed: false, refusal: "empty" })
   })
 })
 
