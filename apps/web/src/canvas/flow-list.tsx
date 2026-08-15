@@ -1,12 +1,17 @@
+import { toast } from "sonner"
+
+import { InlineName } from "@/components/inline-name"
 import { translate } from "@/i18n/messages"
 import type { ProjectEditor } from "@/project/use-project"
 
 /**
- * The Flows of the Project, and which one the Canvas is showing.
+ * The Flows of the Project, which one the Canvas is showing, and what each one
+ * is called.
  *
- * There is one Flow so far. The list is here anyway: the place a Flow is chosen
- * from decides the shape of the whole editor, and adding it once there are
- * several means moving everything else.
+ * A row is chosen by its name and renamed by the pencil beside it, the same
+ * gesture the Project name uses. The pencil is out of the way until the row is
+ * hovered or the keyboard reaches it, except on the Flow that is open: that one
+ * is where the user already is.
  */
 export function FlowList({ editor }: { editor: ProjectEditor }) {
   return (
@@ -15,22 +20,54 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
         {translate("flows.title")}
       </p>
       <ul className="grid gap-1">
-        {editor.project.flows.map(flow => (
-          <li key={flow.id}>
-            <button
-              aria-current={flow.id === editor.flow.id}
-              className={`w-full rounded-md px-2 py-1.5 text-left text-sm ${
-                flow.id === editor.flow.id ? "bg-accent text-accent-foreground" : "hover:bg-muted"
+        {editor.project.flows.map(flow => {
+          const open = flow.id === editor.flow.id
+
+          return (
+            <li
+              key={flow.id}
+              aria-current={open}
+              // `group` is what lets the pencil below appear for the whole row
+              // rather than only when the pointer is on the pencil itself.
+              className={`group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm ${
+                open ? "bg-accent text-accent-foreground" : "hover:bg-muted"
               }`}
-              data-testid={`flow-${flow.id}`}
-              onClick={() => editor.openFlow(flow.id)}
-              type="button"
             >
-              {flow.name}
-            </button>
-          </li>
-        ))}
+              <InlineName
+                name={flow.name}
+                className="w-full"
+                editLabel={translate("flows.name.edit")}
+                fieldLabel={translate("flows.name.field")}
+                editClassName={
+                  // Hidden rather than merely transparent: a pencil nobody can
+                  // see is not one they should be able to click by accident.
+                  // The keyboard still reaches it — tabbing to the row's name
+                  // is what reveals it.
+                  open ? undefined : "invisible group-focus-within:visible group-hover:visible"
+                }
+                testId={`flow-${flow.id}`}
+                onSelect={() => editor.openFlow(flow.id)}
+                onRename={name => renameOrExplain(editor, flow.id, name)}
+              />
+            </li>
+          )
+        })}
       </ul>
     </nav>
   )
+}
+
+/**
+ * Renames a Flow, saying so when the name is one of the Project's already.
+ *
+ * A blank name never reaches here — the control refuses that one itself — so
+ * the only refusal with something to say is the duplicate, and it is said in a
+ * toast because the row has no room to hold a sentence.
+ */
+function renameOrExplain(editor: ProjectEditor, flowId: string, name: string): boolean {
+  const result = editor.renameFlow(flowId, name)
+  if (result.renamed) return true
+
+  if (result.refusal === "duplicate") toast.error(translate("flows.name.taken", { name }))
+  return false
 }

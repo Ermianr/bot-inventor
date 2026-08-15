@@ -93,6 +93,9 @@ const en = {
   "export.problem.failed": "Your bot could not be exported: {message}",
 
   "flows.title": "Your flows",
+  "flows.name.edit": "Rename this flow",
+  "flows.name.field": "The name of this flow",
+  "flows.name.taken": "One of your flows is already called {name}. Give this one another name.",
   "canvas.label": "Canvas",
   "canvas.wire.remove": "Remove this wire",
   "canvas.wire.carried": "Last run carried: {value}",
@@ -221,6 +224,9 @@ const es: Record<MessageKey, string> = {
   "export.problem.failed": "Tu bot no se pudo exportar: {message}",
 
   "flows.title": "Tus flujos",
+  "flows.name.edit": "Cambiar el nombre de este flujo",
+  "flows.name.field": "El nombre de este flujo",
+  "flows.name.taken": "Uno de tus flujos ya se llama {name}. Ponle otro nombre a este.",
   "canvas.label": "Lienzo",
   "canvas.wire.remove": "Quitar este cable",
   "canvas.wire.carried": "La última ejecución llevó: {value}",

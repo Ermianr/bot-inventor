@@ -14,6 +14,10 @@ import { useEffect, useRef, useState } from "react"
  * without leaving the field, because the alternative is a row the user cannot
  * tell apart from another one.
  *
+ * Whoever placed the pencil can refuse a name for its own reasons as well — a
+ * Flow name another Flow already has — and say so, which leaves the user in
+ * front of what they typed the same way a blank name does.
+ *
  * The words are props rather than keys resolved in here, since what the pencil
  * is renaming is only known by whoever placed it.
  */
@@ -23,6 +27,8 @@ export function InlineName({
   fieldLabel,
   testId,
   className,
+  editClassName,
+  onSelect,
   onRename
 }: {
   name: string
@@ -33,7 +39,19 @@ export function InlineName({
   /** Names the pencil `{testId}-edit` and the field `{testId}-field`. */
   testId: string
   className?: string
-  onRename(name: string): void
+  /** For a pencil that is not always shown: the Flow list reveals it on hover. */
+  editClassName?: string
+  /**
+   * Makes the name itself a button. The Flow list chooses a Flow by its name,
+   * and a name that is read and a name that is clicked cannot be two controls
+   * showing the same word.
+   */
+  onSelect?: () => void
+  /**
+   * Takes the trimmed name. Returning `false` refuses it: the field stays open
+   * on what the user typed, and saying why is the caller's to do.
+   */
+  onRename(name: string): boolean | void
 }) {
   const [typed, setTyped] = useState<string | undefined>(undefined)
   const pencil = useRef<HTMLButtonElement>(null)
@@ -53,12 +71,24 @@ export function InlineName({
   if (typed === undefined) {
     return (
       <span className={cn("flex items-center gap-1", className)}>
-        <span data-testid={testId}>{name}</span>
+        {onSelect === undefined ? (
+          <span data-testid={testId}>{name}</span>
+        ) : (
+          <button
+            type="button"
+            className="flex-1 truncate text-left"
+            data-testid={testId}
+            onClick={onSelect}
+          >
+            {name}
+          </button>
+        )}
         <Button
           ref={pencil}
           size="icon-xs"
           variant="ghost"
           aria-label={editLabel}
+          className={editClassName}
           data-testid={`${testId}-edit`}
           onClick={() => {
             settled.current = false
@@ -71,14 +101,14 @@ export function InlineName({
     )
   }
 
-  /** Hands the name over, unless it is blank. Says whether it went. */
+  /** Hands the name over, unless it is blank. Says whether it was taken. */
   const confirm = (value: string): boolean => {
     const trimmed = value.trim()
     // Refusing rather than closing: the user is left in front of what they
     // typed, which is the only place they can fix it.
     if (trimmed.length === 0) return false
+    if (onRename(trimmed) === false) return false
     settled.current = true
-    onRename(trimmed)
     return true
   }
 
@@ -117,6 +147,11 @@ export function InlineName({
       // Clicking away confirms. The value is read off the field rather than
       // from state because a blur can arrive after the field is already gone,
       // and `settled` is what stops that one from renaming a second time.
+      //
+      // A name refused here closes the field all the same: the user is already
+      // somewhere else on the screen, and a field that follows them around is
+      // worse than a rename they can start again. The name they had is what
+      // stays, and whoever refused it has said why.
       onBlur={event => {
         if (settled.current) return
         confirm(event.target.value)

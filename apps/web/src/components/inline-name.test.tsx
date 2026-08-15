@@ -20,7 +20,9 @@ function renameControl() {
       editLabel="Rename this bot"
       fieldLabel="The name of this bot"
       testId="project-name"
-      onRename={name => named.push(name)}
+      onRename={name => {
+        named.push(name)
+      }}
     />
   )
 
@@ -112,6 +114,66 @@ describe("renaming in place", () => {
     fireEvent.keyDown(field, { key: "Escape" })
 
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Rename this bot" }))
+  })
+
+  it("stays in the field when the name is refused by whoever placed the pencil", () => {
+    const named: string[] = []
+    render(
+      <InlineName
+        name="Hello bot"
+        editLabel="Rename this bot"
+        fieldLabel="The name of this bot"
+        testId="project-name"
+        onRename={name => {
+          named.push(name)
+          return false
+        }}
+      />
+    )
+    const field = startEditing()
+
+    fireEvent.change(field, { target: { value: "Goodbye" } })
+    fireEvent.keyDown(field, { key: "Enter" })
+
+    expect(named).toEqual(["Goodbye"])
+    expect(screen.getByRole("textbox", { name: "The name of this bot" })).toBe(field)
+    expect((field as HTMLInputElement).value).toBe("Goodbye")
+  })
+
+  it("closes on a refused name clicked away, rather than following the user", () => {
+    render(
+      <InlineName
+        name="Hello bot"
+        editLabel="Rename this bot"
+        fieldLabel="The name of this bot"
+        testId="project-name"
+        onRename={() => false}
+      />
+    )
+    const field = startEditing()
+
+    fireEvent.change(field, { target: { value: "Goodbye" } })
+    fireEvent.blur(field)
+
+    expect(screen.getByTestId("project-name").textContent).toBe("Hello bot")
+  })
+
+  it("makes the name a button of its own when the caller can be chosen", () => {
+    const chosen: string[] = []
+    render(
+      <InlineName
+        name="Hello"
+        editLabel="Rename this flow"
+        fieldLabel="The name of this flow"
+        testId="flow-name"
+        onSelect={() => chosen.push("Hello")}
+        onRename={() => undefined}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Hello" }))
+
+    expect(chosen).toEqual(["Hello"])
   })
 
   it("refuses a blank name and stays in the field", () => {
