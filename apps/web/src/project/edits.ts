@@ -1,3 +1,4 @@
+import { type NodeCatalogue, pruneDanglingWires } from "@bot-inventor/nodes"
 import type {
   FieldValue,
   Flow,
@@ -36,14 +37,29 @@ export function moveNode(flow: Flow, nodeId: string, position: Position): Flow {
   }
 }
 
-/** The value the user typed into one of a Node's inline fields. */
-export function setNodeField(flow: Flow, nodeId: string, fieldId: string, value: FieldValue): Flow {
-  return {
+/**
+ * The value the user typed into one of a Node's inline fields.
+ *
+ * A field can take Ports with it — renaming or removing a slash command
+ * parameter removes the Port it was read from — so the Wires that Port carried
+ * go at the same time. Leaving them would leave the Project holding Wires
+ * pointing at nothing, which the Compiler refuses and the Canvas cannot draw.
+ */
+export function setNodeField(
+  flow: Flow,
+  catalogue: NodeCatalogue,
+  nodeId: string,
+  fieldId: string,
+  value: FieldValue
+): Flow {
+  const edited: Flow = {
     ...flow,
     nodes: flow.nodes.map(node =>
       node.id === nodeId ? { ...node, fields: { ...node.fields, [fieldId]: value } } : node
     )
   }
+
+  return pruneDanglingWires(edited, catalogue)
 }
 
 /**

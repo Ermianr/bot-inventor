@@ -9,6 +9,7 @@ import { registerCommands, type SlashCommandDefinition } from "@bot-inventor/run
 import { createFakeDiscordCommandApi, type RecordedCall } from "@bot-inventor/runtime/testing"
 import type { Project } from "@bot-inventor/schema"
 import {
+  echoParameterProject,
   emptyProject,
   greetingProject,
   helloProject,
@@ -97,6 +98,15 @@ describe("running a compiled Project", () => {
     ])
 
     expect(replies(result)).toEqual(["<@42>"])
+  })
+
+  it("answers with what the caller typed into the command's parameter", async () => {
+    const result = await runProject(echoParameterProject(), [
+      { type: "slashCommand", command: "echo", parameters: { message: "Good morning" } }
+    ])
+
+    expect(replies(result)).toEqual(["Good morning"])
+    expect(result.failures).toEqual([])
   })
 
   it("leaves out Nodes that are not reachable from the Trigger", async () => {
@@ -210,6 +220,123 @@ describe("watching a run in Development Mode", () => {
     expect(build.source).not.toContain("trace")
     expect(build.source).not.toContain("startRun")
     expect(build.source).not.toContain("run:")
+  })
+})
+
+describe("reading a slash command's parameters", () => {
+  /**
+   * `echoParameterProject` asking for one parameter of the given declaration
+   * instead, with the Reply reading whichever Port it produced.
+   */
+  function echoOf(parameter: { name: string; type: string; required: boolean }): Project {
+    const project = echoParameterProject()
+    const flow = requireFirst(project.flows, "Flow")
+    const trigger = requireFirst(flow.nodes, "Node")
+    trigger.fields.parameters = [{ description: "What to say", ...parameter }]
+
+    const wire = flow.wires.find(candidate => candidate.id === "wire-data")
+    if (wire === undefined) throw new Error("the fixture has no Data Wire")
+    wire.from.port = `parameter.${parameter.name}`
+    return project
+  }
+
+  it("declares the parameters the caller is asked for alongside the command", async () => {
+    const result = await runProject(echoParameterProject(), [])
+
+    expect(declarations(result)).toEqual([
+      {
+        name: "echo",
+        description: "Says something back",
+        parameters: [{ name: "message", description: "What to say", type: "text", required: true }]
+      }
+    ])
+  })
+
+  it("coerces a Number the caller supplied into the text of the reply", async () => {
+    const result = await runProject(echoOf({ name: "times", type: "number", required: true }), [
+      { type: "slashCommand", command: "echo", parameters: { times: 1.5 } }
+    ])
+
+    expect(replies(result)).toEqual(["1.5"])
+  })
+
+  it("coerces a Boolean the caller supplied into the text of the reply", async () => {
+    const result = await runProject(echoOf({ name: "loudly", type: "boolean", required: true }), [
+      { type: "slashCommand", command: "echo", parameters: { loudly: false } }
+    ])
+
+    expect(replies(result)).toEqual(["false"])
+  })
+
+  it("mentions the user the caller named, through the same Coercion the caller goes through", async () => {
+    const result = await runProject(echoOf({ name: "who", type: "user", required: true }), [
+      {
+        type: "slashCommand",
+        command: "echo",
+        parameters: { who: { id: "42", username: "ada", displayName: "Ada" } }
+      }
+    ])
+
+    expect(replies(result)).toEqual(["<@42>"])
+  })
+
+  it("says nothing, rather than 'undefined', for an optional parameter nobody answered", async () => {
+    const optional = { name: "message", type: "text", required: false } as const
+    const project = echoOf(optional)
+
+    const answered = await runProject(project, [
+      { type: "slashCommand", command: "echo", parameters: { message: "" } }
+    ])
+    const unanswered = await runProject(project, [{ type: "slashCommand", command: "echo" }])
+
+    expect(replies(answered)).toEqual([""])
+    expect(replies(unanswered)).toEqual([""])
+    expect(unanswered.failures).toEqual([])
+  })
+
+  it("leaves an unanswered optional Number and User empty rather than undefined", async () => {
+    const times = await runProject(echoOf({ name: "times", type: "number", required: false }), [
+      { type: "slashCommand", command: "echo" }
+    ])
+    const who = await runProject(echoOf({ name: "who", type: "user", required: false }), [
+      { type: "slashCommand", command: "echo" }
+    ])
+
+    expect(replies(times)).toEqual(["0"])
+    expect(replies(who)).toEqual([""])
+  })
+
+  it("gives two parameters whose names are not identifiers two values of their own", async () => {
+    const project = echoParameterProject()
+    const flow = requireFirst(project.flows, "Flow")
+    const trigger = requireFirst(flow.nodes, "Node")
+    trigger.fields.parameters = [
+      { name: "say-it", description: "What to say", type: "text", required: true },
+      { name: "say_it", description: "And again", type: "text", required: true }
+    ]
+    const wire = flow.wires.find(candidate => candidate.id === "wire-data")
+    if (wire === undefined) throw new Error("the fixture has no Data Wire")
+    wire.from.port = "parameter.say-it"
+
+    const result = await runProject(project, [
+      {
+        type: "slashCommand",
+        command: "echo",
+        parameters: { "say-it": "first", say_it: "second" }
+      }
+    ])
+
+    expect(replies(result)).toEqual(["first"])
+  })
+
+  it("refuses a Project whose Wire reads a parameter that is no longer declared", () => {
+    const project = echoParameterProject()
+    const trigger = requireFirst(requireFirst(project.flows, "Flow").nodes, "Node")
+    trigger.fields.parameters = []
+
+    // Silently emitting the Reply's own empty field instead would be a bot
+    // answering with nothing and no way for the user to find out why.
+    expect(() => compile(project, { mode: "build" })).toThrowError(/no longer exists/)
   })
 })
 

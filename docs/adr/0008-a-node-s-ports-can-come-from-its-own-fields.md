@@ -1,0 +1,11 @@
+# A Node's Ports can come from its own fields
+
+A slash command asks its caller for values, and a Flow has to be able to read what they answered. The answers could have arrived as one Port carrying a bag of values, which would have kept every Node's Ports fixed and known at catalogue time. We decided instead that **a Node declares Ports as a function of its fields**: the slash command Trigger has one Data output Port per parameter the user declared, typed by what that parameter asks for. The cost is that a Port is no longer a property of a Node's type — nothing may ask a `NodeDefinition` what Ports it has without also handing it the fields of the Node instance it is asking about. The benefit is that the answers are ordinary Data: the Coercion table alone decides what a parameter may be wired into, and the editor draws a parameter exactly like every other value on the Canvas, with no second vocabulary for "things a command asked for".
+
+## Consequences
+
+- `portsOf(definition, fields)` is the only way to enumerate a Node's Ports, and `findPort` takes the fields too. The Compiler passes the Node it is emitting; the editor passes the Node it is drawing; `findFlowPort` reads them off the Flow, so the connection rules need no change to see a parameter's Port.
+- A Port's name is not always translatable. A parameter's Port is labelled with what the user typed, so `PortDefinition` carries an optional literal `label` that wins over its `labelKey`.
+- Editing a field can take a Port away, which leaves the Wires drawn to it pointing at nothing. Those Wires are removed as part of the same edit (`pruneDanglingWires`), and the Compiler refuses a Flow that still holds one rather than quietly falling back to an inline field — a bot answering with the wrong text and nothing saying why is the one outcome that is not allowed.
+- A Data Port's identifier in the generated code is assigned rather than spelled out, because a Port id is now derived from text the user typed and two names that sanitise the same way must still end up in two variables.
+- A parameter's declared type is a Data type, so `number` and `boolean` join `text` and `user`, each with a Coercion into Text.

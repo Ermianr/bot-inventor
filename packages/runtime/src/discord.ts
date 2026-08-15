@@ -34,12 +34,28 @@ export type SlashCommandDefinition = {
   parameters?: readonly SlashCommandParameter[]
 }
 
+/**
+ * What a caller answered for one parameter. There is one of these per parameter
+ * type a command can ask for, because a parameter's type is the Data Port type
+ * the Trigger hands downstream.
+ */
+export type SlashCommandParameterValue = string | number | boolean | DiscordUser
+
+/**
+ * What the caller supplied, keyed by parameter name.
+ *
+ * A parameter the caller left out has no key at all, which is how it is told
+ * apart from one they set to an empty value: `""` was typed, absent was not.
+ */
+export type SlashCommandParameters = Readonly<Record<string, SlashCommandParameterValue>>
+
 /** One invocation of a slash command. */
 export type SlashCommandEvent = {
   commandName: string
   user: DiscordUser
   guildId: string | null
   channelId: string
+  parameters: SlashCommandParameters
   /**
    * The library object this event came from. Generated code never reads it; it
    * is how the Runtime answers a reply on the right interaction.

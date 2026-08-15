@@ -1,3 +1,4 @@
+import { catalogue } from "@bot-inventor/nodes"
 import type {
   FieldValue,
   Flow,
@@ -62,7 +63,8 @@ export function useProject(createInitial: () => Project): ProjectEditor {
       [edit]
     ),
     setNodeField: useCallback(
-      (nodeId, fieldId, value) => edit(current => setNodeField(current, nodeId, fieldId, value)),
+      (nodeId, fieldId, value) =>
+        edit(current => setNodeField(current, catalogue, nodeId, fieldId, value)),
       [edit]
     ),
     connectWire: useCallback(wire => edit(current => connectWire(current, wire)), [edit]),

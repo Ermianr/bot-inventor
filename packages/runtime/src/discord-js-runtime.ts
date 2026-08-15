@@ -9,10 +9,13 @@ import {
 } from "./command-registration.js"
 import type {
   DiscordRuntime,
+  DiscordUser,
   ReplyOptions,
   SlashCommandDefinition,
   SlashCommandEvent,
-  SlashCommandHandler
+  SlashCommandHandler,
+  SlashCommandParameters,
+  SlashCommandParameterValue
 } from "./discord.js"
 import type { FlowFailure, Runtime, TraceEvent } from "./runtime.js"
 import { createTracing } from "./tracing.js"
@@ -190,13 +193,37 @@ function createDiscordJsCommandApi(rest: REST, applicationId: string): DiscordCo
 function toSlashCommandEvent(interaction: ChatInputCommandInteraction): SlashCommandEvent {
   return {
     commandName: interaction.commandName,
-    user: {
-      id: interaction.user.id,
-      username: interaction.user.username,
-      displayName: interaction.user.displayName
-    },
+    user: toDiscordUser(interaction.user),
     guildId: interaction.guildId,
     channelId: interaction.channelId,
+    parameters: toParameters(interaction),
     source: interaction
   }
+}
+
+function toDiscordUser(user: ChatInputCommandInteraction["user"]): DiscordUser {
+  return { id: user.id, username: user.username, displayName: user.displayName }
+}
+
+/**
+ * What the caller answered, in the shape generated code reads.
+ *
+ * Discord sends only the options that were actually supplied, so an optional
+ * parameter left out simply has no entry here — which is exactly how a Flow
+ * tells it apart from one answered with empty text.
+ */
+function toParameters(interaction: ChatInputCommandInteraction): SlashCommandParameters {
+  const parameters: Record<string, SlashCommandParameterValue> = {}
+
+  for (const option of interaction.options.data) {
+    // A user option carries the user alongside its raw id value, and it is the
+    // user a User Port hands downstream.
+    if (option.user !== undefined) {
+      parameters[option.name] = toDiscordUser(option.user)
+      continue
+    }
+    if (option.value !== undefined) parameters[option.name] = option.value
+  }
+
+  return parameters
 }

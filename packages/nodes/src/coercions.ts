@@ -26,6 +26,18 @@ export const coercions: readonly CoercionDefinition[] = [
     to: "text",
     runtimeCall: "userToText",
     labelKey: "coercions.userToText.label"
+  },
+  {
+    from: "number",
+    to: "text",
+    runtimeCall: "numberToText",
+    labelKey: "coercions.numberToText.label"
+  },
+  {
+    from: "boolean",
+    to: "text",
+    runtimeCall: "booleanToText",
+    labelKey: "coercions.booleanToText.label"
   }
 ]
 

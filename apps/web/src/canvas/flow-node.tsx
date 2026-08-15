@@ -1,4 +1,9 @@
-import type { FieldDefinition, NodeDefinition, PortDefinition } from "@bot-inventor/nodes"
+import {
+  type FieldDefinition,
+  type NodeDefinition,
+  type PortDefinition,
+  portsOf
+} from "@bot-inventor/nodes"
 import type { FieldValue, Node } from "@bot-inventor/schema"
 import { Checkbox } from "@bot-inventor/ui/components/checkbox"
 import { Input } from "@bot-inventor/ui/components/input"
@@ -44,16 +49,18 @@ const RUN_STATE_RING: Record<NodeRunState, string> = {
 export type FlowNodeType = ReactFlowNode<FlowNodeData, "flowNode">
 
 /**
- * `commandParameters` is not drawn yet: until a Flow can read what the caller
- * answered, a control for declaring parameters is a field the user can fill in
- * that does nothing.
+ * `commandParameters` is not drawn yet: it is a list of declarations rather
+ * than one value, and it needs a control of its own. A Flow can already read
+ * what the caller answered — the Ports are there as soon as the field holds
+ * parameters — so what is left is the editing surface.
  */
 const DRAWN_CONTROLS = new Set<FieldDefinition["control"]>(["text", "number", "switch"])
 
 export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
   const { node, definition, runState, setField } = data
-  const inputs = definition.ports.filter(port => port.direction === "input")
-  const outputs = definition.ports.filter(port => port.direction === "output")
+  const ports = portsOf(definition, node.fields)
+  const inputs = ports.filter(port => port.direction === "input")
+  const outputs = ports.filter(port => port.direction === "output")
   const highlight = runState === undefined ? "" : ` ${RUN_STATE_RING[runState]}`
 
   return (
@@ -112,7 +119,8 @@ function PortRow({ nodeId, port }: { nodeId: string; port: PortDefinition }) {
         position={isInput ? HandlePosition.Left : HandlePosition.Right}
         type={isInput ? "target" : "source"}
       />
-      <span>{translateDefinitionKey(port.labelKey)}</span>
+      {/* A Port the user named is shown in their own words; the rest are translated. */}
+      <span>{port.label ?? translateDefinitionKey(port.labelKey)}</span>
     </div>
   )
 }

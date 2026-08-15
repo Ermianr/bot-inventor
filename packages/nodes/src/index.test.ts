@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest"
 import { buildCatalogue, catalogue } from "./catalogue.js"
 import { applyCoercion, coercions, findCoercion } from "./coercions.js"
-import { defaultFieldValue, findField, findPort, indent, joinStatements } from "./definition.js"
+import {
+  defaultFieldValue,
+  findField,
+  findPort,
+  indent,
+  joinStatements,
+  portsOf
+} from "./definition.js"
 import { reply } from "./discord/reply.js"
 import { slashCommandTrigger } from "./discord/slash-command-trigger.js"
 
@@ -55,6 +62,72 @@ describe("the slash command Trigger", () => {
   })
 })
 
+describe("the Ports a slash command's parameters declare", () => {
+  const parameters = [
+    { name: "message", description: "What to say", type: "text", required: true },
+    { name: "times", description: "How many times", type: "number", required: false },
+    { name: "loudly", description: "Shout it", type: "boolean", required: false },
+    { name: "who", description: "Who to tell", type: "user", required: false }
+  ]
+
+  it("has one Data output Port per parameter, carrying that parameter's type", () => {
+    const ports = portsOf(slashCommandTrigger, { parameters })
+
+    expect(
+      ports
+        .filter(port => port.kind === "data" && port.id.startsWith("parameter."))
+        .map(port => [port.id, port.kind === "data" ? port.dataType : undefined])
+    ).toEqual([
+      ["parameter.message", "text"],
+      ["parameter.times", "number"],
+      ["parameter.loudly", "boolean"],
+      ["parameter.who", "user"]
+    ])
+  })
+
+  it("names a parameter's Port with what the user called it, not a translation key", () => {
+    expect(findPort(slashCommandTrigger, "parameter.message", { parameters })).toMatchObject({
+      label: "message"
+    })
+  })
+
+  it("keeps the Trigger's own Ports alongside them", () => {
+    const ports = portsOf(slashCommandTrigger, { parameters })
+
+    expect(ports.map(port => port.id).slice(0, 2)).toEqual(["next", "user"])
+  })
+
+  it("has no parameter Ports at all when the command asks for nothing", () => {
+    expect(portsOf(slashCommandTrigger, {})).toEqual(slashCommandTrigger.ports)
+    expect(portsOf(slashCommandTrigger, { parameters: [] })).toEqual(slashCommandTrigger.ports)
+  })
+
+  it("takes a Port away when the parameter it came from is renamed", () => {
+    const renamed = [{ name: "text", description: "What to say", type: "text", required: true }]
+
+    expect(
+      findPort(slashCommandTrigger, "parameter.message", { parameters: renamed })
+    ).toBeUndefined()
+    expect(findPort(slashCommandTrigger, "parameter.text", { parameters: renamed })).toBeDefined()
+  })
+
+  it("ignores entries a hand-edited Project could hold that are not parameters", () => {
+    const ports = portsOf(slashCommandTrigger, {
+      parameters: [
+        "nonsense",
+        { name: "", description: "", type: "text", required: true },
+        { name: "colour", description: "", type: "rainbow", required: true },
+        { name: "message", description: "What to say", type: "text", required: true },
+        { name: "message", description: "declared twice", type: "number", required: true }
+      ]
+    })
+
+    expect(ports.filter(port => port.id.startsWith("parameter.")).map(port => port.id)).toEqual([
+      "parameter.message"
+    ])
+  })
+})
+
 describe("the Reply Node", () => {
   it("takes its text from a Data input Port backed by a field of the same id", () => {
     expect(findPort(reply, "content")).toMatchObject({ kind: "data", direction: "input" })
@@ -85,8 +158,17 @@ describe("the Coercion table", () => {
     }
   })
 
+  it("takes a Number and a Boolean into Text, which is what a message is made of", () => {
+    expect(findCoercion("number", "text")).toMatchObject({ runtimeCall: "numberToText" })
+    expect(findCoercion("boolean", "text")).toMatchObject({ runtimeCall: "booleanToText" })
+  })
+
   it("has none between types that must not be connected", () => {
     expect(findCoercion("text", "user")).toBeUndefined()
+    // Text into a Number would have to decide what a word converts to, and
+    // there is no answer to that a user would predict.
+    expect(findCoercion("text", "number")).toBeUndefined()
+    expect(findCoercion("number", "boolean")).toBeUndefined()
   })
 })
 

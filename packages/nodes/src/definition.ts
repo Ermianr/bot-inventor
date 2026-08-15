@@ -1,4 +1,4 @@
-import type { FieldValue } from "@bot-inventor/schema"
+import type { FieldValue, Node } from "@bot-inventor/schema"
 
 /**
  * The interface every Node of the catalogue implements. A Node's visual
@@ -15,25 +15,34 @@ export type CompilerMode = "development" | "build"
  * Wire between two of them is legal only when they match or the Coercion table
  * has an entry for the pair.
  */
-export type DataType = "text" | "user"
+export type DataType = "text" | "number" | "boolean" | "user"
 
 export type PortDirection = "input" | "output"
 
-/** An Execution Port: it defines the order things happen in, and carries no value. */
-export type ExecutionPortDefinition = {
+/**
+ * What every Port carries, whichever kind it is.
+ *
+ * A Port is normally named through the i18n layer, but a Port that exists
+ * because the user declared it — a slash command parameter — is named by them,
+ * in whatever language they typed. `label` is that text, and it wins over
+ * `labelKey` when it is there, because there is nothing to translate.
+ */
+type PortIdentity = {
   id: string
-  kind: "execution"
   direction: PortDirection
   labelKey: string
+  label?: string
+}
+
+/** An Execution Port: it defines the order things happen in, and carries no value. */
+export type ExecutionPortDefinition = PortIdentity & {
+  kind: "execution"
 }
 
 /** A Data Port: it carries a value of one type. */
-export type DataPortDefinition = {
-  id: string
+export type DataPortDefinition = PortIdentity & {
   kind: "data"
-  direction: PortDirection
   dataType: DataType
-  labelKey: string
 }
 
 export type PortDefinition = ExecutionPortDefinition | DataPortDefinition
@@ -44,6 +53,9 @@ export type PortDefinition = ExecutionPortDefinition | DataPortDefinition
  * one control.
  */
 export type FieldControl = "text" | "number" | "switch" | "commandParameters"
+
+/** The values typed into one Node's fields, as the Project stores them. */
+export type NodeFields = Node["fields"]
 
 /** A value typed directly into the Node on the Canvas. */
 export type FieldDefinition = {
@@ -104,14 +116,42 @@ export type NodeDefinition = {
   descriptionKey: string
   /** A Trigger has no Execution input and starts a run. */
   isTrigger: boolean
+  /** The Ports every Node of this type has, whatever is typed into it. */
   ports: readonly PortDefinition[]
   fields: readonly FieldDefinition[]
+  /**
+   * The Ports this Node has because of what the user typed into it — one per
+   * slash command parameter, and one per whatever the Nodes after it declare.
+   *
+   * It is a function of the fields alone so that the editor, the Compiler and
+   * the connection rules all arrive at the same list, and so that a Port
+   * disappearing is nothing more than a field being edited.
+   */
+  dynamicPorts?(fields: NodeFields): readonly PortDefinition[]
   /** Emits this Node's JavaScript, including the continuation of its Execution outputs. */
   generate(context: GenerationContext): string
 }
 
-export function findPort(definition: NodeDefinition, id: string): PortDefinition | undefined {
-  return definition.ports.find(port => port.id === id)
+/**
+ * Every Port a Node instance has: the fixed ones its type always carries, then
+ * the ones its own fields declare.
+ */
+export function portsOf(definition: NodeDefinition, fields: NodeFields): readonly PortDefinition[] {
+  const dynamic = definition.dynamicPorts?.(fields) ?? []
+  return dynamic.length === 0 ? definition.ports : [...definition.ports, ...dynamic]
+}
+
+/**
+ * One of a Node instance's Ports. The fields are what decide whether a dynamic
+ * Port is there at all, so a caller holding a Node instance must pass them:
+ * omitting them answers about the Node's type, not about the Node.
+ */
+export function findPort(
+  definition: NodeDefinition,
+  id: string,
+  fields: NodeFields = {}
+): PortDefinition | undefined {
+  return portsOf(definition, fields).find(port => port.id === id)
 }
 
 export function findField(definition: NodeDefinition, id: string): FieldDefinition | undefined {

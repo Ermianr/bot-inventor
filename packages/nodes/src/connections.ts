@@ -1,4 +1,4 @@
-import type { Flow, PortReference, WireKind } from "@bot-inventor/schema"
+import type { Flow, PortReference, Wire, WireKind } from "@bot-inventor/schema"
 import type { NodeCatalogue } from "./catalogue.js"
 import { type CoercionDefinition, findCoercion } from "./coercions.js"
 import { findPort, type PortDefinition } from "./definition.js"
@@ -101,7 +101,48 @@ export function findFlowPort(
   const definition = catalogue.get(node.type)
   if (definition === undefined) return undefined
 
-  return findPort(definition, reference.port)
+  // The Node's own fields, because which Ports it has is partly up to them.
+  return findPort(definition, reference.port, node.fields)
+}
+
+/**
+ * The Wires of a Flow whose Ports are no longer there.
+ *
+ * A Port can stop existing while the Project is open: renaming or removing a
+ * slash command parameter takes its Port with it, and the Wires drawn to it are
+ * left pointing at nothing. Those Wires are what this finds, so that the editor
+ * can clear them and say so, and the Compiler can refuse rather than quietly
+ * emit a Flow missing a value the user believes they wired.
+ */
+export function findDanglingWires(flow: Flow, catalogue: NodeCatalogue): readonly Wire[] {
+  return flow.wires.filter(
+    wire => isDangling(flow, catalogue, wire.from) || isDangling(flow, catalogue, wire.to)
+  )
+}
+
+/**
+ * Whether one end of a Wire names a Port its Node does not declare.
+ *
+ * A Node that is not on the Flow, or whose type this build does not know, is
+ * not this: both are the Project being wrong about something bigger, they are
+ * reported in their own words, and a Wire is not the user's mistake to lose
+ * over a Node a newer build wrote.
+ */
+function isDangling(flow: Flow, catalogue: NodeCatalogue, reference: PortReference): boolean {
+  const node = flow.nodes.find(candidate => candidate.id === reference.node)
+  if (node === undefined) return false
+
+  const definition = catalogue.get(node.type)
+  if (definition === undefined) return false
+
+  return findPort(definition, reference.port, node.fields) === undefined
+}
+
+/** The Flow with its dangling Wires removed. */
+export function pruneDanglingWires(flow: Flow, catalogue: NodeCatalogue): Flow {
+  const dangling = new Set(findDanglingWires(flow, catalogue).map(wire => wire.id))
+  if (dangling.size === 0) return flow
+  return { ...flow, wires: flow.wires.filter(wire => !dangling.has(wire.id)) }
 }
 
 function sameEnd(end: PortReference, reference: PortReference): boolean {
