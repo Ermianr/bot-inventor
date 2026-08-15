@@ -1,7 +1,12 @@
 import type { Flow, PortReference } from "@bot-inventor/schema"
 import { describe, expect, it } from "vitest"
 import { buildCatalogue } from "./catalogue.js"
-import { checkConnection, findDanglingWires, pruneDanglingWires } from "./connections.js"
+import {
+  checkConnection,
+  danglingEndsOf,
+  findDanglingWires,
+  pruneDanglingWires
+} from "./connections.js"
 import type { NodeDefinition } from "./definition.js"
 import { reply } from "./discord/reply.js"
 import { slashCommandTrigger } from "./discord/slash-command-trigger.js"
@@ -287,5 +292,40 @@ describe("Wires left pointing at a Port that is no longer there", () => {
     const flow = wiredToAParameter()
 
     expect(pruneDanglingWires(flow, catalogue)).toBe(flow)
+  })
+
+  it("says which end of the Wire lost its Port, which is the Node to look at", () => {
+    const flow = wiredToAParameter()
+    const trigger = flow.nodes[0]
+    if (trigger === undefined) throw new Error("the Flow has no Trigger")
+    trigger.fields = { parameters: [] }
+
+    const wire = flow.wires[1]
+    if (wire === undefined) throw new Error("the Flow has no Data Wire")
+
+    // The Trigger is where the parameter went, not the Reply reading from it.
+    expect(danglingEndsOf(flow, catalogue, wire)).toEqual([
+      { node: "node-trigger", port: "parameter.message" }
+    ])
+  })
+
+  it("takes away only the Wires of the Node it was told about", () => {
+    const flow = wiredToAParameter()
+    const trigger = flow.nodes[0]
+    if (trigger === undefined) throw new Error("the Flow has no Trigger")
+    trigger.fields = { parameters: [] }
+    flow.wires.push({
+      id: "wire-elsewhere",
+      kind: "data",
+      from: port("node-text-source", "gone"),
+      to: port("node-second-reply", "content")
+    })
+
+    // Editing one Node must not destroy a Wire that dangles for a reason of its
+    // own — a Port a newer build declared and this one does not.
+    expect(pruneDanglingWires(flow, catalogue, "node-trigger").wires.map(wire => wire.id)).toEqual([
+      "wire-execution",
+      "wire-elsewhere"
+    ])
   })
 })

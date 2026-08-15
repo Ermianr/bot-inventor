@@ -1,4 +1,4 @@
-import { catalogue } from "@bot-inventor/nodes"
+import { catalogue, pruneProjectWires } from "@bot-inventor/nodes"
 import type {
   FieldValue,
   Flow,
@@ -54,8 +54,17 @@ export function useProject(createInitial: () => Project): ProjectEditor {
     project,
     flow,
     openFlow: setOpenFlowId,
+    /**
+     * Opens a Project, reconciled with the catalogue this build has.
+     *
+     * A Wire whose Port is not there cannot be drawn — React Flow renders no
+     * edge for a handle that does not exist — so it cannot be removed on the
+     * Canvas either, while the Compiler refuses to run or export the Flow that
+     * holds it. Clearing it on the way in is the only reading under which the
+     * user is not locked out of their own Project by something invisible.
+     */
     replace: useCallback((next: Project) => {
-      setProject(next)
+      setProject(pruneProjectWires(next, catalogue))
       setOpenFlowId(next.flows[0]?.id ?? "")
     }, []),
     moveNode: useCallback(

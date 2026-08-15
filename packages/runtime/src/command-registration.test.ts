@@ -140,6 +140,39 @@ describe("command registration", () => {
     expect(api.commandsFor(everywhere)).toEqual([])
   })
 
+  it("names the parameter Discord would refuse the whole registration over", async () => {
+    const api = createFakeDiscordCommandApi()
+    const declaration: SlashCommandDefinition = {
+      name: "greet",
+      description: "Greets someone",
+      parameters: [{ name: "How many", description: "A count", type: "number", required: true }]
+    }
+
+    // Discord answers this with a form error about `options[0].name` and
+    // registers nothing at all, so the whole bot fails to come up over one
+    // capital letter. Saying which parameter it is beats that.
+    await expect(registerCommands(api, everywhere, [declaration])).rejects.toThrowError(
+      /"greet".+"How many".+lowercase/s
+    )
+    expect(api.commandsFor(everywhere)).toEqual([])
+  })
+
+  it("names the parameter that was asked for twice", async () => {
+    const api = createFakeDiscordCommandApi()
+    const declaration: SlashCommandDefinition = {
+      name: "greet",
+      description: "Greets someone",
+      parameters: [
+        { name: "who", description: "Who to greet", type: "user", required: true },
+        { name: "who", description: "And again", type: "text", required: true }
+      ]
+    }
+
+    await expect(registerCommands(api, everywhere, [declaration])).rejects.toThrowError(
+      /"greet".+"who".+twice/s
+    )
+  })
+
   it("still registers when Discord will not say what it already holds", async () => {
     const api = createFakeDiscordCommandApi()
     api.listCommands = async () => {

@@ -1,4 +1,4 @@
-import type { Flow, PortReference, Wire, WireKind } from "@bot-inventor/schema"
+import type { Flow, PortReference, Project, Wire, WireKind } from "@bot-inventor/schema"
 import type { NodeCatalogue } from "./catalogue.js"
 import { type CoercionDefinition, findCoercion } from "./coercions.js"
 import { findPort, type PortDefinition } from "./definition.js"
@@ -115,9 +115,20 @@ export function findFlowPort(
  * emit a Flow missing a value the user believes they wired.
  */
 export function findDanglingWires(flow: Flow, catalogue: NodeCatalogue): readonly Wire[] {
-  return flow.wires.filter(
-    wire => isDangling(flow, catalogue, wire.from) || isDangling(flow, catalogue, wire.to)
-  )
+  return flow.wires.filter(wire => danglingEndsOf(flow, catalogue, wire).length > 0)
+}
+
+/**
+ * The ends of one Wire that name a Port which is not there, in the order they
+ * are drawn. It is what tells the user which Node to look at: a Wire is usually
+ * left dangling by its source losing a Port, not its target.
+ */
+export function danglingEndsOf(
+  flow: Flow,
+  catalogue: NodeCatalogue,
+  wire: Wire
+): readonly PortReference[] {
+  return [wire.from, wire.to].filter(end => isDangling(flow, catalogue, end))
 }
 
 /**
@@ -138,11 +149,28 @@ function isDangling(flow: Flow, catalogue: NodeCatalogue, reference: PortReferen
   return findPort(definition, reference.port, node.fields) === undefined
 }
 
-/** The Flow with its dangling Wires removed. */
-export function pruneDanglingWires(flow: Flow, catalogue: NodeCatalogue): Flow {
-  const dangling = new Set(findDanglingWires(flow, catalogue).map(wire => wire.id))
+/**
+ * The Flow with its dangling Wires removed.
+ *
+ * `nodeId` narrows it to the Wires touching one Node, which is what an edit to
+ * that Node is allowed to take away. A Wire dangling for some other reason — a
+ * Port a newer build declared and this one does not — is not that edit's to
+ * destroy, and losing it while typing into an unrelated field is a deletion the
+ * user neither asked for nor saw.
+ */
+export function pruneDanglingWires(flow: Flow, catalogue: NodeCatalogue, nodeId?: string): Flow {
+  const dangling = new Set(
+    findDanglingWires(flow, catalogue)
+      .filter(wire => nodeId === undefined || wire.from.node === nodeId || wire.to.node === nodeId)
+      .map(wire => wire.id)
+  )
   if (dangling.size === 0) return flow
   return { ...flow, wires: flow.wires.filter(wire => !dangling.has(wire.id)) }
+}
+
+/** Every Flow of a Project with its dangling Wires removed. */
+export function pruneProjectWires(project: Project, catalogue: NodeCatalogue): Project {
+  return { ...project, flows: project.flows.map(flow => pruneDanglingWires(flow, catalogue)) }
 }
 
 function sameEnd(end: PortReference, reference: PortReference): boolean {

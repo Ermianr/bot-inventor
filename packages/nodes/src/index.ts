@@ -15,9 +15,11 @@ export {
   type ConnectionCheck,
   type ConnectionRequest,
   checkConnection,
+  danglingEndsOf,
   findDanglingWires,
   findFlowPort,
-  pruneDanglingWires
+  pruneDanglingWires,
+  pruneProjectWires
 } from "./connections.js"
 export {
   type CompilerMode,

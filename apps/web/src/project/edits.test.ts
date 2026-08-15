@@ -51,6 +51,28 @@ describe("editing a Project from the Canvas", () => {
     expect(edited.wires.map(wire => wire.id)).toEqual(["wire-execution"])
   })
 
+  it("leaves a Wire dangling for a reason of its own where it is", () => {
+    const flow = flowOf(echoParameterProject())
+    flow.nodes.push({
+      id: "node-second",
+      type: "discord.interaction.reply",
+      position: { x: 640, y: 0 },
+      fields: {}
+    })
+    flow.wires.push({
+      id: "wire-elsewhere",
+      kind: "data",
+      from: { node: "node-reply", port: "gone" },
+      to: { node: "node-second", port: "content" }
+    })
+
+    // Typing into a Node's name must not quietly destroy Wires that edit had
+    // nothing to do with: there is no undo, and nothing says it happened.
+    const edited = setNodeField(flow, catalogue, "node-trigger", "name", "say")
+
+    expect(edited.wires.map(wire => wire.id)).toContain("wire-elsewhere")
+  })
+
   it("takes away the Wire drawn from a parameter the user removed", () => {
     const edited = setNodeField(
       flowOf(echoParameterProject()),

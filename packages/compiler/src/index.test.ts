@@ -338,6 +338,42 @@ describe("reading a slash command's parameters", () => {
     // answering with nothing and no way for the user to find out why.
     expect(() => compile(project, { mode: "build" })).toThrowError(/no longer exists/)
   })
+
+  it("blames the Node the parameter went from, not the one that was reading it", () => {
+    const project = echoParameterProject()
+    const trigger = requireFirst(requireFirst(project.flows, "Flow").nodes, "Node")
+    trigger.fields.parameters = []
+
+    try {
+      compile(project, { mode: "build" })
+      throw new Error("the Compiler accepted a Wire to a Port that is not there")
+    } catch (error) {
+      expect(error).toBeInstanceOf(CompilerError)
+      expect(error).toMatchObject({ node: "node-trigger" })
+    }
+  })
+
+  it("hands a parameter this build cannot make a Port of to registration, which names it", async () => {
+    const project = echoParameterProject()
+    const flow = requireFirst(project.flows, "Flow")
+    const trigger = requireFirst(flow.nodes, "Node")
+    trigger.fields.parameters = [
+      { name: "where", description: "A channel", type: "channel", required: true }
+    ]
+    // The Wire read the parameter that is now gone; the case here is the
+    // declaration, not the Wire.
+    flow.wires = flow.wires.filter(wire => wire.id !== "wire-data")
+
+    // Dropping it here instead would register a command quietly asking for
+    // less than the Canvas says it does.
+    const result = await runProject(project, [])
+    expect(declarations(result)[0]?.parameters).toEqual([
+      { name: "where", description: "A channel", type: "channel", required: true }
+    ])
+    await expect(
+      registerCommands(createFakeDiscordCommandApi(), { kind: "global" }, declarations(result))
+    ).rejects.toThrowError(/"where"/)
+  })
 })
 
 describe("refusing a Project it cannot emit", () => {

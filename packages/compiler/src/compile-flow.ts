@@ -2,6 +2,7 @@ import {
   applyCoercion,
   type CompilerMode,
   type DataType,
+  danglingEndsOf,
   defaultFieldValue,
   findCoercion,
   findDanglingWires,
@@ -335,9 +336,14 @@ class FlowCompiler {
     const [dangling] = findDanglingWires(this.flow, this.catalogue)
     if (dangling === undefined) return
 
+    // The end that actually lost its Port, which is the Node the editor has to
+    // mark: a renamed slash command parameter is the common case, and that is
+    // the Wire's source, not the Node reading from it.
+    const [end] = danglingEndsOf(this.flow, this.catalogue, dangling)
+
     throw new CompilerError(
       `Wire "${dangling.id}" is drawn to a Port that no longer exists; remove it or restore the Port it named`,
-      { flow: this.flow.id, node: dangling.to.node }
+      { flow: this.flow.id, node: (end ?? dangling.to).node }
     )
   }
 

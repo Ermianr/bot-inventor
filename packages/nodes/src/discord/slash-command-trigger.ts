@@ -74,16 +74,23 @@ export const slashCommandTrigger: NodeDefinition = {
     return commandParameterPorts(fields.parameters)
   },
   generate(context) {
-    const parameters = readCommandParameters(context.field("parameters"))
+    const declared = context.field("parameters")
+    const parameters = readCommandParameters(declared)
     const declaration = [
       `name: ${context.literal(context.field("name"))}`,
       `description: ${context.literal(context.field("description"))}`
     ]
 
+    // What the user declared goes to the Runtime as they declared it, not as
+    // this Node understood it. A parameter this build cannot make a Port of is
+    // still a parameter they asked for, and registration is where it gets named
+    // — dropping it here would register a command quietly asking for less than
+    // the Canvas says it does.
+    //
     // A command asking for nothing declares no parameters at all, rather than
     // an empty list Discord would have to be sent anyway.
-    if (parameters.length > 0) {
-      declaration.push(`parameters: ${context.literal(parameters)}`)
+    if (Array.isArray(declared) && declared.length > 0) {
+      declaration.push(`parameters: ${context.literal(declared)}`)
     }
 
     const definition = declaration.join(", ")
@@ -107,10 +114,12 @@ export const slashCommandTrigger: NodeDefinition = {
 /** Binds what the caller answered for one parameter to that parameter's Port. */
 function bindParameter(context: GenerationContext, parameter: CommandParameter): string {
   const answered = `${context.event}.parameters[${context.literal(parameter.name)}]`
-  // A required parameter is always there, so only an optional one needs the
-  // fallback — and writing it only where it can happen keeps the exported
-  // source readable, which is what a Node Project is for.
-  const value = parameter.required ? answered : `${answered} ?? ${EMPTY_VALUE[parameter.type]}`
+  // The fallback is emitted for a required parameter too. Discord should always
+  // send one, but "should" is doing the work there — a command registered
+  // before the parameter was marked required is still rolling out somewhere —
+  // and the cost of being wrong is `undefined` reaching a Discord message,
+  // which is the outcome this table exists to prevent.
+  const value = `${answered} ?? ${EMPTY_VALUE[parameter.type]}`
 
   return `const ${context.output(parameterPortId(parameter.name))} = ${value}`
 }

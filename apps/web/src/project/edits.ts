@@ -59,7 +59,7 @@ export function setNodeField(
     )
   }
 
-  return pruneDanglingWires(edited, catalogue)
+  return pruneDanglingWires(edited, catalogue, nodeId)
 }
 
 /**
