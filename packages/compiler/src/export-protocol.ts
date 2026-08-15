@@ -65,7 +65,13 @@ export const exportResultSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("refused"),
     reason: z.enum(["already-exists", "failed"]),
-    message: z.string()
+    message: z.string(),
+    /**
+     * What is in the way, when something is: the file a Single File would
+     * replace, the folder a Node Project would. It is what the user is asked
+     * about, so it has to be the thing that would actually go.
+     */
+    path: z.string().optional()
   })
 ])
 

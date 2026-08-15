@@ -38,6 +38,7 @@ const en = {
   "run.deleted": "No longer on Discord: {commands}",
   "run.failure.token": "Discord did not accept that token. Check it and paste it again.",
   "run.failure.missingSecret": "Paste your bot token first, then press Run.",
+  "run.failure.noDesktop": "Bot Inventor can only run your bot in the desktop app.",
   "run.failure.unknown": "Your bot could not start: {message}",
   "run.failure.timeout":
     "Your bot never finished connecting. Check your internet connection and press Run again.",
@@ -156,6 +157,8 @@ const es: Record<MessageKey, string> = {
   "run.deleted": "Ya no están en Discord: {commands}",
   "run.failure.token": "Discord no aceptó ese token. Revísalo y pégalo de nuevo.",
   "run.failure.missingSecret": "Pega el token de tu bot antes de pulsar Ejecutar.",
+  "run.failure.noDesktop":
+    "Bot Inventor solo puede ejecutar tu bot en la aplicación de escritorio.",
   "run.failure.unknown": "Tu bot no pudo arrancar: {message}",
   "run.failure.timeout":
     "Tu bot nunca terminó de conectarse. Revisa tu conexión a internet y pulsa Ejecutar otra vez.",

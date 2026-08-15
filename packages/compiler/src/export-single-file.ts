@@ -1,4 +1,4 @@
-import { mkdir, stat, writeFile } from "node:fs/promises"
+import { mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import type { NodeCatalogue } from "@bot-inventor/nodes"
 import type { Project } from "@bot-inventor/schema"
@@ -7,6 +7,7 @@ import { NATIVE_ADDON_EXTERNALS, NODE_BUNDLE_BANNER } from "./bundle.js"
 import { compile } from "./compile.js"
 import { ExportError } from "./export-error.js"
 import { SINGLE_FILE_TARGET } from "./export-target.js"
+import { exists } from "./files.js"
 import { RUNTIME_PACKAGE, readVendoredRuntime, type VendoredRuntime } from "./vendored-runtime.js"
 
 /**
@@ -67,9 +68,7 @@ export async function exportSingleFile(
   if (options.overwrite !== true && (await exists(path))) {
     throw new ExportError(
       `An Export already exists at ${path}. Exporting again would replace it.`,
-      {
-        alreadyExists: true
-      }
+      { alreadyExists: true, path }
     )
   }
 
@@ -137,14 +136,5 @@ function vendoredRuntime(runtime: VendoredRuntime): Plugin {
         loader: "js"
       }))
     }
-  }
-}
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path)
-    return true
-  } catch {
-    return false
   }
 }

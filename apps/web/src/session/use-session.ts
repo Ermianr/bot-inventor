@@ -2,6 +2,7 @@ import { readSessionLine, redactSecret, renderDevelopmentSession } from "@bot-in
 import type { Project } from "@bot-inventor/schema"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { type MessageKey, translate } from "@/i18n/messages"
+import { describeError } from "@/project/project-file"
 import type { SessionId } from "@/session/events"
 import { describeRefusal } from "@/session/refusal"
 import type { SessionGateway } from "@/session/session-gateway"
@@ -255,7 +256,7 @@ export function useSession(project: Project, shell: SessionGateway): Session {
         entry = renderDevelopmentSession(project, { testServerId: options.testServerId })
       } catch (error) {
         setStatus("failed")
-        setProblem(translate("run.failure.build", { message: describeCompilerError(error) }))
+        setProblem(translate("run.failure.build", { message: describeError(error) }))
         return
       }
 
@@ -290,9 +291,14 @@ export function useSession(project: Project, shell: SessionGateway): Session {
         // The bot on the sidecar is the last version that compiled, and it is
         // left running: taking away a working bot because of a half-finished
         // edit is the opposite of keeping the user's train of thought.
-        setProblem(translate("run.failure.build", { message: describeCompilerError(error) }))
+        setProblem(translate("run.failure.build", { message: describeError(error) }))
         return
       }
+
+      // It compiles, so whatever the last edit could not build is no longer
+      // true. Leaving that banner up over a bot that is fine is its own kind of
+      // wrong answer.
+      setProblem(undefined)
 
       if (entry === bot.entry) {
         // The edit changed the Canvas but not the bot. Restarting for it would
@@ -308,13 +314,4 @@ export function useSession(project: Project, shell: SessionGateway): Session {
   }, [project, launch, note])
 
   return { status, entries, problem, trace, start, stop }
-}
-
-/**
- * What the user is told about a Project that will not compile. The Compiler's
- * message names the Flow and the Node at fault, which is as close to actionable
- * as this gets without the Canvas pointing at it.
- */
-function describeCompilerError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
 }

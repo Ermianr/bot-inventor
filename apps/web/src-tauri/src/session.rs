@@ -97,24 +97,42 @@ pub async fn start_session(
         .map_err(Refusal::failed)?
         .ok_or(Refusal::MissingSecret)?;
 
-    // Running two bots for one Project would register the same commands twice
-    // and answer every interaction twice with it.
-    stop_running(&sessions);
-
     let directory = prepare(&app, &project_id, &entry).map_err(Refusal::failed)?;
 
-    let (mut events, child) = app
-        .shell()
-        .sidecar("node")
-        .map_err(Refusal::failed)?
-        .current_dir(directory.clone())
-        .env(TOKEN_VARIABLE, token.clone())
-        .args([ENTRY_NAME])
-        .spawn()
-        .map_err(Refusal::failed)?;
+    // Killing the running bot and putting its replacement in its place happen
+    // under one lock, held across both.
+    //
+    // Two of these can be in flight at once — Tauri runs commands concurrently,
+    // and a hot reload asks for a bot without waiting for the last answer. Taken
+    // and released twice, both calls could get past the kill before either
+    // recorded its child, and the bot nobody is holding any more goes on
+    // answering every interaction a second time. There is no `.await` between
+    // here and the end of the block, which is what makes holding it safe.
+    let mut events = {
+        let mut running = sessions.running.lock().unwrap();
 
-    sessions.jail.hold(child.pid());
-    *sessions.running.lock().unwrap() = Some(child);
+        // Running two bots for one Project would register the same commands
+        // twice and answer every interaction twice with it.
+        if let Some(previous) = running.take() {
+            // The process is being told to go, so failing to kill one that has
+            // already gone is the outcome we wanted.
+            let _ = previous.kill();
+        }
+
+        let (events, child) = app
+            .shell()
+            .sidecar("node")
+            .map_err(Refusal::failed)?
+            .current_dir(directory.clone())
+            .env(TOKEN_VARIABLE, token.clone())
+            .args([ENTRY_NAME])
+            .spawn()
+            .map_err(Refusal::failed)?;
+
+        sessions.jail.hold(child.pid());
+        *running = Some(child);
+        events
+    };
 
     // The token is redacted here rather than in the editor, because here is the
     // last place that has it: the webview is never sent one, so nothing it does

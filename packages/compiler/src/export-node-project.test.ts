@@ -1,14 +1,14 @@
 import { type ChildProcess, spawn } from "node:child_process"
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join, relative, sep } from "node:path"
+import { dirname, join, relative, sep } from "node:path"
 import { helloProject, requireFirst } from "@bot-inventor/schema/fixtures"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { delay, died, stop } from "./child-process.js"
 import { ExportError } from "./export-error.js"
 import { exportNodeProject } from "./export-node-project.js"
 import { type FakeDiscordServer, startFakeDiscordServer } from "./fake-discord-server.js"
-import { ENTRY_FILE_NAME, TOKEN_VARIABLE } from "./node-project.js"
+import { ENTRY_FILE_NAME, FLOWS_DIRECTORY, TOKEN_VARIABLE } from "./node-project.js"
 
 /**
  * The Node Project's own second seam: a folder written to disk, installed with
@@ -231,6 +231,30 @@ describe("Exporting somewhere that is not there yet", () => {
         expect(await tree(target)).toEqual([...exported.files].sort())
       } finally {
         await rm(parent, { recursive: true, force: true })
+      }
+    },
+    SLOW
+  )
+
+  it(
+    "leaves a folder of the user's own alone, even where the names collide",
+    async () => {
+      const target = await mkdtemp(join(tmpdir(), "bot-inventor-node-project-theirs-"))
+
+      try {
+        // `flows` and `src/runtime` belong to an Export outright and are
+        // emptied when one is replaced. In a folder that holds no Export they
+        // are two ordinary names, and somebody's own work is not ours to
+        // delete — there was no Export here to warn them about.
+        const theirs = join(target, FLOWS_DIRECTORY, "notes.txt")
+        await mkdir(dirname(theirs), { recursive: true })
+        await writeFile(theirs, "mine", "utf8")
+
+        await exportNodeProject(helloProject(), { outputDirectory: target })
+
+        expect(await readFile(theirs, "utf8")).toBe("mine")
+      } finally {
+        await rm(target, { recursive: true, force: true })
       }
     },
     SLOW

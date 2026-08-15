@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event"
 
 import { inDesktopShell } from "@/session/desktop"
 import { EXIT_EVENT, OUTPUT_EVENT } from "@/session/events"
+import type { Refusal } from "@/session/refusal"
 import type { SessionGateway } from "@/session/session-gateway"
 
 /**
@@ -34,7 +35,9 @@ const desktopSession: SessionGateway = {
  * and it works without a bot behind it.
  */
 const noSession: SessionGateway = {
-  start: () => Promise.reject(new Error("Bot Inventor can only run a bot in the desktop app.")),
+  // A refusal rather than an error, because it is one: the panel already knows
+  // how to put every other refusal in front of the user, in their language.
+  start: () => Promise.reject({ kind: "no-desktop" } satisfies Refusal),
   stop: () => Promise.resolve(),
   onOutput: () => () => {},
   onExit: () => () => {}

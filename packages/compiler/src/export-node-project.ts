@@ -1,8 +1,9 @@
-import { mkdir, rm, stat, writeFile } from "node:fs/promises"
+import { mkdir, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import type { NodeCatalogue } from "@bot-inventor/nodes"
 import type { Project } from "@bot-inventor/schema"
 import { ExportError } from "./export-error.js"
+import { exists } from "./files.js"
 import { FLOWS_DIRECTORY, RUNTIME_DIRECTORY, renderNodeProject } from "./node-project.js"
 import { readVendoredRuntime, type VendoredRuntime } from "./vendored-runtime.js"
 
@@ -72,10 +73,12 @@ export async function exportNodeProject(
   options: ExportNodeProjectOptions
 ): Promise<NodeProjectExport> {
   const marker = join(options.outputDirectory, MARKER_FILE)
-  if (options.overwrite !== true && (await exists(marker))) {
+  const replacing = await exists(marker)
+
+  if (options.overwrite !== true && replacing) {
     throw new ExportError(
       `An Export already exists at ${options.outputDirectory}. Exporting again would replace it.`,
-      { alreadyExists: true }
+      { alreadyExists: true, path: options.outputDirectory }
     )
   }
 
@@ -88,11 +91,18 @@ export async function exportNodeProject(
   })
   const files = [...generated, ...runtime.files]
 
-  // Both directories are ours entirely, so emptying them is what makes the
-  // README's promise true: a Flow the user renamed leaves no file behind
-  // pretending to still be part of the bot.
-  for (const directory of GENERATED_DIRECTORIES) {
-    await rm(join(options.outputDirectory, directory), { recursive: true, force: true })
+  // Both directories belong to an Export entirely, so emptying them is what
+  // makes the README's promise true: a Flow the user renamed leaves no file
+  // behind pretending to still be part of the bot.
+  //
+  // Only when there is an Export here to replace, though. In a folder of the
+  // user's own these are two ordinary names, and deleting a `flows` directory
+  // somebody else put there — without it being the Export they were warned
+  // about — is the destruction this whole path exists to prevent.
+  if (replacing) {
+    for (const directory of GENERATED_DIRECTORIES) {
+      await rm(join(options.outputDirectory, directory), { recursive: true, force: true })
+    }
   }
 
   // The marker goes last. Written first, a write that failed halfway would
@@ -108,13 +118,4 @@ export async function exportNodeProject(
   }
 
   return { path: options.outputDirectory, files: files.map(file => file.path) }
-}
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path)
-    return true
-  } catch {
-    return false
-  }
 }

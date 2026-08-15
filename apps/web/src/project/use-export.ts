@@ -4,6 +4,7 @@ import { useCallback, useState } from "react"
 
 import { translate } from "@/i18n/messages"
 import type { ExportGateway } from "@/project/export-gateway"
+import { describeError } from "@/project/project-file"
 
 /**
  * Taking the bot away: the Project as something that runs without Bot Inventor.
@@ -36,7 +37,7 @@ export function useExport(project: Project, exports: ExportGateway): Exporting {
       try {
         outputDirectory = await exports.chooseDestination(format)
       } catch (error) {
-        setProblem(translate("export.problem.failed", { message: describe(error) }))
+        setProblem(translate("export.problem.failed", { message: describeError(error) }))
         return
       }
       // The user closed the dialog. Nothing was asked for, so nothing is said.
@@ -49,7 +50,10 @@ export function useExport(project: Project, exports: ExportGateway): Exporting {
         // The one refusal the user can answer. Everything of theirs is still
         // where it was until they say otherwise.
         if (result.kind === "refused" && result.reason === "already-exists") {
-          if (!(await exports.confirmOverwrite(outputDirectory))) return
+          // What is in the way rather than where it was put: for a Single File
+          // those are different things, and asking about the folder when the
+          // file is what goes is how somebody agrees to lose the wrong thing.
+          if (!(await exports.confirmOverwrite(result.path ?? outputDirectory))) return
           result = await exports.run({ format, project, outputDirectory, overwrite: true })
         }
 
@@ -59,7 +63,7 @@ export function useExport(project: Project, exports: ExportGateway): Exporting {
           setProblem(translate("export.problem.failed", { message: result.message }))
         }
       } catch (error) {
-        setProblem(translate("export.problem.failed", { message: describe(error) }))
+        setProblem(translate("export.problem.failed", { message: describeError(error) }))
       } finally {
         setBusy(false)
       }
@@ -73,8 +77,4 @@ export function useExport(project: Project, exports: ExportGateway): Exporting {
 /** How the two formats describe what they left behind: a file, or a folder. */
 function whereItWent(format: ExportFormat) {
   return format === "single-file" ? "export.written.file" : "export.written.folder"
-}
-
-function describe(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
 }

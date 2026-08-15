@@ -1,10 +1,11 @@
-import { copyFile, mkdir, stat, writeFile } from "node:fs/promises"
+import { copyFile, mkdir, writeFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
 import { build } from "esbuild"
 import { NATIVE_ADDON_EXTERNALS, NODE_BUNDLE_BANNER } from "./bundle.js"
 import { SIDECAR_NODE_TARGET } from "./development-runtime.js"
 import { ExportError } from "./export-error.js"
+import { exists } from "./files.js"
 import { readVendoredRuntime } from "./vendored-runtime.js"
 
 /**
@@ -132,13 +133,4 @@ async function findBundlerBinary(): Promise<string> {
     throw new ExportError(`esbuild's binary is not at ${binary}, so the exporter has no bundler.`)
   }
   return binary
-}
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path)
-    return true
-  } catch {
-    return false
-  }
 }

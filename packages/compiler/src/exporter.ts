@@ -45,10 +45,12 @@ export async function runExport(
       files: [...written.files]
     }
   } catch (error) {
+    const inTheWay = error instanceof ExportError && error.alreadyExists
     return {
       kind: "refused",
-      reason: error instanceof ExportError && error.alreadyExists ? "already-exists" : "failed",
-      message: error instanceof Error ? error.message : String(error)
+      reason: inTheWay ? "already-exists" : "failed",
+      message: error instanceof Error ? error.message : String(error),
+      path: inTheWay ? error.path : undefined
     }
   }
 }
