@@ -1,4 +1,10 @@
-import { catalogue, checkConnection, findCoercion, findFlowPort } from "@bot-inventor/nodes"
+import {
+  catalogue,
+  checkConnection,
+  findCoercion,
+  findFlowPort,
+  type NodeDefinition
+} from "@bot-inventor/nodes"
 import type { PortReference, Wire as ProjectWire } from "@bot-inventor/schema"
 import {
   Background,
@@ -9,9 +15,12 @@ import {
   type NodeChange,
   type OnConnectEnd,
   ReactFlow,
-  useNodesState
+  ReactFlowProvider,
+  useNodesState,
+  useReactFlow
 } from "@xyflow/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { AddNodeMenu } from "@/canvas/add-node"
 import { FlowNode, type FlowNodeData, type FlowNodeType } from "@/canvas/flow-node"
 import { Wire, type WireData, type WireType } from "@/canvas/wire"
 import { translate, translateDefinitionKey } from "@/i18n/messages"
@@ -39,8 +48,23 @@ import "@xyflow/react/dist/style.css"
 const nodeTypes = { flowNode: FlowNode }
 const wireTypes = { wire: Wire }
 
-export function Canvas({ editor, trace }: { editor: ProjectEditor; trace?: RunTrace }) {
+/**
+ * The Canvas needs React Flow's viewport from outside the `ReactFlow` element —
+ * turning the point a right-click happened at into a position in the Flow is
+ * done next to the menu, not inside the graph — and `useReactFlow` only answers
+ * under a provider. So the provider is here and the Canvas itself is below it.
+ */
+export function Canvas(props: { editor: ProjectEditor; trace?: RunTrace }) {
+  return (
+    <ReactFlowProvider>
+      <CanvasBoard {...props} />
+    </ReactFlowProvider>
+  )
+}
+
+function CanvasBoard({ editor, trace }: { editor: ProjectEditor; trace?: RunTrace }) {
   const { flow } = editor
+  const { screenToFlowPosition } = useReactFlow()
   const [refusal, setRefusal] = useState<string | undefined>(undefined)
 
   /**
@@ -195,25 +219,39 @@ export function Canvas({ editor, trace }: { editor: ProjectEditor; trace?: RunTr
     lastRefusal.current = undefined
   }, [])
 
+  /**
+   * A Node is added where the pointer was, not where the viewport happens to
+   * start: the user is told it lands where they clicked, and a Canvas they have
+   * panned or zoomed must keep that promise.
+   */
+  const placeNode = useCallback(
+    (definition: NodeDefinition, at: { x: number; y: number }) => {
+      editor.addNode(definition, screenToFlowPosition(at))
+    },
+    [editor.addNode, screenToFlowPosition]
+  )
+
   return (
     <section aria-label={translate("canvas.label")} className="relative h-full w-full">
-      <ReactFlow
-        edgeTypes={wireTypes}
-        edges={wires}
-        fitView
-        isValidConnection={isValidConnection}
-        nodeTypes={nodeTypes}
-        nodes={drawn}
-        onConnect={onConnect}
-        onConnectEnd={onConnectEnd}
-        onConnectStart={onConnectStart}
-        onEdgesChange={onWiresChange}
-        onNodesChange={onNodesChange}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background />
-        <Controls showInteractive={false} />
-      </ReactFlow>
+      <AddNodeMenu place={placeNode}>
+        <ReactFlow
+          edgeTypes={wireTypes}
+          edges={wires}
+          fitView
+          isValidConnection={isValidConnection}
+          nodeTypes={nodeTypes}
+          nodes={drawn}
+          onConnect={onConnect}
+          onConnectEnd={onConnectEnd}
+          onConnectStart={onConnectStart}
+          onEdgesChange={onWiresChange}
+          onNodesChange={onNodesChange}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background />
+          <Controls showInteractive={false} />
+        </ReactFlow>
+      </AddNodeMenu>
 
       {refusal !== undefined && (
         <p

@@ -105,6 +105,11 @@ const en = {
   "flows.remove.last": "This is your only flow. Add another one before deleting this one.",
   "flows.neverRuns": "This flow never runs: nothing in it makes it start.",
   "canvas.label": "Canvas",
+  "canvas.addNode": "Add a node",
+  "canvas.addNode.title": "Add a node",
+  "canvas.addNode.help": "Search for a node and press Enter to put it where you clicked.",
+  "canvas.addNode.search": "Search for a node",
+  "canvas.addNode.noMatch": "No node matches that.",
   "canvas.wire.remove": "Remove this wire",
   "canvas.wire.carried": "Last run carried: {value}",
 
@@ -245,6 +250,11 @@ const es: Record<MessageKey, string> = {
   "flows.remove.last": "Este es tu único flujo. Añade otro antes de eliminar este.",
   "flows.neverRuns": "Este flujo nunca se ejecuta: nada dentro hace que empiece.",
   "canvas.label": "Lienzo",
+  "canvas.addNode": "Añadir un nodo",
+  "canvas.addNode.title": "Añadir un nodo",
+  "canvas.addNode.help": "Busca un nodo y pulsa Enter para ponerlo donde hiciste clic.",
+  "canvas.addNode.search": "Busca un nodo",
+  "canvas.addNode.noMatch": "Ningún nodo coincide.",
   "canvas.wire.remove": "Quitar este cable",
   "canvas.wire.carried": "La última ejecución llevó: {value}",
 

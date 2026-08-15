@@ -50,6 +50,36 @@ export class CanvasPage {
     return this.page.locator(`#${nodeId}-${fieldId}`)
   }
 
+  /**
+   * The empty part of the Canvas, which is React Flow's own element rather than
+   * anything of ours: it is what the pointer lands on between the Nodes.
+   */
+  pane(): Locator {
+    return this.page.locator(".react-flow__pane")
+  }
+
+  /** Right-clicks empty Canvas at a point measured from the Canvas's top left. */
+  async rightClickPane(at: { x: number; y: number }) {
+    const box = await this.pane().boundingBox()
+    if (box === null) throw new Error("the Canvas is not on screen")
+
+    await this.page.mouse.click(box.x + at.x, box.y + at.y, { button: "right" })
+  }
+
+  /** The "Add a node" entry of the Canvas's context menu. */
+  addNode(): Locator {
+    return this.page.getByTestId("canvas-add-node")
+  }
+
+  /** The catalogue, as the searchable list the user picks a Node from. */
+  nodeList(): Locator {
+    return this.page.getByTestId("add-node-list")
+  }
+
+  nodeChoice(definitionId: string): Locator {
+    return this.page.getByTestId(`add-node-${definitionId}`)
+  }
+
   /** Drags a Wire from one Port to another, the way a user does. */
   async drawWire(from: Locator, to: Locator) {
     const start = await centreOf(from)

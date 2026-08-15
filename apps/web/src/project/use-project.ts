@@ -1,4 +1,4 @@
-import { catalogue, pruneProjectWires } from "@bot-inventor/nodes"
+import { catalogue, type NodeDefinition, pruneProjectWires } from "@bot-inventor/nodes"
 import type {
   FieldValue,
   Flow,
@@ -10,6 +10,7 @@ import type {
 import { useCallback, useMemo, useState } from "react"
 import { translate } from "@/i18n/messages"
 import {
+  addNode,
   connectWire,
   createFlow,
   disconnectWire,
@@ -55,6 +56,8 @@ export type ProjectEditor = {
    * it refused, so the list can tell the user why nothing happened.
    */
   removeFlow(flowId: string): FlowRemoval
+  /** Puts a Node of the catalogue on the open Flow, at a Canvas position. */
+  addNode(definition: NodeDefinition, position: Position): void
   moveNode(nodeId: string, position: Position): void
   setNodeField(nodeId: string, fieldId: string, value: FieldValue): void
   connectWire(wire: { kind: WireKind; from: PortReference; to: PortReference }): void
@@ -171,6 +174,10 @@ export function useProject(createInitial: () => Project): ProjectEditor {
         return removal
       },
       [project, flow.id]
+    ),
+    addNode: useCallback(
+      (definition, position) => edit(current => addNode(current, definition, position)),
+      [edit]
     ),
     moveNode: useCallback(
       (nodeId, position) => edit(current => moveNode(current, nodeId, position)),
