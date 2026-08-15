@@ -32,6 +32,16 @@ test.describe("the Project name", () => {
     await expect(toolbar.name()).toHaveText(before ?? "")
   })
 
+  test("keeps the name when the user clicks away instead of pressing Enter", async ({ page }) => {
+    await toolbar.editName().click()
+    await toolbar.nameField().fill("Moderation bot")
+    // Anywhere that is not the field: a Node on the Canvas, found by test id so
+    // the click does not depend on the language the editor is in.
+    await page.getByTestId("node-node-trigger").click()
+
+    await expect(toolbar.name()).toHaveText("Moderation bot")
+  })
+
   test("refuses a blank name and keeps the user in the field", async () => {
     await toolbar.editName().click()
     await toolbar.nameField().fill("   ")

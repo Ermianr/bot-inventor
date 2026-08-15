@@ -63,6 +63,57 @@ describe("renaming in place", () => {
     expect(screen.getByTestId("project-name").textContent).toBe("Hello bot")
   })
 
+  it("hands over the name without the spaces around it", () => {
+    const named = renameControl()
+    const field = startEditing()
+
+    fireEvent.change(field, { target: { value: "  Moderation bot  " } })
+    fireEvent.keyDown(field, { key: "Enter" })
+
+    expect(named).toEqual(["Moderation bot"])
+  })
+
+  it("leaves Enter to the IME while a name is being composed", () => {
+    const named = renameControl()
+    const field = startEditing()
+
+    fireEvent.change(field, { target: { value: "モデ" } })
+    fireEvent.keyDown(field, { key: "Enter", isComposing: true })
+
+    expect(named).toEqual([])
+    expect(screen.getByRole("textbox", { name: "The name of this bot" })).toBe(field)
+  })
+
+  it("confirms what was typed when the user clicks away", () => {
+    const named = renameControl()
+    const field = startEditing()
+
+    fireEvent.change(field, { target: { value: "Moderation bot" } })
+    fireEvent.blur(field)
+
+    expect(named).toEqual(["Moderation bot"])
+  })
+
+  it("closes on a blank name clicked away, rather than trapping the user", () => {
+    const named = renameControl()
+    const field = startEditing()
+
+    fireEvent.change(field, { target: { value: "  " } })
+    fireEvent.blur(field)
+
+    expect(named).toEqual([])
+    expect(screen.getByRole("button", { name: "Rename this bot" })).toBeTruthy()
+  })
+
+  it("puts the focus back on the pencil once the keyboard closed the field", () => {
+    renameControl()
+    const field = startEditing()
+
+    fireEvent.keyDown(field, { key: "Escape" })
+
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Rename this bot" }))
+  })
+
   it("refuses a blank name and stays in the field", () => {
     const named = renameControl()
     const field = startEditing()

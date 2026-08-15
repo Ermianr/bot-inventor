@@ -1,8 +1,11 @@
 import type { Locator, Page } from "@playwright/test"
 
 /**
- * The Project toolbar: what the Project is called, and whether the file behind
- * it is behind.
+ * The Project toolbar: what the Project is called, and whether the file on disk
+ * is out of date.
+ *
+ * Everything is found by test id rather than by its words, because the words
+ * are translated and the test would otherwise only pass in English.
  */
 export class ToolbarPage {
   constructor(private readonly page: Page) {}
@@ -29,6 +32,6 @@ export class ToolbarPage {
 
   /** The mark saying the file on disk is behind what is on the Canvas. */
   unsavedMark(): Locator {
-    return this.page.getByText("Unsaved")
+    return this.page.getByTestId("project-unsaved")
   }
 }

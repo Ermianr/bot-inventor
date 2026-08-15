@@ -51,7 +51,11 @@ export function ProjectToolbar({
           onRename={onRename}
         />
         {file.saved ? null : (
-          <span className="text-muted-foreground text-xs" title={translate("project.file.unsaved")}>
+          <span
+            className="text-muted-foreground text-xs"
+            data-testid="project-unsaved"
+            title={translate("project.file.unsaved")}
+          >
             {translate("project.file.unsavedMark")}
           </span>
         )}

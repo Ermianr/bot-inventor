@@ -2,6 +2,7 @@ import type { Migration } from "@bot-inventor/schema"
 import { CURRENT_SCHEMA_VERSION } from "@bot-inventor/schema"
 import { futureVersionProject, helloProject } from "@bot-inventor/schema/fixtures"
 import { describe, expect, it } from "vitest"
+import { renameProject } from "@/project/edits"
 import {
   PROJECT_FILE_EXTENSION,
   type ProjectFileSystem,
@@ -65,6 +66,12 @@ describe("writing a Project to a .botinv file", () => {
     expect(suggestedFileName({ ...helloProject(), name: "***" })).toBe(
       `project.${PROJECT_FILE_EXTENSION}`
     )
+  })
+
+  it("suggests the name the user renamed the Project to, not the one it had", () => {
+    const renamed = renameProject(helloProject(), "Moderation bot")
+
+    expect(suggestedFileName(renamed)).toBe(`moderation-bot.${PROJECT_FILE_EXTENSION}`)
   })
 })
 
