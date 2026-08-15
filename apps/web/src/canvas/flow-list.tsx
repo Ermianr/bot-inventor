@@ -70,13 +70,17 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
               aria-current={open}
               // `group` is what lets the pencil below appear for the whole row
               // rather than only when the pointer is on the pencil itself.
-              className={`group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm ${
+              // The pencil and the bin are one cluster, with nothing between
+              // them: they are what can be done to this row, and a gap makes
+              // them read as two unrelated controls that happen to be near
+              // each other.
+              className={`group flex items-center rounded-md py-1.5 pr-1 pl-2 text-sm ${
                 open ? "bg-accent text-accent-foreground" : "hover:bg-muted"
               }`}
             >
               <InlineName
                 name={flow.name}
-                className="w-full"
+                className="w-full gap-0"
                 editLabel={translate("flows.name.edit")}
                 fieldLabel={translate("flows.name.field")}
                 editClassName={
