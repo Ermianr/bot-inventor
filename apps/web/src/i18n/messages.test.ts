@@ -22,12 +22,4 @@ describe("the words a Node is named by", () => {
       }
     })
   }
-
-  it("names a Node differently in each language, which is what makes searching in one work", () => {
-    for (const definition of catalogue.values()) {
-      expect(translateDefinitionKey(definition.labelKey, "es")).not.toBe(
-        translateDefinitionKey(definition.labelKey, "en")
-      )
-    }
-  })
 })

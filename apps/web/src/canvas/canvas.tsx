@@ -20,7 +20,7 @@ import {
   useReactFlow
 } from "@xyflow/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { AddNodeMenu } from "@/canvas/add-node"
+import { AddNodeMenu, type ScreenPoint } from "@/canvas/add-node"
 import { FlowNode, type FlowNodeData, type FlowNodeType } from "@/canvas/flow-node"
 import { Wire, type WireData, type WireType } from "@/canvas/wire"
 import { translate, translateDefinitionKey } from "@/i18n/messages"
@@ -48,21 +48,24 @@ import "@xyflow/react/dist/style.css"
 const nodeTypes = { flowNode: FlowNode }
 const wireTypes = { wire: Wire }
 
+type CanvasProps = { editor: ProjectEditor; trace?: RunTrace }
+
 /**
  * The Canvas needs React Flow's viewport from outside the `ReactFlow` element —
  * turning the point a right-click happened at into a position in the Flow is
  * done next to the menu, not inside the graph — and `useReactFlow` only answers
- * under a provider. So the provider is here and the Canvas itself is below it.
+ * under a provider. So this puts the provider up, and the Canvas itself is
+ * everything under it.
  */
-export function Canvas(props: { editor: ProjectEditor; trace?: RunTrace }) {
+export function Canvas(props: CanvasProps) {
   return (
     <ReactFlowProvider>
-      <CanvasBoard {...props} />
+      <CanvasUnderProvider {...props} />
     </ReactFlowProvider>
   )
 }
 
-function CanvasBoard({ editor, trace }: { editor: ProjectEditor; trace?: RunTrace }) {
+function CanvasUnderProvider({ editor, trace }: CanvasProps) {
   const { flow } = editor
   const { screenToFlowPosition } = useReactFlow()
   const [refusal, setRefusal] = useState<string | undefined>(undefined)
@@ -225,7 +228,7 @@ function CanvasBoard({ editor, trace }: { editor: ProjectEditor; trace?: RunTrac
    * panned or zoomed must keep that promise.
    */
   const placeNode = useCallback(
-    (definition: NodeDefinition, at: { x: number; y: number }) => {
+    (definition: NodeDefinition, at: ScreenPoint) => {
       editor.addNode(definition, screenToFlowPosition(at))
     },
     [editor.addNode, screenToFlowPosition]
@@ -233,7 +236,7 @@ function CanvasBoard({ editor, trace }: { editor: ProjectEditor; trace?: RunTrac
 
   return (
     <section aria-label={translate("canvas.label")} className="relative h-full w-full">
-      <AddNodeMenu place={placeNode}>
+      <AddNodeMenu landsOnNode={landsOnNode} place={placeNode}>
         <ReactFlow
           edgeTypes={wireTypes}
           edges={wires}
@@ -264,6 +267,15 @@ function CanvasBoard({ editor, trace }: { editor: ProjectEditor; trace?: RunTrac
       )}
     </section>
   )
+}
+
+/**
+ * Whether a pointer gesture landed on a Node. `react-flow__node` is React
+ * Flow's own class on the element it wraps a Node in, and this file is where
+ * its words are allowed to be spoken.
+ */
+function landsOnNode(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(".react-flow__node") !== null
 }
 
 /**

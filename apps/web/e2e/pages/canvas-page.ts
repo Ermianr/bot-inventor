@@ -76,6 +76,7 @@ export class CanvasPage {
     return this.page.getByTestId("add-node-list")
   }
 
+  /** One Node of that list, found by the catalogue id the user never sees. */
   nodeChoice(definitionId: string): Locator {
     return this.page.getByTestId(`add-node-${definitionId}`)
   }

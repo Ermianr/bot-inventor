@@ -82,6 +82,14 @@ test.describe("adding a Node", () => {
     await expect(canvas.node("node-1")).toHaveCount(0)
   })
 
+  test("offers nothing when the right-click lands on a Node", async () => {
+    // The menu belongs to empty Canvas. What a Node offers on a right-click is
+    // a later ticket's answer, and until it has one the gesture does nothing.
+    await canvas.node("node-trigger").locator("header").click({ button: "right" })
+
+    await expect(canvas.addNode()).toHaveCount(0)
+  })
+
   test("marks the Project as unsaved", async ({ page }) => {
     const toolbar = new ToolbarPage(page)
     await expect(toolbar.unsavedMark()).toHaveCount(0)
@@ -91,5 +99,29 @@ test.describe("adding a Node", () => {
     await canvas.nodeChoice("discord.interaction.reply").click()
 
     await expect(toolbar.unsavedMark()).toBeVisible()
+  })
+})
+
+/**
+ * The same gesture for a user reading the editor in Spanish. A Node is searched
+ * for by the words they are shown it under, so in Spanish those words are the
+ * Spanish ones — the catalogue id is not text anybody has ever seen, in any
+ * language.
+ */
+test.describe("adding a Node in Spanish", () => {
+  test.use({ locale: "es-ES" })
+
+  test("finds a Node by its Spanish name", async ({ page }) => {
+    const canvas = new CanvasPage(page)
+    await canvas.open()
+
+    await canvas.rightClickPane({ x: 520, y: 80 })
+    await page.getByTestId("canvas-add-node").click()
+    await canvas.nodeList().getByRole("combobox").fill("Respond")
+
+    await expect(canvas.nodeChoice("discord.interaction.reply")).toBeVisible()
+    await canvas.nodeChoice("discord.interaction.reply").click()
+
+    await expect(canvas.node("node-1")).toContainText("Responder")
   })
 })

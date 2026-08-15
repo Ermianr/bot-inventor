@@ -32,20 +32,35 @@ import { translate, translateDefinitionKey } from "@/i18n/messages"
  * is the one holding React Flow's viewport — so this hands the point back
  * untouched.
  */
+/**
+ * A point on the screen, in client coordinates. It is not a `Position`: a
+ * Position is where something sits in the Flow, and the two are only the same
+ * on a Canvas nobody has panned or zoomed.
+ */
+export type ScreenPoint = { x: number; y: number }
+
 export function AddNodeMenu({
   children,
+  landsOnNode,
   place
 }: {
   children: ReactNode
-  /** Where on the screen the user asked for the Node, in client coordinates. */
-  place: (definition: NodeDefinition, at: { x: number; y: number }) => void
+  /**
+   * Whether a pointer gesture landed on a Node rather than on empty Canvas.
+   * It is asked rather than answered here, because what a Node looks like in
+   * the document is React Flow's vocabulary and the Canvas is where that is
+   * spoken.
+   */
+  landsOnNode: (target: EventTarget | null) => boolean
+  /** Puts a Node of the catalogue where the user asked for it. */
+  place: (definition: NodeDefinition, at: ScreenPoint) => void
 }) {
   /**
    * Where the right-click that opened the menu happened. It is kept because the
    * point is gone by the time the user has picked a Node: the menu closes, the
    * list opens, and neither of those events knows where the gesture started.
    */
-  const [at, setAt] = useState({ x: 0, y: 0 })
+  const [at, setAt] = useState<ScreenPoint>({ x: 0, y: 0 })
   const [picking, setPicking] = useState(false)
 
   return (
@@ -61,7 +76,12 @@ export function AddNodeMenu({
           <div
             className="h-full w-full"
             onContextMenuCapture={event => {
-              if (event.target instanceof Element && event.target.closest(".react-flow__node")) {
+              if (landsOnNode(event.target)) {
+                // The browser's own menu is turned down as well as ours: a
+                // right-click that offers the editor's menu in one place and
+                // Chrome's in another reads as the application breaking. What a
+                // Node offers on a right-click is a later ticket's answer.
+                event.preventDefault()
                 event.stopPropagation()
                 return
               }
@@ -82,7 +102,7 @@ export function AddNodeMenu({
         description={translate("canvas.addNode.help")}
         onOpenChange={setPicking}
         open={picking}
-        title={translate("canvas.addNode.title")}
+        title={translate("canvas.addNode")}
       >
         <Command data-testid="add-node-list">
           <CommandInput placeholder={translate("canvas.addNode.search")} />
