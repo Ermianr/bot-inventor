@@ -1,4 +1,5 @@
-import { helloProject } from "@bot-inventor/schema/fixtures"
+import { catalogue } from "@bot-inventor/nodes"
+import { echoParameterProject, helloProject } from "@bot-inventor/schema/fixtures"
 import { describe, expect, it } from "vitest"
 import { connectWire, disconnectWire, moveNode, setNodeField, updateFlow } from "@/project/edits"
 
@@ -19,9 +20,69 @@ describe("editing a Project from the Canvas", () => {
   })
 
   it("records what the user typed into a field", () => {
-    const edited = setNodeField(flowOf(), "node-trigger", "name", "goodbye")
+    const edited = setNodeField(flowOf(), catalogue, "node-trigger", "name", "goodbye")
 
     expect(edited.nodes.find(node => node.id === "node-trigger")?.fields.name).toBe("goodbye")
+  })
+
+  it("keeps the Wires that a field edit leaves alone", () => {
+    const edited = setNodeField(
+      flowOf(echoParameterProject()),
+      catalogue,
+      "node-trigger",
+      "description",
+      "Says it back"
+    )
+
+    expect(edited.wires.map(wire => wire.id)).toEqual(["wire-execution", "wire-data"])
+  })
+
+  it("takes away the Wire drawn from a parameter the user renamed", () => {
+    const edited = setNodeField(
+      flowOf(echoParameterProject()),
+      catalogue,
+      "node-trigger",
+      "parameters",
+      [{ name: "text", description: "What to say", type: "text", required: true }]
+    )
+
+    // The Execution Wire is untouched: only the Port that went with the old
+    // name took its Wire with it.
+    expect(edited.wires.map(wire => wire.id)).toEqual(["wire-execution"])
+  })
+
+  it("leaves a Wire dangling for a reason of its own where it is", () => {
+    const flow = flowOf(echoParameterProject())
+    flow.nodes.push({
+      id: "node-second",
+      type: "discord.interaction.reply",
+      position: { x: 640, y: 0 },
+      fields: {}
+    })
+    flow.wires.push({
+      id: "wire-elsewhere",
+      kind: "data",
+      from: { node: "node-reply", port: "gone" },
+      to: { node: "node-second", port: "content" }
+    })
+
+    // Typing into a Node's name must not quietly destroy Wires that edit had
+    // nothing to do with: there is no undo, and nothing says it happened.
+    const edited = setNodeField(flow, catalogue, "node-trigger", "name", "say")
+
+    expect(edited.wires.map(wire => wire.id)).toContain("wire-elsewhere")
+  })
+
+  it("takes away the Wire drawn from a parameter the user removed", () => {
+    const edited = setNodeField(
+      flowOf(echoParameterProject()),
+      catalogue,
+      "node-trigger",
+      "parameters",
+      []
+    )
+
+    expect(edited.wires.map(wire => wire.id)).toEqual(["wire-execution"])
   })
 
   it("draws a Wire under an id no other Wire has", () => {
@@ -47,7 +108,7 @@ describe("editing a Project from the Canvas", () => {
     project.flows.push({ id: "flow-other", name: "Other", nodes: [], wires: [] })
 
     const edited = updateFlow(project, "flow-hello", flow =>
-      setNodeField(flow, "node-trigger", "name", "goodbye")
+      setNodeField(flow, catalogue, "node-trigger", "name", "goodbye")
     )
 
     expect(edited.flows[0]?.nodes[0]?.fields.name).toBe("goodbye")

@@ -52,6 +52,49 @@ function draw(runState: NodeRunState | undefined) {
   return within(container).getByTestId("node-reply")
 }
 
+describe("drawing the Ports a Node's own fields declare", () => {
+  const trigger = requireDefinition("discord.trigger.slashCommand")
+
+  function drawTrigger(parameters: unknown) {
+    const data: FlowNodeData = {
+      node: {
+        id: "node-trigger",
+        type: trigger.id,
+        position: { x: 0, y: 0 },
+        fields: { name: "echo", parameters } as FlowNodeData["node"]["fields"]
+      },
+      definition: trigger,
+      runState: undefined,
+      setField: () => {}
+    }
+    const props = { data, id: "trigger", type: "flowNode" } as unknown as ComponentProps<
+      typeof FlowNode
+    >
+
+    const { container } = render(
+      <ReactFlowProvider>
+        <FlowNode {...props} />
+      </ReactFlowProvider>
+    )
+    return within(container).getByTestId("node-trigger")
+  }
+
+  it("gives a declared parameter a Port, named the way the user named it", () => {
+    const node = drawTrigger([
+      { name: "message", description: "What to say", type: "text", required: true }
+    ])
+
+    expect(within(node).getByTestId("port-trigger-parameter.message")).toBeDefined()
+    expect(node.textContent).toContain("message")
+  })
+
+  it("draws no parameter Ports for a command that asks for nothing", () => {
+    const node = drawTrigger([])
+
+    expect(within(node).queryByTestId("port-trigger-parameter.message")).toBeNull()
+  })
+})
+
 describe("drawing a Node the run reached", () => {
   it("marks the Node the bot is inside right now", () => {
     const node = draw("entered")

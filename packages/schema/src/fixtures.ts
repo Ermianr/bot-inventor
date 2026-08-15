@@ -140,6 +140,59 @@ export function parameterisedCommandProject(): Project {
 }
 
 /**
+ * A Project whose reply reads what the caller answered: `/echo` asks for a
+ * piece of text and says it back, with a Data Wire from the parameter's Port
+ * into the Reply Node.
+ */
+export function echoParameterProject(): Project {
+  return {
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    id: "project-echo",
+    name: "Echo Bot",
+    flows: [
+      {
+        id: "flow-echo",
+        name: "Echo",
+        nodes: [
+          {
+            id: "node-trigger",
+            type: "discord.trigger.slashCommand",
+            position: { x: 0, y: 0 },
+            fields: {
+              name: "echo",
+              description: "Says something back",
+              parameters: [
+                { name: "message", description: "What to say", type: "text", required: true }
+              ]
+            }
+          },
+          {
+            id: "node-reply",
+            type: "discord.interaction.reply",
+            position: { x: 320, y: 0 },
+            fields: { ephemeral: false }
+          }
+        ],
+        wires: [
+          {
+            id: "wire-execution",
+            kind: "execution",
+            from: { node: "node-trigger", port: "next" },
+            to: { node: "node-reply", port: "in" }
+          },
+          {
+            id: "wire-data",
+            kind: "data",
+            from: { node: "node-trigger", port: "parameter.message" },
+            to: { node: "node-reply", port: "content" }
+          }
+        ]
+      }
+    ]
+  }
+}
+
+/**
  * `helloProject` with a second Reply Node dropped on the Canvas and wired to
  * nothing: it is part of the Project, but not part of any run.
  */

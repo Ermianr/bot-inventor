@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 
 import type { Project } from "@bot-inventor/schema"
-import { futureVersionProject, helloProject } from "@bot-inventor/schema/fixtures"
+import {
+  echoParameterProject,
+  futureVersionProject,
+  helloProject,
+  requireFirst
+} from "@bot-inventor/schema/fixtures"
 import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import { type ProjectFileGateway, serializeProject } from "@/project/project-file"
@@ -125,6 +130,25 @@ describe("opening a Project", () => {
     expect(result.current.editor.project).toEqual(saved)
     expect(result.current.file.path).toBe("C:/bots/hello.botinv")
     expect(result.current.file.saved).toBe(true)
+  })
+
+  it("clears a Wire the Canvas could never show, let alone remove", async () => {
+    const saved = echoParameterProject()
+    const trigger = requireFirst(requireFirst(saved.flows, "Flow").nodes, "Node")
+    trigger.fields.parameters = []
+
+    const { gateway } = fakeGateway(
+      { "C:/bots/echo.botinv": serializeProject(saved) },
+      { openPath: "C:/bots/echo.botinv" }
+    )
+    const { result } = editorWith(gateway)
+
+    await act(() => result.current.file.open())
+
+    // React Flow draws no edge for a handle that is not there, so the Wire
+    // would be invisible and undeletable while the Compiler refuses to run the
+    // Flow that holds it: the Project would be open and unusable.
+    expect(result.current.editor.flow.wires.map(wire => wire.id)).toEqual(["wire-execution"])
   })
 
   it("explains a Project from a newer build and keeps the one on the Canvas", async () => {

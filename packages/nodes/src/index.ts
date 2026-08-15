@@ -6,10 +6,20 @@ export {
   findCoercion
 } from "./coercions.js"
 export {
+  type CommandParameter,
+  commandParameterPorts,
+  parameterPortId,
+  readCommandParameters
+} from "./command-parameters.js"
+export {
   type ConnectionCheck,
   type ConnectionRequest,
   checkConnection,
-  findFlowPort
+  danglingEndsOf,
+  findDanglingWires,
+  findFlowPort,
+  pruneDanglingWires,
+  pruneProjectWires
 } from "./connections.js"
 export {
   type CompilerMode,
@@ -25,8 +35,10 @@ export {
   indent,
   joinStatements,
   type NodeDefinition,
+  type NodeFields,
   type PortDefinition,
   type PortDirection,
+  portsOf,
   type TraceRequest
 } from "./definition.js"
 export { reply } from "./discord/reply.js"

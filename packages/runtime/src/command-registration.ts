@@ -126,11 +126,42 @@ export function toCommandPayload(definition: SlashCommandDefinition): CommandPay
       .sort((left, right) => Number(right.required) - Number(left.required))
       .map(parameter => ({
         type: optionTypeOf(parameter, definition),
-        name: parameter.name,
+        name: nameOf(parameter, definition, parameters),
         description: parameter.description,
         required: parameter.required
       }))
   }
+}
+
+/** What Discord accepts as an option name: lowercase letters, digits, `-` and `_`. */
+const OPTION_NAME = /^[-_\p{Ll}\p{N}]{1,32}$/u
+
+/**
+ * A parameter's name, refused here rather than by Discord.
+ *
+ * Discord answers a name it does not like with a form error naming
+ * `options[0].name`, which says nothing about the Canvas the user is looking
+ * at, and it rejects the whole registration: the bot never comes up, and no
+ * command works, because of one capital letter.
+ */
+function nameOf(
+  parameter: SlashCommandParameter,
+  definition: SlashCommandDefinition,
+  parameters: readonly SlashCommandParameter[]
+): string {
+  if (!OPTION_NAME.test(parameter.name)) {
+    throw new Error(
+      `The slash command "${definition.name}" asks for "${parameter.name}". Discord only accepts lowercase letters, numbers, "-" and "_" there, and at most 32 of them.`
+    )
+  }
+
+  if (parameters.filter(candidate => candidate.name === parameter.name).length > 1) {
+    throw new Error(
+      `The slash command "${definition.name}" asks for "${parameter.name}" twice. Discord asks for each name once.`
+    )
+  }
+
+  return parameter.name
 }
 
 /**

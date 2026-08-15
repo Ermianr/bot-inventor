@@ -10,7 +10,8 @@ import type {
   ReplyOptions,
   SlashCommandDefinition,
   SlashCommandEvent,
-  SlashCommandHandler
+  SlashCommandHandler,
+  SlashCommandParameters
 } from "./discord.js"
 import type { FlowFailure, Runtime, TraceEvent } from "./runtime.js"
 import { createTracing } from "./tracing.js"
@@ -29,6 +30,12 @@ export type SlashCommandInput = {
   user?: Partial<DiscordUser>
   guildId?: string | null
   channelId?: string
+  /**
+   * What the caller answered, keyed by parameter name. Leaving a name out is
+   * the caller not answering an optional parameter, which is the case a test
+   * needs to be able to tell from an empty answer.
+   */
+  parameters?: SlashCommandParameters
 }
 
 export type FakeRuntimeOptions = {
@@ -165,6 +172,7 @@ export function createFakeRuntime(options: FakeRuntimeOptions = {}): FakeRuntime
         user: { ...anonymous, ...input.user },
         guildId: input.guildId === undefined ? "guild-1" : input.guildId,
         channelId: input.channelId ?? "channel-1",
+        parameters: input.parameters ?? {},
         source: undefined
       })
     }

@@ -2,8 +2,10 @@ import {
   applyCoercion,
   type CompilerMode,
   type DataType,
+  danglingEndsOf,
   defaultFieldValue,
   findCoercion,
+  findDanglingWires,
   findField,
   findPort,
   type GenerationContext,
@@ -15,7 +17,7 @@ import {
 } from "@bot-inventor/nodes"
 import type { FieldValue, Flow, Node } from "@bot-inventor/schema"
 import { CompilerError } from "./errors.js"
-import { assignIdentifierPrefixes, literal } from "./identifiers.js"
+import { assignIdentifierPrefixes, claimIdentifier, literal, sanitise } from "./identifiers.js"
 
 /** The identifiers the generated code uses. Node definitions read them off the context. */
 const RUNTIME = "runtime"
@@ -40,6 +42,10 @@ class FlowCompiler {
   private readonly bound = new Set<string>()
   /** Nodes already emitted in this run, so a cycle is reported rather than inlined forever. */
   private readonly emitted = new Set<string>()
+  /** Every identifier this Flow's generated code has already used. */
+  private readonly takenIdentifiers: Set<string>
+  /** The identifier each Data Port's value lives in, as `nodeId.portId`. */
+  private readonly portIdentifiers = new Map<string, string>()
   /** Whether the run this Flow's Tracing stamps its events with is declared yet. */
   private runDeclared = false
 
@@ -50,9 +56,12 @@ class FlowCompiler {
   ) {
     this.nodesById = new Map(flow.nodes.map(node => [node.id, node]))
     this.prefixes = assignIdentifierPrefixes(flow.nodes)
+    this.takenIdentifiers = new Set(this.prefixes.values())
   }
 
   compile(): string {
+    this.refuseDanglingWires()
+
     const triggers = this.flow.nodes.filter(node => this.definitionOf(node).isTrigger)
 
     const [trigger] = triggers
@@ -71,7 +80,7 @@ class FlowCompiler {
   /** Everything reachable from one Execution output Port, in execution order. */
   private emitFrom(node: Node, portId: string, startsRun: boolean): string {
     const definition = this.definitionOf(node)
-    const port = findPort(definition, portId)
+    const port = findPort(definition, portId, node.fields)
     if (port === undefined || port.kind !== "execution" || port.direction !== "output") {
       throw new CompilerError(
         `the Node "${definition.id}" asked for the continuation of "${portId}", which is not one of its Execution output Ports`,
@@ -150,7 +159,7 @@ class FlowCompiler {
       field: id => this.fieldOf(node, definition, id),
       input: id => this.inputExpression(node, definition, id),
       output: id => {
-        const port = findPort(definition, id)
+        const port = findPort(definition, id, node.fields)
         if (port === undefined || port.kind !== "data" || port.direction !== "output") {
           throw new CompilerError(
             `the Node "${definition.id}" bound "${id}", which is not one of its Data output Ports`,
@@ -158,7 +167,7 @@ class FlowCompiler {
           )
         }
         this.bound.add(`${node.id}.${id}`)
-        return `${this.prefixOf(node)}_${id}`
+        return this.identifierFor(node, id)
       },
       continuation: portId => this.emitFrom(node, portId, isTrigger),
       trace: request => this.traceStatement(node, request)
@@ -202,7 +211,7 @@ class FlowCompiler {
    * Coercion the two Port types need, and from the Node's own field otherwise.
    */
   private inputExpression(node: Node, definition: NodeDefinition, id: string): string {
-    const port = findPort(definition, id)
+    const port = findPort(definition, id, node.fields)
     if (port === undefined || port.kind !== "data" || port.direction !== "input") {
       throw new CompilerError(
         `the Node "${definition.id}" read "${id}", which is not one of its Data input Ports`,
@@ -226,7 +235,7 @@ class FlowCompiler {
 
     const source = this.nodeFor(wire.from.node, node.id)
     const sourceDefinition = this.definitionOf(source)
-    const sourcePort = findPort(sourceDefinition, wire.from.port)
+    const sourcePort = findPort(sourceDefinition, wire.from.port, source.fields)
     if (
       sourcePort === undefined ||
       sourcePort.kind !== "data" ||
@@ -245,7 +254,7 @@ class FlowCompiler {
       )
     }
 
-    const bound = `${this.prefixOf(source)}_${wire.from.port}`
+    const bound = this.identifierFor(source, wire.from.port)
     const expression = this.coerced(bound, wire.id, sourcePort.dataType, port.dataType, node)
 
     return this.traceWire(wire.id, expression)
@@ -292,6 +301,50 @@ class FlowCompiler {
       )
     }
     return definition
+  }
+
+  /**
+   * The identifier one Data Port's value lives in.
+   *
+   * It is assigned once and remembered rather than spelled out wherever it is
+   * needed, because a Port id is not an identifier: a slash command parameter's
+   * Port is named after text the user typed, and two names that sanitise to the
+   * same thing must still end up in two different variables.
+   */
+  private identifierFor(node: Node, portId: string): string {
+    const key = `${node.id}.${portId}`
+    const existing = this.portIdentifiers.get(key)
+    if (existing !== undefined) return existing
+
+    const identifier = claimIdentifier(
+      this.takenIdentifiers,
+      `${this.prefixOf(node)}_${sanitise(portId)}`
+    )
+    this.portIdentifiers.set(key, identifier)
+    return identifier
+  }
+
+  /**
+   * Refuses a Flow holding a Wire whose Port is no longer there.
+   *
+   * Editing a slash command's parameters takes Ports away, and the Wires drawn
+   * to them stop meaning anything. Emitting anyway is the one outcome that is
+   * not allowed: a Data input silently falling back to its inline field is a
+   * bot answering with the wrong text and nothing at all saying why.
+   */
+  private refuseDanglingWires(): void {
+    const [dangling] = findDanglingWires(this.flow, this.catalogue)
+    if (dangling === undefined) return
+
+    // The end that actually lost its Port, which is the Node the editor has to
+    // mark: a renamed slash command parameter is the common case, and that is
+    // the Wire's source, not the Node reading from it.
+    const [end] = danglingEndsOf(this.flow, this.catalogue, dangling)
+
+    throw new CompilerError(
+      `Wire "${dangling.id}" is drawn to a Port that no longer exists; remove it or restore the Port it named`,
+      { flow: this.flow.id, node: (end ?? dangling.to).node }
+    )
   }
 
   /** The identifier prefix a Node's Data outputs are bound under. */

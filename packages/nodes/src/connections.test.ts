@@ -1,7 +1,12 @@
 import type { Flow, PortReference } from "@bot-inventor/schema"
 import { describe, expect, it } from "vitest"
 import { buildCatalogue } from "./catalogue.js"
-import { checkConnection } from "./connections.js"
+import {
+  checkConnection,
+  danglingEndsOf,
+  findDanglingWires,
+  pruneDanglingWires
+} from "./connections.js"
 import type { NodeDefinition } from "./definition.js"
 import { reply } from "./discord/reply.js"
 import { slashCommandTrigger } from "./discord/slash-command-trigger.js"
@@ -210,6 +215,19 @@ describe("checking whether a Wire is legal", () => {
     ).toMatchObject({ legal: true })
   })
 
+  it("accepts a Wire from a Port a slash command parameter declared", () => {
+    const flow = bareFlow()
+    const trigger = flow.nodes[0]
+    if (trigger === undefined) throw new Error("the Flow has no Trigger")
+    trigger.fields = {
+      parameters: [{ name: "message", description: "What to say", type: "text", required: true }]
+    }
+
+    expect(
+      check(flow, port("node-trigger", "parameter.message"), port("node-reply", "content"))
+    ).toEqual({ legal: true, kind: "data", coercion: undefined })
+  })
+
   it("rejects a Wire that closes a cycle", () => {
     const flow = bareFlow()
     flow.wires.push({
@@ -223,5 +241,91 @@ describe("checking whether a Wire is legal", () => {
       legal: false,
       reasonKey: "connections.rejected.cycle"
     })
+  })
+})
+
+describe("Wires left pointing at a Port that is no longer there", () => {
+  /** A Flow whose reply reads a parameter Port, which a test can then take away. */
+  function wiredToAParameter(): Flow {
+    const flow = bareFlow()
+    const trigger = flow.nodes[0]
+    if (trigger === undefined) throw new Error("the Flow has no Trigger")
+    trigger.fields = {
+      parameters: [{ name: "message", description: "What to say", type: "text", required: true }]
+    }
+    flow.wires.push(
+      {
+        id: "wire-execution",
+        kind: "execution",
+        from: port("node-trigger", "next"),
+        to: port("node-reply", "in")
+      },
+      {
+        id: "wire-data",
+        kind: "data",
+        from: port("node-trigger", "parameter.message"),
+        to: port("node-reply", "content")
+      }
+    )
+    return flow
+  }
+
+  it("finds none while every Port a Wire names is still declared", () => {
+    expect(findDanglingWires(wiredToAParameter(), catalogue)).toEqual([])
+  })
+
+  it("finds the Wire whose parameter was renamed", () => {
+    const flow = wiredToAParameter()
+    const trigger = flow.nodes[0]
+    if (trigger === undefined) throw new Error("the Flow has no Trigger")
+    trigger.fields = {
+      parameters: [{ name: "text", description: "What to say", type: "text", required: true }]
+    }
+
+    expect(findDanglingWires(flow, catalogue).map(wire => wire.id)).toEqual(["wire-data"])
+    expect(pruneDanglingWires(flow, catalogue).wires.map(wire => wire.id)).toEqual([
+      "wire-execution"
+    ])
+  })
+
+  it("hands back the Flow it was given when there is nothing to take away", () => {
+    const flow = wiredToAParameter()
+
+    expect(pruneDanglingWires(flow, catalogue)).toBe(flow)
+  })
+
+  it("says which end of the Wire lost its Port, which is the Node to look at", () => {
+    const flow = wiredToAParameter()
+    const trigger = flow.nodes[0]
+    if (trigger === undefined) throw new Error("the Flow has no Trigger")
+    trigger.fields = { parameters: [] }
+
+    const wire = flow.wires[1]
+    if (wire === undefined) throw new Error("the Flow has no Data Wire")
+
+    // The Trigger is where the parameter went, not the Reply reading from it.
+    expect(danglingEndsOf(flow, catalogue, wire)).toEqual([
+      { node: "node-trigger", port: "parameter.message" }
+    ])
+  })
+
+  it("takes away only the Wires of the Node it was told about", () => {
+    const flow = wiredToAParameter()
+    const trigger = flow.nodes[0]
+    if (trigger === undefined) throw new Error("the Flow has no Trigger")
+    trigger.fields = { parameters: [] }
+    flow.wires.push({
+      id: "wire-elsewhere",
+      kind: "data",
+      from: port("node-text-source", "gone"),
+      to: port("node-second-reply", "content")
+    })
+
+    // Editing one Node must not destroy a Wire that dangles for a reason of its
+    // own — a Port a newer build declared and this one does not.
+    expect(pruneDanglingWires(flow, catalogue, "node-trigger").wires.map(wire => wire.id)).toEqual([
+      "wire-execution",
+      "wire-elsewhere"
+    ])
   })
 })

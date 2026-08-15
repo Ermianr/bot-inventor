@@ -108,9 +108,14 @@ const en = {
   "connections.rejected.cycle": "That would send your bot round in a circle.",
 
   "coercions.userToText.label": "as text",
+  "coercions.numberToText.label": "as text",
+  "coercions.booleanToText.label": "as text",
 
   "ports.in.label": "Run this",
   "ports.next.label": "Then",
+  // Shown only when a parameter has somehow lost its name: a parameter's Port is
+  // normally labelled with what the user called it.
+  "ports.commandParameter.label": "What they answered",
 
   "nodes.discord.trigger.slashCommand.label": "Slash command",
   "nodes.discord.trigger.slashCommand.description": "Starts when someone uses your command.",
@@ -229,9 +234,12 @@ const es: Record<MessageKey, string> = {
   "connections.rejected.cycle": "Eso haría que tu bot diera vueltas en círculo.",
 
   "coercions.userToText.label": "como texto",
+  "coercions.numberToText.label": "como texto",
+  "coercions.booleanToText.label": "como texto",
 
   "ports.in.label": "Haz esto",
   "ports.next.label": "Después",
+  "ports.commandParameter.label": "Lo que respondieron",
 
   "nodes.discord.trigger.slashCommand.label": "Comando",
   "nodes.discord.trigger.slashCommand.description": "Empieza cuando alguien usa tu comando.",
