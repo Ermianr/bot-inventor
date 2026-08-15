@@ -61,10 +61,20 @@ export class FlowListPage {
     return this.page.getByTestId("remove-flow-cancel")
   }
 
+  /** The mark saying a Flow has nothing to start it, and so never runs. */
+  neverRuns(flowId: string): Locator {
+    return this.page.getByTestId(`flow-${flowId}-never-runs`)
+  }
+
+  /** The same mark on whichever Flow is open, whose id a test may not know. */
+  neverRunsOpen(): Locator {
+    return this.page.locator('li[aria-current="true"] [data-testid$="-never-runs"]')
+  }
+
   /** Every Flow's name, in the order the list holds them. */
   names(): Locator {
     return this.page.locator(
-      '[data-testid^="flow-"]:not([data-testid$="-edit"], [data-testid$="-field"], [data-testid$="-remove"], [data-testid="flow-create"])'
+      '[data-testid^="flow-"]:not([data-testid$="-edit"], [data-testid$="-field"], [data-testid$="-remove"], [data-testid$="-never-runs"], [data-testid="flow-create"])'
     )
   }
 

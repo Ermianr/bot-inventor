@@ -1,3 +1,4 @@
+import { catalogue, hasTrigger } from "@bot-inventor/nodes"
 import { Button } from "@bot-inventor/ui/components/button"
 import {
   Dialog,
@@ -7,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@bot-inventor/ui/components/dialog"
-import { PlusIcon, Trash2Icon } from "lucide-react"
+import { CircleAlertIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -28,6 +29,12 @@ import type { ProjectEditor } from "@/project/use-project"
  * The "+" adds a Flow and hands the user its name as a field, so calling it
  * something is part of making it rather than a second thing to remember. The
  * bin beside the pencil takes one away, always asking first: there is no undo.
+ *
+ * A Flow with no Trigger is marked here as one that never runs. The Compiler
+ * emits nothing for it and says nothing about it, so the list is the only place
+ * a user finds out before spending an afternoon wondering why their bot ignores
+ * them. The mark is read off the Flow's Nodes, so it goes the moment a Trigger
+ * lands on the Canvas.
  */
 export function FlowList({ editor }: { editor: ProjectEditor }) {
   /**
@@ -95,6 +102,26 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
                 onSelect={() => editor.openFlow(flow.id)}
                 onRename={name => renameOrExplain(editor, flow.id, name)}
               />
+              {hasTrigger(flow, catalogue) ? null : (
+                // A sentence would not fit a row this narrow, so the mark is an
+                // icon carrying the sentence: `title` for the pointer, the same
+                // words as its accessible name for everyone else. It stays put
+                // while the row is hovered, unlike the pencil and the bin —
+                // what it says is true whether or not the user is reaching for
+                // anything.
+                <span
+                  role="img"
+                  aria-label={translate("flows.neverRuns")}
+                  title={translate("flows.neverRuns")}
+                  data-testid={`flow-${flow.id}-never-runs`}
+                  // Not muted: it is the same kind of statement the run panel
+                  // makes when something is wrong, and a mark nobody notices is
+                  // one the user still spends their afternoon on.
+                  className="shrink-0 px-1 text-destructive"
+                >
+                  <CircleAlertIcon className="size-3.5" />
+                </span>
+              )}
               <Button
                 size="icon-xs"
                 variant="ghost"
