@@ -4,6 +4,21 @@ Windows desktop app (Tauri) where non-programmers build Discord bots by wiring N
 
 Read [CONTEXT.md](./CONTEXT.md) before naming anything — it is the domain glossary and it is binding. Architectural decisions and their reasoning live in [docs/adr/](./docs/adr/).
 
+## Commands
+
+Bun is the package manager and Turborepo the task runner; run everything from the repository root.
+
+```bash
+bun install
+bun run desktop:dev    # the real app: builds the sidecar, then tauri dev
+bun run dev:web        # the editor in a browser, no Tauri shell
+bun run test           # vitest across every package
+bun run check-types
+bun run check          # biome check --write . — this one rewrites files
+```
+
+End-to-end tests are Playwright and are not part of `bun run test`: `cd apps/web && bun run test:e2e`.
+
 ## Language policy
 
 **Everything written in this repository is in English.** No exceptions:
@@ -44,8 +59,15 @@ Bun workspaces + Turborepo. Vite 8, React 19, TanStack Router, Tailwind 4, shadc
 - `packages/nodes` — the Node catalogue. Each Node's visual definition and its code generation live in **the same file**; do not split them (see ADR 0001)
 - `packages/compiler` — Project graph to JavaScript, both modes
 - `packages/runtime` — thin layer over discord.js plus Memory; this is what generated code consumes
+- `packages/config` — `tsconfig.base.json`, extended by every other package
 - `apps/web` — the editor, shipped inside Tauri. Its `src-tauri` side owns Secrets, the Node.js sidecar and the life of a Session
 - `scripts` — repository tasks. `bun run sidecar` downloads the pinned Node.js and builds the Runtime resource; `desktop:dev` and `desktop:build` run it first. Neither artifact is in git
+
+## Testing
+
+Unit tests are Vitest and sit next to what they test, as `src/**/*.test.ts`. Playwright specs live in `apps/web/e2e`, with their Page Objects in `apps/web/e2e/pages`.
+
+`test` and `check-types` depend on `^build` in `turbo.json`, so a package's workspace dependencies must be built before its tests can resolve them — prefer `bun run test` at the root over calling `vitest` inside a package. In `apps/web`, `check-types` deliberately runs a full `vite build` before `tsc --noEmit`; it is slow on purpose.
 
 ## Non-negotiables
 
