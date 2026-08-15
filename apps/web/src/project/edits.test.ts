@@ -2,10 +2,12 @@ import { catalogue } from "@bot-inventor/nodes"
 import { echoParameterProject, helloProject } from "@bot-inventor/schema/fixtures"
 import { describe, expect, it } from "vitest"
 import {
+  canRemoveFlow,
   connectWire,
   createFlow,
   disconnectWire,
   moveNode,
+  removeFlow,
   renameFlow,
   renameProject,
   setNodeField,
@@ -129,6 +131,72 @@ describe("creating a Flow", () => {
     }
 
     expect(createFlow(project, "flow-new", "Main").flows.at(-1)?.name).toBe("Main 3")
+  })
+})
+
+describe("removing a Flow", () => {
+  /** `twoFlowProject` with a third Flow, so a middle one has both neighbours. */
+  function threeFlowProject() {
+    const project = twoFlowProject()
+    return {
+      ...project,
+      flows: [...project.flows, { id: "flow-third", name: "Third", nodes: [], wires: [] }]
+    }
+  }
+
+  it("takes the Flow out, leaving the ones the Project had", () => {
+    const project = threeFlowProject()
+    const removal = removeFlow(project, "flow-goodbye", "flow-hello")
+
+    if (!removal.removed) throw new Error("the removal was refused")
+    expect(removal.project.flows.map(flow => flow.id)).toEqual(["flow-hello", "flow-third"])
+    expect(project.flows).toHaveLength(3)
+  })
+
+  it("refuses to remove the only Flow of a Project", () => {
+    const project = helloProject()
+
+    expect(removeFlow(project, "flow-hello", "flow-hello")).toEqual({
+      removed: false,
+      refusal: "last"
+    })
+  })
+
+  it("says a Flow the Project does not have is missing, not the last one", () => {
+    expect(removeFlow(threeFlowProject(), "flow-nothing", "flow-hello")).toEqual({
+      removed: false,
+      refusal: "missing"
+    })
+    expect(removeFlow(helloProject(), "flow-nothing", "flow-hello")).toEqual({
+      removed: false,
+      refusal: "missing"
+    })
+  })
+
+  it("says up front which Projects can spare a Flow", () => {
+    expect(canRemoveFlow(helloProject())).toBe(false)
+    expect(canRemoveFlow(twoFlowProject())).toBe(true)
+  })
+
+  it("leaves the open Flow where it was when another Flow goes", () => {
+    const removal = removeFlow(threeFlowProject(), "flow-third", "flow-hello")
+
+    if (!removal.removed) throw new Error("the removal was refused")
+    expect(removal.open).toBe("flow-hello")
+  })
+
+  it("opens the Flow before the one the user was looking at", () => {
+    const removal = removeFlow(threeFlowProject(), "flow-third", "flow-third")
+
+    if (!removal.removed) throw new Error("the removal was refused")
+    expect(removal.open).toBe("flow-goodbye")
+  })
+
+  it("opens the Flow after the one the user was looking at when it was the first", () => {
+    const removal = removeFlow(threeFlowProject(), "flow-hello", "flow-hello")
+
+    if (!removal.removed) throw new Error("the removal was refused")
+    expect(removal.open).toBe("flow-goodbye")
   })
 })
 

@@ -100,6 +100,61 @@ function freeFlowName(project: Project, base: string): string {
   return `${base} ${number}`
 }
 
+/**
+ * Why a removal was refused, or the Project it produced and the Flow the
+ * Canvas shows next.
+ *
+ * Which Flow to open is answered here rather than in the editor: it is a rule
+ * about the list, it is the part of removing a Flow the user notices most, and
+ * a rule held inside a hook is one only a rendered Canvas can test.
+ */
+export type FlowRemoval =
+  | { removed: true; project: Project; open: string }
+  | { removed: false; refusal: "last" | "missing" }
+
+/**
+ * Whether this Project can spare a Flow at all.
+ *
+ * The refusal is the same rule `removeFlow` applies, exported so the list can
+ * say why before asking a question it already knows the answer to — a modal
+ * that only ever ends in "no" is a modal that should not have opened.
+ */
+export function canRemoveFlow(project: Project): boolean {
+  return project.flows.length > 1
+}
+
+/**
+ * Removes a Flow, and says which Flow the Canvas should show afterwards.
+ *
+ * The last Flow of a Project is never removed: the editor always has a Canvas
+ * on screen, and a Project with no Flow is one the user cannot do anything with
+ * — not even start again, since nothing would be there to add a Node to.
+ *
+ * `openFlowId` is the Flow the Canvas is showing. Removing some other Flow
+ * leaves the user where they were. Removing the one they are looking at moves
+ * them to its neighbour — the Flow above it, or the one below when it was the
+ * first — because the work they were doing is next to that Flow in the list,
+ * and jumping to the top of a long list loses their place for no reason.
+ */
+export function removeFlow(project: Project, flowId: string, openFlowId: string): FlowRemoval {
+  const index = project.flows.findIndex(flow => flow.id === flowId)
+  // Answered before the last-Flow rule, so a Flow that is not there is never
+  // explained away as the only one the Project has.
+  if (index === -1) return { removed: false, refusal: "missing" }
+  if (!canRemoveFlow(project)) return { removed: false, refusal: "last" }
+
+  const flows = project.flows.filter(flow => flow.id !== flowId)
+  const neighbour = project.flows[index - 1] ?? project.flows[index + 1]
+
+  return {
+    removed: true,
+    project: { ...project, flows },
+    // `neighbour` is there whenever the removed Flow was not the only one, and
+    // the fallback only keeps the type honest.
+    open: flowId === openFlowId ? (neighbour?.id ?? "") : openFlowId
+  }
+}
+
 /** Replaces one Flow of a Project, leaving the others as they were. */
 export function updateFlow(
   project: Project,

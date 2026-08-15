@@ -36,10 +36,35 @@ export class FlowListPage {
     return this.page.getByTestId("flow-create")
   }
 
+  /** The bin that asks whether a Flow should go. */
+  remove(flowId: string): Locator {
+    return this.page.getByTestId(`flow-${flowId}-remove`)
+  }
+
+  /** The bin on whichever Flow is open, whose id a test may not know. */
+  removeOpen(): Locator {
+    return this.page.locator('li[aria-current="true"] [data-testid$="-remove"]')
+  }
+
+  /** The question a removal puts before it happens. */
+  removeDialog(): Locator {
+    return this.page.getByTestId("remove-flow-dialog")
+  }
+
+  /** The button that goes through with a removal. */
+  confirmRemoval(): Locator {
+    return this.page.getByTestId("remove-flow-confirm")
+  }
+
+  /** The button that calls the removal off. */
+  cancelRemoval(): Locator {
+    return this.page.getByTestId("remove-flow-cancel")
+  }
+
   /** Every Flow's name, in the order the list holds them. */
   names(): Locator {
     return this.page.locator(
-      '[data-testid^="flow-"]:not([data-testid$="-edit"], [data-testid$="-field"], [data-testid="flow-create"])'
+      '[data-testid^="flow-"]:not([data-testid$="-edit"], [data-testid$="-field"], [data-testid$="-remove"], [data-testid="flow-create"])'
     )
   }
 
