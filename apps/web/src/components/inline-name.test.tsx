@@ -176,6 +176,25 @@ describe("renaming in place", () => {
     expect(chosen).toEqual(["Hello"])
   })
 
+  it("starts as a field, selected, for a name the user has not chosen yet", () => {
+    render(
+      <InlineName
+        name="Main"
+        startEditing
+        editLabel="Rename this flow"
+        fieldLabel="The name of this flow"
+        testId="flow-name"
+        onRename={() => undefined}
+      />
+    )
+    const field = screen.getByRole("textbox", { name: "The name of this flow" }) as HTMLInputElement
+
+    expect(field.value).toBe("Main")
+    // Selected, so the first key the user presses is the whole name, not the
+    // one after the default.
+    expect([field.selectionStart, field.selectionEnd]).toEqual([0, "Main".length])
+  })
+
   it("refuses a blank name and stays in the field", () => {
     const named = renameControl()
     const field = startEditing()

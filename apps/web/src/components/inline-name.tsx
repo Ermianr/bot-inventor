@@ -28,10 +28,18 @@ export function InlineName({
   testId,
   className,
   editClassName,
+  startEditing = false,
   onSelect,
   onRename
 }: {
   name: string
+  /**
+   * Whether this name starts as a field rather than as a word. A Flow the user
+   * has just created is named without reaching for the pencil first; it is read
+   * once, when the name appears, so a later render does not reopen a field the
+   * user has closed.
+   */
+  startEditing?: boolean
   /** What the pencil is called: "Rename this project", and later this Flow. */
   editLabel: string
   /** What the field is called while the name is being typed. */
@@ -53,12 +61,18 @@ export function InlineName({
    */
   onRename(name: string): boolean | void
 }) {
-  const [typed, setTyped] = useState<string | undefined>(undefined)
+  const [typed, setTyped] = useState<string | undefined>(startEditing ? name : undefined)
   const pencil = useRef<HTMLButtonElement>(null)
   /** Set when the keyboard closed the field, so the pencil is focused again. */
   const returningFocus = useRef(false)
   /** Set once the field is on its way out, so blur does not confirm twice. */
   const settled = useRef(false)
+  /**
+   * A name the user did not choose — the default a new Flow is given — is
+   * selected so the first key they press replaces it. Once, and only for that
+   * one: a name they typed themselves is one they are coming back to edit.
+   */
+  const selectOnFocus = useRef(startEditing)
 
   useEffect(() => {
     if (typed !== undefined || !returningFocus.current) return
@@ -127,6 +141,11 @@ export function InlineName({
       aria-label={fieldLabel}
       data-testid={`${testId}-field`}
       onChange={event => setTyped(event.target.value)}
+      onFocus={event => {
+        if (!selectOnFocus.current) return
+        selectOnFocus.current = false
+        event.target.select()
+      }}
       onKeyDown={event => {
         // Enter is how a candidate is accepted while composing with an IME or a
         // dead key. Confirming there would store half a word and close the

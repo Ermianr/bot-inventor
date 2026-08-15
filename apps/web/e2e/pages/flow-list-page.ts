@@ -31,6 +31,26 @@ export class FlowListPage {
     return this.page.getByTestId(`flow-${flowId}-field`)
   }
 
+  /** The "+" that adds a Flow. */
+  create(): Locator {
+    return this.page.getByTestId("flow-create")
+  }
+
+  /** Every Flow's name, in the order the list holds them. */
+  names(): Locator {
+    return this.page.locator(
+      '[data-testid^="flow-"]:not([data-testid$="-edit"], [data-testid$="-field"], [data-testid="flow-create"])'
+    )
+  }
+
+  /**
+   * Whichever name is currently a field. A Flow the test has just created is
+   * found this way because its id is a UUID the test cannot know.
+   */
+  openField(): Locator {
+    return this.page.locator('[data-testid^="flow-"][data-testid$="-field"]')
+  }
+
   /** Whatever the editor is saying about a refused rename. */
   toast(): Locator {
     return this.page.locator("[data-sonner-toast]")

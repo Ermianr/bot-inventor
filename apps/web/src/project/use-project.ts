@@ -8,8 +8,10 @@ import type {
   WireKind
 } from "@bot-inventor/schema"
 import { useCallback, useMemo, useState } from "react"
+import { translate } from "@/i18n/messages"
 import {
   connectWire,
+  createFlow,
   disconnectWire,
   type FlowRename,
   moveNode,
@@ -32,6 +34,11 @@ export type ProjectEditor = {
   /** The Flow the Canvas is showing. */
   flow: Flow
   openFlow(flowId: string): void
+  /**
+   * Adds an empty Flow, opens it, and says which one it made so the list can
+   * put the user straight into naming it.
+   */
+  createFlow(): string
   /** Puts another Project on the Canvas: opening a file, or starting a new one. */
   replace(project: Project): void
   /** Names the Project. A blank name is refused and the old one kept. */
@@ -70,6 +77,24 @@ export function useProject(createInitial: () => Project): ProjectEditor {
     project,
     flow,
     openFlow: setOpenFlowId,
+    /**
+     * The default name is the word the first Flow of a new Project is given, so
+     * the Flows of one Project read as one set. It is translated here rather
+     * than resolved when the row is drawn because from this moment it is the
+     * user's text, saved in their file — the same as the Project's own name.
+     *
+     * The id is made here, before the Flow is, because the caller is told which
+     * Flow to open there and then rather than after React has settled.
+     */
+    createFlow: useCallback(() => {
+      const id = `flow-${crypto.randomUUID()}`
+      // Added to whatever Project the state is holding by the time React gets
+      // here, so a creation batched behind another edit neither puts that edit
+      // back nor takes a name the edit beside it has just given a Flow.
+      setProject(previous => createFlow(previous, id, translate("project.flow.default")))
+      setOpenFlowId(id)
+      return id
+    }, []),
     /**
      * Opens a Project, reconciled with the catalogue this build has.
      *
