@@ -1,13 +1,49 @@
 import { catalogue } from "@bot-inventor/nodes"
 import { echoParameterProject, helloProject } from "@bot-inventor/schema/fixtures"
 import { describe, expect, it } from "vitest"
-import { connectWire, disconnectWire, moveNode, setNodeField, updateFlow } from "@/project/edits"
+import {
+  connectWire,
+  disconnectWire,
+  moveNode,
+  renameProject,
+  setNodeField,
+  updateFlow
+} from "@/project/edits"
 
 function flowOf(project = helloProject()) {
   const flow = project.flows[0]
   if (flow === undefined) throw new Error("the fixture has no Flow")
   return flow
 }
+
+describe("naming a Project", () => {
+  it("takes the name the user typed", () => {
+    const project = helloProject()
+    const renamed = renameProject(project, "Moderation bot")
+
+    expect(renamed.name).toBe("Moderation bot")
+    expect(project.name).not.toBe("Moderation bot")
+  })
+
+  it("keeps everything else the Project holds", () => {
+    const project = helloProject()
+    const renamed = renameProject(project, "Moderation bot")
+
+    expect(renamed.flows).toEqual(project.flows)
+    expect(renamed.schemaVersion).toBe(project.schemaVersion)
+  })
+
+  it("drops the spaces around the name", () => {
+    expect(renameProject(helloProject(), "  Moderation bot  ").name).toBe("Moderation bot")
+  })
+
+  it("refuses a blank name and keeps the one the Project had", () => {
+    const project = helloProject()
+
+    expect(renameProject(project, "").name).toBe(project.name)
+    expect(renameProject(project, "   ").name).toBe(project.name)
+  })
+})
 
 describe("editing a Project from the Canvas", () => {
   it("moves a Node without touching the others", () => {

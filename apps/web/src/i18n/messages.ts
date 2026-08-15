@@ -49,6 +49,8 @@ const en = {
 
   "project.untitled": "Untitled bot",
   "project.flow.default": "Main",
+  "project.name.edit": "Rename this bot",
+  "project.name.field": "The name of this bot",
   "project.file.filter": "Bot Inventor Project",
   "project.file.new": "New",
   "project.file.open": "Open",
@@ -174,6 +176,8 @@ const es: Record<MessageKey, string> = {
 
   "project.untitled": "Bot sin nombre",
   "project.flow.default": "Principal",
+  "project.name.edit": "Cambiar el nombre de este bot",
+  "project.name.field": "El nombre de este bot",
   "project.file.filter": "Proyecto de Bot Inventor",
   "project.file.new": "Nuevo",
   "project.file.open": "Abrir",
