@@ -15,6 +15,12 @@ export class CanvasPage {
     await this.node("node-trigger").waitFor()
   }
 
+  /** Starts the editor again, which is as close to a restart as a browser gets. */
+  async reload() {
+    await this.page.reload()
+    await this.node("node-trigger").waitFor()
+  }
+
   node(nodeId: string): Locator {
     return this.page.getByTestId(`node-${nodeId}`)
   }
@@ -65,6 +71,20 @@ export class CanvasPage {
    */
   controlButtons(): Locator {
     return this.page.locator(".react-flow__controls-button")
+  }
+
+  /**
+   * The Minimap, which React Flow draws itself: `react-flow__minimap` is the
+   * class it puts on it, and this file is where its words are allowed to be
+   * spoken.
+   */
+  minimap(): Locator {
+    return this.page.locator(".react-flow__minimap")
+  }
+
+  /** Every Node as the Minimap draws it, in the order the Flow holds them. */
+  minimapNodes(): Locator {
+    return this.page.locator(".react-flow__minimap-node")
   }
 
   /** Right-clicks empty Canvas at a point measured from the Canvas's top left. */

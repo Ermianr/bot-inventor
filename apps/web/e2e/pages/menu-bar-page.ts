@@ -34,4 +34,40 @@ export class MenuBarPage {
   unsavedMark(): Locator {
     return this.page.getByTestId("project-unsaved")
   }
+
+  /** Opens the View menu, and waits for what hangs under it to be there. */
+  async openViewMenu() {
+    await this.page.getByTestId("menu-view").click()
+    await this.minimapEntry().waitFor()
+  }
+
+  /** View ▸ Minimap, which is only on the screen while View is open. */
+  minimapEntry(): Locator {
+    return this.page.getByTestId("menu-minimap")
+  }
+
+  /** Ticks or unticks View ▸ Minimap, and waits for the menu to be gone. */
+  async toggleMinimap() {
+    await this.openViewMenu()
+    await this.minimapEntry().click()
+    await waitForMenuToClose(this.minimapEntry())
+  }
+
+  /** Leaves the View menu without choosing anything from it. */
+  async closeViewMenu() {
+    await this.page.keyboard.press("Escape")
+    await waitForMenuToClose(this.minimapEntry())
+  }
+}
+
+/**
+ * Waits for a menu to be off the screen, given anything that was inside it.
+ *
+ * A menu that has been chosen from is animating out, and it is still on the
+ * screen while it does: the next thing a test does would otherwise land on the
+ * copy that is on its way off. Every Page Object driving the Menu Bar needs
+ * this, so it lives beside them rather than in each of them.
+ */
+export async function waitForMenuToClose(inside: Locator) {
+  await inside.waitFor({ state: "detached" })
 }

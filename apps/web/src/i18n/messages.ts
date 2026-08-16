@@ -72,6 +72,10 @@ const en = {
   "theme.dark": "Dark",
   "theme.system": "System",
 
+  "minimap.title": "Minimap",
+  // What the picture in the corner is, for anyone who cannot see it.
+  "minimap.label": "Minimap of this flow",
+
   "project.untitled": "Untitled bot",
   "project.flow.default": "Main",
   "project.name.edit": "Rename this bot",
@@ -247,6 +251,9 @@ const es: Record<MessageKey, string> = {
   "theme.light": "Claro",
   "theme.dark": "Oscuro",
   "theme.system": "Sistema",
+
+  "minimap.title": "Minimapa",
+  "minimap.label": "Minimapa de este flujo",
 
   "project.untitled": "Bot sin nombre",
   "project.flow.default": "Principal",

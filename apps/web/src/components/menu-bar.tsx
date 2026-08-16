@@ -15,6 +15,7 @@ import { toast } from "sonner"
 
 import { AboutDialog } from "@/components/about-dialog"
 import { InlineName } from "@/components/inline-name"
+import { MinimapMenuItem } from "@/components/minimap-menu"
 import { ThemeMenu } from "@/components/theme-menu"
 import { useMenuShortcuts } from "@/components/use-menu-shortcuts"
 import { translate } from "@/i18n/messages"
@@ -136,13 +137,15 @@ export function MenuBar({
         </MenubarMenu>
 
         {/*
-          The theme is the only setting the application has, so it is a menu
-          entry rather than a preferences dialog. When the second one arrives —
-          the language — both move into a dialog together.
+          What the editor shows the user, and what it looks like while it does.
+          Both are the person's own preference rather than the bot's, and
+          neither is ever written into a Project File: opening somebody else's
+          bot must not rearrange your editor.
         */}
         <MenubarMenu>
           <MenubarTrigger data-testid="menu-view">{translate("menu.view")}</MenubarTrigger>
           <MenubarContent>
+            <MinimapMenuItem />
             <ThemeMenu />
           </MenubarContent>
         </MenubarMenu>
