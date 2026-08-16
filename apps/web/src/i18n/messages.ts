@@ -49,6 +49,23 @@ const en = {
 
   "menu.project": "Project",
   "menu.view": "View",
+  "menu.help": "Help",
+
+  "about.menu": "About",
+  // The product's name is filled in rather than written into the sentence, so
+  // that renaming it is one edit and not one per language.
+  "about.title": "About {name}",
+  "about.description": "What this application is, and which version of it you are running.",
+  "about.name": "Application",
+  "about.version": "Version",
+  "about.licence": "Licence",
+  "about.node": "The Node.js it runs your bot on",
+  "about.project": "This bot is saved in",
+  "about.repository": "Where its code lives",
+  // Shown in place of anything only the installed application can answer, which
+  // is what the editor running in a browser cannot.
+  "about.unknown": "Unknown",
+  "about.close": "Close",
 
   "theme.title": "Theme",
   "theme.light": "Light",
@@ -211,6 +228,19 @@ const es: Record<MessageKey, string> = {
 
   "menu.project": "Proyecto",
   "menu.view": "Ver",
+  "menu.help": "Ayuda",
+
+  "about.menu": "Acerca de",
+  "about.title": "Acerca de {name}",
+  "about.description": "Qué es esta aplicación y qué versión tienes.",
+  "about.name": "Aplicación",
+  "about.version": "Versión",
+  "about.licence": "Licencia",
+  "about.node": "El Node.js con el que ejecuta tu bot",
+  "about.project": "Este bot está guardado en",
+  "about.repository": "Dónde vive su código",
+  "about.unknown": "Desconocido",
+  "about.close": "Cerrar",
 
   "theme.title": "Tema",
   "theme.light": "Claro",

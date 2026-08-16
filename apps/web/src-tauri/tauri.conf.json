@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "bot-inventor",
+        "title": "Bot Inventor",
         "width": 800,
         "height": 600,
         "resizable": true,
