@@ -3,6 +3,7 @@ import {
   MenubarContent,
   MenubarItem,
   MenubarMenu,
+  MenubarShortcut,
   MenubarSub,
   MenubarSubContent,
   MenubarSubTrigger,
@@ -14,6 +15,7 @@ import { toast } from "sonner"
 
 import { InlineName } from "@/components/inline-name"
 import { ThemeMenu } from "@/components/theme-menu"
+import { useMenuShortcuts } from "@/components/use-menu-shortcuts"
 import { translate } from "@/i18n/messages"
 import type { Exporting } from "@/project/use-export"
 import type { ProjectFileEditor } from "@/project/use-project-file"
@@ -42,6 +44,13 @@ export function MenuBar({
   file: ProjectFileEditor
   exporting: Exporting
 }) {
+  useMenuShortcuts({
+    create: () => void file.create(),
+    open: () => void file.open(),
+    save: () => void file.save(),
+    saveAs: () => void file.saveAs()
+  })
+
   useAnnounce(file.problem, toast.error)
   useAnnounce(exporting.problem, toast.error)
   useAnnounce(exporting.written, toast.success)
@@ -52,17 +61,26 @@ export function MenuBar({
         <MenubarMenu>
           <MenubarTrigger>{translate("menu.project")}</MenubarTrigger>
           <MenubarContent>
+            {/*
+              The shortcut is written beside the entry it belongs to, which is
+              how somebody who has never been told about it learns it: they came
+              to the menu for the action and leave knowing the keys.
+            */}
             <MenubarItem onClick={() => void file.create()}>
               {translate("project.file.new")}
+              <MenubarShortcut>{translate("project.file.new.shortcut")}</MenubarShortcut>
             </MenubarItem>
             <MenubarItem onClick={() => void file.open()}>
               {translate("project.file.open")}
+              <MenubarShortcut>{translate("project.file.open.shortcut")}</MenubarShortcut>
             </MenubarItem>
             <MenubarItem onClick={() => void file.save()}>
               {translate("project.file.save")}
+              <MenubarShortcut>{translate("project.file.save.shortcut")}</MenubarShortcut>
             </MenubarItem>
             <MenubarItem onClick={() => void file.saveAs()}>
               {translate("project.file.saveAs")}
+              <MenubarShortcut>{translate("project.file.saveAs.shortcut")}</MenubarShortcut>
             </MenubarItem>
 
             {/*

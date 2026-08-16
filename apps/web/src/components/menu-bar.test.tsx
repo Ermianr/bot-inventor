@@ -2,6 +2,7 @@
 
 import type { ExportFormat } from "@bot-inventor/compiler"
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MenuBar } from "@/components/menu-bar"
 import { translate } from "@/i18n/messages"
@@ -142,6 +143,141 @@ describe("the Project menu", () => {
     expect(trigger.closest("[data-disabled]")).not.toBeNull()
   })
 })
+
+/**
+ * The keyboard doing what the menu does.
+ *
+ * A shortcut drawn beside an entry and never registered is the interface lying
+ * to the user, so both halves are held to here: that the keys are written where
+ * they can be learned, and that pressing them does the thing.
+ */
+describe("the Project menu's shortcuts", () => {
+  for (const [entry, key, shortcut] of [
+    ["a new Project", "project.file.new", "project.file.new.shortcut"],
+    ["opening one", "project.file.open", "project.file.open.shortcut"],
+    ["saving", "project.file.save", "project.file.save.shortcut"],
+    ["saving somewhere else", "project.file.saveAs", "project.file.saveAs.shortcut"]
+  ] as const) {
+    it(`writes the keys for ${entry} beside the entry`, async () => {
+      const { file, exporting } = fakeEditors()
+      render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+      openProjectMenu()
+
+      const item = (await screen.findByText(translate(key))).closest("[role='menuitem']")
+      expect(item?.textContent).toContain(translate(shortcut))
+    })
+  }
+
+  for (const [keys, press, expected] of [
+    ["Ctrl+N", { key: "n" }, "create"],
+    ["Ctrl+O", { key: "o" }, "open"],
+    ["Ctrl+S", { key: "s" }, "save"],
+    ["Ctrl+Shift+S", { key: "S", shiftKey: true }, "saveAs"]
+  ] as const) {
+    it(`asks for ${expected} when ${keys} is pressed`, async () => {
+      const { asked, file, exporting } = fakeEditors()
+      render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+      await act(async () => {
+        fireEvent.keyDown(window, { ctrlKey: true, ...press })
+      })
+
+      expect(asked.file).toEqual([expected])
+    })
+  }
+
+  /**
+   * The Project name is a text field on the row itself, so it is the field a
+   * user is most likely to be inside when they reach for one of these.
+   */
+  it("does nothing but save while the bot's name is being typed", async () => {
+    const { asked, file, exporting } = fakeEditors()
+    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+    fireEvent.click(screen.getByTestId("project-name-edit"))
+    const field = await screen.findByTestId("project-name-field")
+
+    for (const press of [{ key: "n" }, { key: "o" }, { key: "S", shiftKey: true }]) {
+      await act(async () => {
+        fireEvent.keyDown(field, { ctrlKey: true, ...press })
+      })
+    }
+    expect(asked.file).toEqual([])
+
+    await act(async () => {
+      fireEvent.keyDown(field, { ctrlKey: true, key: "s" })
+    })
+    await settle()
+    expect(asked.file).toEqual(["save"])
+  })
+
+  /**
+   * The name is only handed over when the field loses the focus, so a Save that
+   * read the Project straight away would write the name from before the edit —
+   * which is the very edit the user pressed Ctrl+S to keep.
+   */
+  it("saves the name the user has just typed, not the one it is replacing", async () => {
+    const { file, exporting } = fakeEditors()
+    const stored: string[] = []
+
+    /** Holds the name the way the editor does, so Save can read what it is now. */
+    function Editing() {
+      const [name, setName] = useState("Bot")
+      return (
+        <MenuBar
+          name={name}
+          onRename={setName}
+          file={{
+            ...file,
+            save: async () => {
+              stored.push(name)
+            }
+          }}
+          exporting={exporting}
+        />
+      )
+    }
+
+    render(<Editing />)
+    fireEvent.click(screen.getByTestId("project-name-edit"))
+    const field = await screen.findByTestId("project-name-field")
+
+    await act(async () => {
+      fireEvent.change(field, { target: { value: "Helper" } })
+    })
+    await act(async () => {
+      fireEvent.keyDown(field, { ctrlKey: true, key: "s" })
+    })
+    await settle()
+
+    expect(stored).toEqual(["Helper"])
+  })
+
+  /**
+   * "From anywhere in the editor" includes the menu the shortcut is written in:
+   * the popup is where a user reading the keys for the first time is standing.
+   */
+  it("still saves while the Project menu is open", async () => {
+    const { asked, file, exporting } = fakeEditors()
+    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+    openProjectMenu()
+    const entry = await screen.findByText(translate("project.file.save"))
+    await act(async () => {
+      fireEvent.keyDown(entry, { ctrlKey: true, key: "s" })
+    })
+
+    expect(asked.file).toEqual(["save"])
+  })
+})
+
+/** Lets a Save that waited for a field to give up its name arrive. */
+async function settle() {
+  await act(async () => {
+    await new Promise(resolve => setTimeout(resolve))
+  })
+}
 
 /**
  * The View menu holds the theme, and what it does with it is covered where the
