@@ -65,7 +65,7 @@ _Avoid_: overview, navigator, thumbnail
 ### Building
 
 **Project**:
-The unit the user opens, edits and saves: the complete definition of one bot, with all its Flows.
+The unit the user creates, opens and edits: the complete definition of one bot, with all its Flows. It is not saved — the application owns where it lives and keeps it up to date on its own.
 _Avoid_: bot, workspace, file
 
 **Project File**:

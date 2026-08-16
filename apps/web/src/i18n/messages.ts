@@ -48,8 +48,32 @@ const en = {
   "run.reloading": "You changed something. Restarting your bot…",
 
   "menu.project": "Project",
+  "menu.project.dashboard": "All my bots",
   "menu.view": "View",
   "menu.help": "Help",
+
+  "dashboard.title": "Your bots",
+  "dashboard.subtitle": "Everything you have built. Pick one to carry on with it.",
+  "dashboard.create": "New bot",
+  "dashboard.example": "Open an example",
+  "dashboard.empty.title": "You have not built a bot yet.",
+  "dashboard.empty.body":
+    "Make one from scratch, or open the example and take it apart to see how it works.",
+  "dashboard.card.changed": "Last changed {when}",
+  "dashboard.card.unreadable": "This bot could not be read",
+  "dashboard.create.title": "Make a bot",
+  "dashboard.create.description":
+    "Bot Inventor keeps it for you. You will not be asked where to put it.",
+  "dashboard.create.name": "What is it called?",
+  "dashboard.create.token": "Bot token",
+  "dashboard.create.token.help":
+    "Your bot signs in to Discord with this. Make an application on the Discord Developer Portal, add a bot to it, and copy the token it gives you.",
+  "dashboard.create.testServer": "Server to test it on",
+  "dashboard.create.confirm": "Make it",
+  "dashboard.create.cancel": "Cancel",
+  "dashboard.create.tokenRequired": "Paste a bot token. Without one your bot cannot run.",
+  "dashboard.problem.list": "Your bots could not be listed: {message}",
+  "dashboard.problem.create": "This bot could not be made: {message}",
 
   "about.menu": "About",
   // The product's name is filled in rather than written into the sentence, so
@@ -60,7 +84,6 @@ const en = {
   "about.version": "Version",
   "about.licence": "Licence",
   "about.node": "The Node.js it runs your bot on",
-  "about.project": "This bot is saved in",
   "about.repository": "Where its code lives",
   // Shown in place of anything only the installed application can answer, which
   // is what the editor running in a browser cannot.
@@ -80,27 +103,6 @@ const en = {
   "project.flow.default": "Main",
   "project.name.edit": "Rename this bot",
   "project.name.field": "The name of this bot",
-  "project.file.filter": "Bot Inventor Project",
-  "project.file.new": "New",
-  "project.file.open": "Open",
-  "project.file.save": "Save",
-  "project.file.saveAs": "Save as…",
-  // The keys themselves are printed on the keyboard the user has in front of
-  // them, so they read the same in every language — but they are still text on
-  // the screen, and text on the screen comes from here.
-  "project.file.new.shortcut": "Ctrl+N",
-  "project.file.open.shortcut": "Ctrl+O",
-  "project.file.save.shortcut": "Ctrl+S",
-  "project.file.saveAs.shortcut": "Ctrl+Shift+S",
-  "project.file.unsaved": "You have changes that are not saved yet.",
-  "project.file.unsavedMark": "Unsaved",
-  "project.file.location": "Saved in {path}",
-  "project.file.nowhere": "Not saved to a file yet.",
-  "project.discard.title": "Unsaved changes",
-  "project.discard.message":
-    "You have changes in {project} that are not saved. If you carry on, they are lost.",
-  "project.discard.confirm": "Discard my changes",
-  "project.discard.cancel": "Go back",
   "project.problem.futureVersion":
     "This Project was made with a newer version of Bot Inventor, so this one cannot open it. Nothing in the file was changed. Update the app and try again.",
   "project.problem.malformed":
@@ -232,8 +234,31 @@ const es: Record<MessageKey, string> = {
   "run.reloading": "Cambiaste algo. Reiniciando tu bot…",
 
   "menu.project": "Proyecto",
+  "menu.project.dashboard": "Todos mis bots",
   "menu.view": "Ver",
   "menu.help": "Ayuda",
+
+  "dashboard.title": "Tus bots",
+  "dashboard.subtitle": "Todo lo que has construido. Elige uno para seguir con él.",
+  "dashboard.create": "Nuevo bot",
+  "dashboard.example": "Abrir un ejemplo",
+  "dashboard.empty.title": "Todavía no has construido ningún bot.",
+  "dashboard.empty.body":
+    "Haz uno desde cero, o abre el ejemplo y desármalo para ver cómo funciona.",
+  "dashboard.card.changed": "Cambiado por última vez el {when}",
+  "dashboard.card.unreadable": "Este bot no se pudo leer",
+  "dashboard.create.title": "Crear un bot",
+  "dashboard.create.description": "Bot Inventor lo guarda por ti. No te preguntará dónde ponerlo.",
+  "dashboard.create.name": "¿Cómo se llama?",
+  "dashboard.create.token": "Token del bot",
+  "dashboard.create.token.help":
+    "Tu bot inicia sesión en Discord con esto. Crea una aplicación en el portal de desarrolladores de Discord, añádele un bot y copia el token que te dé.",
+  "dashboard.create.testServer": "Servidor donde probarlo",
+  "dashboard.create.confirm": "Crearlo",
+  "dashboard.create.cancel": "Cancelar",
+  "dashboard.create.tokenRequired": "Pega un token de bot. Sin uno, tu bot no puede ejecutarse.",
+  "dashboard.problem.list": "Tus bots no se pudieron listar: {message}",
+  "dashboard.problem.create": "Este bot no se pudo crear: {message}",
 
   "about.menu": "Acerca de",
   "about.title": "Acerca de {name}",
@@ -242,7 +267,6 @@ const es: Record<MessageKey, string> = {
   "about.version": "Versión",
   "about.licence": "Licencia",
   "about.node": "El Node.js con el que ejecuta tu bot",
-  "about.project": "Este bot está guardado en",
   "about.repository": "Dónde vive su código",
   "about.unknown": "Desconocido",
   "about.close": "Cerrar",
@@ -259,24 +283,6 @@ const es: Record<MessageKey, string> = {
   "project.flow.default": "Principal",
   "project.name.edit": "Cambiar el nombre de este bot",
   "project.name.field": "El nombre de este bot",
-  "project.file.filter": "Proyecto de Bot Inventor",
-  "project.file.new": "Nuevo",
-  "project.file.open": "Abrir",
-  "project.file.save": "Guardar",
-  "project.file.saveAs": "Guardar como…",
-  "project.file.new.shortcut": "Ctrl+N",
-  "project.file.open.shortcut": "Ctrl+O",
-  "project.file.save.shortcut": "Ctrl+S",
-  "project.file.saveAs.shortcut": "Ctrl+Shift+S",
-  "project.file.unsaved": "Tienes cambios sin guardar.",
-  "project.file.unsavedMark": "Sin guardar",
-  "project.file.location": "Guardado en {path}",
-  "project.file.nowhere": "Todavía no está guardado en ningún archivo.",
-  "project.discard.title": "Cambios sin guardar",
-  "project.discard.message":
-    "Tienes cambios en {project} que no están guardados. Si sigues, se pierden.",
-  "project.discard.confirm": "Descartar mis cambios",
-  "project.discard.cancel": "Volver",
   "project.problem.futureVersion":
     "Este Proyecto se hizo con una versión más nueva de Bot Inventor, así que esta no puede abrirlo. No se cambió nada del archivo. Actualiza la aplicación e inténtalo de nuevo.",
   "project.problem.malformed":

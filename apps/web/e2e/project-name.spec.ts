@@ -19,7 +19,6 @@ test.describe("the Project name", () => {
     await menuBar.nameField().press("Enter")
 
     await expect(menuBar.name()).toHaveText("Moderation bot")
-    await expect(menuBar.unsavedMark()).toBeVisible()
   })
 
   test("leaves the previous name when the rename is cancelled", async () => {

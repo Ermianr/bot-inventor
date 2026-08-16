@@ -1,64 +1,23 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 
-import { Canvas } from "@/canvas/canvas"
-import { FlowList } from "@/canvas/flow-list"
-import { MenuBar } from "@/components/menu-bar"
-import { RunPanel } from "@/components/run-panel"
-import { desktopExports } from "@/project/desktop-exports"
-import { desktopProjectFiles } from "@/project/desktop-project-files"
-import { initialProject } from "@/project/initial-project"
-import { useCloseGuard } from "@/project/use-close-guard"
-import { useExport } from "@/project/use-export"
-import { useProject } from "@/project/use-project"
-import { useProjectFile } from "@/project/use-project-file"
-import { sessionGateway } from "@/session/desktop-session"
-import { useSession } from "@/session/use-session"
-
-/** Which shell this build runs a bot through. It does not change while it runs. */
-const shell = sessionGateway()
+import { Dashboard } from "@/dashboard/dashboard"
+import { projectStore } from "@/project/store"
 
 export const Route = createFileRoute("/")({
-  component: HomeComponent
+  component: DashboardRoute
 })
 
 /**
- * The editor: the Menu Bar and what the Project is called on top, the
- * Flows on the left, the one being edited in the middle, and running it on the
- * right. The Canvas takes the room, because it is what the user came here to
- * look at.
+ * The root screen. Opening a Project is a navigation rather than a state
+ * change, which is what makes the back button take the user home again.
  */
-function HomeComponent() {
-  const editor = useProject(initialProject)
-  const file = useProjectFile(editor, desktopProjectFiles)
-  useCloseGuard(file.confirmDiscard)
-
-  // The Session is held here rather than in the panel that starts it, because
-  // watching the bot think happens on the Canvas: both sides read one run.
-  const session = useSession(editor.project, shell)
-  const exporting = useExport(editor.project, desktopExports)
+function DashboardRoute() {
+  const navigate = useNavigate()
 
   return (
-    <div className="grid h-full grid-rows-[auto_1fr] overflow-hidden">
-      <MenuBar
-        name={editor.project.name}
-        onRename={editor.renameProject}
-        file={file}
-        exporting={exporting}
-      />
-
-      <div className="grid grid-cols-[14rem_1fr_24rem] overflow-hidden">
-        <aside className="overflow-y-auto border-r">
-          <FlowList editor={editor} />
-        </aside>
-
-        <main className="h-full">
-          <Canvas editor={editor} trace={session.trace} />
-        </main>
-
-        <aside className="overflow-y-auto border-l p-4">
-          <RunPanel project={editor.project} session={session} />
-        </aside>
-      </div>
-    </div>
+    <Dashboard
+      store={projectStore}
+      onOpen={projectId => void navigate({ to: "/projects/$projectId", params: { projectId } })}
+    />
   )
 }

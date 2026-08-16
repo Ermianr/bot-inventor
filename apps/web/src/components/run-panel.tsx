@@ -9,10 +9,11 @@ import {
 } from "@bot-inventor/ui/components/card"
 import { Input } from "@bot-inventor/ui/components/input"
 import { Label } from "@bot-inventor/ui/components/label"
-import { invoke } from "@tauri-apps/api/core"
 import { useEffect, useRef, useState } from "react"
 import { TestServerPicker } from "@/components/test-server-picker"
 import { translate } from "@/i18n/messages"
+import type { ProjectStore } from "@/project/project-store"
+import type { TestServer } from "@/project/use-test-server"
 import { describeRefusal } from "@/session/refusal"
 import type { Session, SessionEntry, SessionStatus } from "@/session/use-session"
 
@@ -23,22 +24,45 @@ import type { Session, SessionEntry, SessionStatus } from "@/session/use-session
  * The Session itself belongs to the editor rather than to this panel: the
  * Canvas watches the same run light up while it is going on.
  *
- * The token is typed here and goes straight to the operating system keychain
- * through the Tauri side. It is never held in the Project, and it is not kept
- * in this component beyond the moment it is saved.
+ * The token is typed here and goes straight to the operating system keychain,
+ * through the port rather than through Tauri directly: what a Project has is
+ * one seam, and this panel is testable without a desktop shell because of it.
+ * It is never held in the Project, and it is not kept in this component beyond
+ * the moment it is saved.
+ *
+ * The Test Server is not this panel's to hold either — it is remembered with
+ * the Project, so it is typed once rather than before every run.
  */
-export function RunPanel({ project, session }: { project: Project; session: Session }) {
+export function RunPanel({
+  project,
+  session,
+  store,
+  testServer
+}: {
+  project: Project
+  session: Session
+  store: ProjectStore
+  testServer: TestServer
+}) {
   const [secret, setSecret] = useState("")
   const [stored, setStored] = useState(false)
-  const [testServerId, setTestServerId] = useState("")
   /** Why storing the token did not work, when it did not. */
   const [problem, setProblem] = useState<string | undefined>(undefined)
 
   useEffect(() => {
-    invoke<boolean>("secret_exists", { projectId: project.id })
-      .then(setStored)
-      .catch(() => setStored(false))
-  }, [project.id])
+    let current = true
+    store
+      .hasSecret(project.id)
+      .then(has => {
+        if (current) setStored(has)
+      })
+      .catch(() => {
+        if (current) setStored(false)
+      })
+    return () => {
+      current = false
+    }
+  }, [store, project.id])
 
   /**
    * A keychain that refuses the token says so. Letting the call reject on its
@@ -49,7 +73,7 @@ export function RunPanel({ project, session }: { project: Project; session: Sess
   const save = async () => {
     setProblem(undefined)
     try {
-      await invoke("store_secret", { projectId: project.id, secret })
+      await store.storeSecret(project.id, secret)
       setStored(true)
     } catch (error) {
       setStored(false)
@@ -90,10 +114,17 @@ export function RunPanel({ project, session }: { project: Project; session: Sess
           {problem === undefined ? null : <p className="text-destructive text-xs">{problem}</p>}
         </div>
 
-        <TestServerPicker projectId={project.id} value={testServerId} onChange={setTestServerId} />
+        <TestServerPicker
+          projectId={project.id}
+          value={testServer.testServerId}
+          onChange={testServer.choose}
+        />
 
         <div className="flex gap-2">
-          <Button onClick={() => session.start({ testServerId, secret })} disabled={running}>
+          <Button
+            onClick={() => session.start({ testServerId: testServer.testServerId, secret })}
+            disabled={running}
+          >
             {translate("run.start")}
           </Button>
           <Button variant="outline" onClick={() => session.stop()} disabled={!running}>

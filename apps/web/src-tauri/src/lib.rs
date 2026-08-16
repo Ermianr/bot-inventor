@@ -1,7 +1,7 @@
 mod about;
 mod export;
 mod jail;
-mod project_file;
+mod projects;
 mod secrets;
 mod session;
 mod test_servers;
@@ -18,9 +18,13 @@ pub fn run() {
       about::open_repository,
       export::export_project,
       export::show_export,
-      project_file::back_up_project_file,
-      project_file::read_project_file,
-      project_file::write_project_file,
+      projects::back_up_project,
+      projects::create_project,
+      projects::list_projects,
+      projects::read_project,
+      projects::read_test_server,
+      projects::write_project,
+      projects::write_test_server,
       secrets::store_secret,
       secrets::secret_exists,
       session::start_session,

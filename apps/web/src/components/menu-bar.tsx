@@ -3,13 +3,11 @@ import {
   MenubarContent,
   MenubarItem,
   MenubarMenu,
-  MenubarShortcut,
   MenubarSub,
   MenubarSubContent,
   MenubarSubTrigger,
   MenubarTrigger
 } from "@bot-inventor/ui/components/menubar"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@bot-inventor/ui/components/tooltip"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -17,10 +15,8 @@ import { AboutDialog } from "@/components/about-dialog"
 import { InlineName } from "@/components/inline-name"
 import { MinimapMenuItem } from "@/components/minimap-menu"
 import { ThemeMenu } from "@/components/theme-menu"
-import { useMenuShortcuts } from "@/components/use-menu-shortcuts"
 import { translate } from "@/i18n/messages"
 import type { Exporting } from "@/project/use-export"
-import type { ProjectFileEditor } from "@/project/use-project-file"
 
 /**
  * The Menu Bar: the one row that holds what the user does with the Project as a
@@ -33,28 +29,40 @@ import type { ProjectFileEditor } from "@/project/use-project-file"
  * own.
  *
  * Project, View and Help live here.
+ *
+ * There is no Save, and no New or Open either. The application owns where
+ * Projects live (ADR 0009): work saves itself, and another Project is reached
+ * by going back to the Dashboard rather than through a file dialog.
  */
 export function MenuBar({
   name,
   onRename,
-  file,
+  onDashboard,
+  saved,
+  problem,
   exporting
 }: {
   name: string
   onRename: (name: string) => void
-  file: ProjectFileEditor
+  /** Takes the user back to the Dashboard. The route knows where that is. */
+  onDashboard: () => void
+  /**
+   * Whether everything on the Canvas has reached storage.
+   *
+   * It is not drawn. Nothing the user could do about it exists any more, and a
+   * word appearing and going on its own every time anything is typed is noise
+   * about a promise the editor already keeps. It is on the row as an attribute
+   * because autosave is the only thing that knows it, and an end-to-end spec
+   * asking "is my work safe yet" has nothing else to read.
+   */
+  saved: boolean
+  /** Why the last write did not happen, when it did not. */
+  problem: string | undefined
   exporting: Exporting
 }) {
-  useMenuShortcuts({
-    create: () => void file.create(),
-    open: () => void file.open(),
-    save: () => void file.save(),
-    saveAs: () => void file.saveAs()
-  })
-
   const [aboutOpen, setAboutOpen] = useState(false)
 
-  useAnnounce(file.problem, toast.error)
+  useAnnounce(problem, toast.error)
   useAnnounce(exporting.problem, toast.error)
 
   // Where the Export went is the one message that has something to do about it,
@@ -71,7 +79,7 @@ export function MenuBar({
   )
 
   return (
-    <div className="flex items-center gap-2 border-b px-3 py-1">
+    <div className="flex items-center gap-2 border-b px-3 py-1" data-saved={saved}>
       {/*
         The row is the thinnest thing in the window on purpose: every pixel it
         takes is a pixel the Canvas does not have, and nothing in it is read
@@ -79,31 +87,15 @@ export function MenuBar({
       */}
       <Menubar className="h-8 border-0 shadow-none">
         <MenubarMenu>
-          <MenubarTrigger>{translate("menu.project")}</MenubarTrigger>
+          <MenubarTrigger data-testid="menu-project">{translate("menu.project")}</MenubarTrigger>
           <MenubarContent>
             {/*
-              The shortcut is written beside the entry it belongs to, which is
-              how somebody who has never been told about it learns it: they came
-              to the menu for the action and leave knowing the keys. They are
-              held off the label rather than sitting against it: read at a
-              glance, an entry is a thing to do and the keys are an aside, and
-              two words touching are read as one.
+              The way back to every other Project, and the way to open a second
+              one: with the application owning where Projects live, there is
+              nothing else New and Open were for.
             */}
-            <MenubarItem className="gap-6" onClick={() => void file.create()}>
-              {translate("project.file.new")}
-              <MenubarShortcut>{translate("project.file.new.shortcut")}</MenubarShortcut>
-            </MenubarItem>
-            <MenubarItem className="gap-6" onClick={() => void file.open()}>
-              {translate("project.file.open")}
-              <MenubarShortcut>{translate("project.file.open.shortcut")}</MenubarShortcut>
-            </MenubarItem>
-            <MenubarItem className="gap-6" onClick={() => void file.save()}>
-              {translate("project.file.save")}
-              <MenubarShortcut>{translate("project.file.save.shortcut")}</MenubarShortcut>
-            </MenubarItem>
-            <MenubarItem className="gap-6" onClick={() => void file.saveAs()}>
-              {translate("project.file.saveAs")}
-              <MenubarShortcut>{translate("project.file.saveAs.shortcut")}</MenubarShortcut>
+            <MenubarItem data-testid="menu-dashboard" onClick={onDashboard}>
+              {translate("menu.project.dashboard")}
             </MenubarItem>
 
             {/*
@@ -175,45 +167,16 @@ export function MenuBar({
         is gone the moment the entry is clicked, and it would take the dialog
         with it.
       */}
-      <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} projectPath={file.path} />
+      <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
 
-      {/*
-        Where the Project is saved is what somebody about to close the
-        application wants, and not what they need while working: it hangs off
-        the name rather than taking a piece of the row for good.
-      */}
       <InlineName
         name={name}
         className="font-medium text-sm"
         editLabel={translate("project.name.edit")}
         fieldLabel={translate("project.name.field")}
         testId="project-name"
-        hint={
-          file.path === undefined
-            ? translate("project.file.nowhere")
-            : translate("project.file.location", { path: file.path })
-        }
         onRename={onRename}
       />
-
-      {file.saved ? null : (
-        // The mark is a word wide, so what it means is said by the editor's own
-        // tooltip rather than the operating system's `title`: that one arrives
-        // late and in a typeface from nowhere in this app.
-        <Tooltip>
-          <TooltipTrigger
-            render={<span />}
-            // The whole sentence, and not only the word the mark shows: the
-            // accessible name carries it for anyone who cannot see the tooltip.
-            aria-label={translate("project.file.unsaved")}
-            className="text-muted-foreground text-xs"
-            data-testid="project-unsaved"
-          >
-            {translate("project.file.unsavedMark")}
-          </TooltipTrigger>
-          <TooltipContent>{translate("project.file.unsaved")}</TooltipContent>
-        </Tooltip>
-      )}
     </div>
   )
 }

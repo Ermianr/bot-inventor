@@ -7,7 +7,7 @@ import { helloProject } from "@bot-inventor/schema/fixtures"
  *
  * The desktop application starts from an empty Project and opens `.botinv`
  * files. A plain browser can do neither, so this is what it shows there — see
- * `initial-project.ts`.
+ * `use-projects.ts`, which is what the Dashboard's example button makes.
  *
  * The first Flow is the schema package's own `helloProject`, rather than a
  * second copy of the same Nodes: the end-to-end tests read this Canvas and the

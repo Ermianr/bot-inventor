@@ -2,12 +2,10 @@
 
 import type { ExportFormat } from "@bot-inventor/compiler"
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MenuBar } from "@/components/menu-bar"
 import { translate } from "@/i18n/messages"
 import type { Exporting } from "@/project/use-export"
-import type { ProjectFileEditor } from "@/project/use-project-file"
 
 // The toaster itself belongs to the root route, so what the Menu Bar can be
 // held to is which toast it raised and what it said.
@@ -37,29 +35,11 @@ vi.mock("sonner", () => ({
  * underneath it notices.
  */
 
-/** Every call the Menu Bar can make, in the order it made them. */
-type Asked = { file: string[]; exports: ExportFormat[] }
+/** Every Export the Menu Bar asked for, in the order it asked. */
+type Asked = { exports: ExportFormat[] }
 
-function fakeEditors(
-  exportOverrides: Partial<Exporting> = {},
-  fileOverrides: Partial<ProjectFileEditor> = {}
-) {
-  const asked: Asked = { file: [], exports: [] }
-  const record = (what: string) => async () => {
-    asked.file.push(what)
-  }
-
-  const file: ProjectFileEditor = {
-    path: undefined,
-    saved: true,
-    problem: undefined,
-    create: record("create"),
-    open: record("open"),
-    save: record("save"),
-    saveAs: record("saveAs"),
-    confirmDiscard: async () => true,
-    ...fileOverrides
-  }
+function fakeExporting(overrides: Partial<Exporting> = {}) {
+  const asked: Asked = { exports: [] }
 
   const exporting: Exporting = {
     written: undefined,
@@ -69,10 +49,27 @@ function fakeEditors(
     exportAs: async format => {
       asked.exports.push(format)
     },
-    ...exportOverrides
+    ...overrides
   }
 
-  return { asked, file, exporting }
+  return { asked, exporting }
+}
+
+/** The row as the editor renders it, with only what a test is about changed. */
+function renderMenuBar(
+  exporting: Exporting,
+  overrides: { onDashboard?: () => void; problem?: string } = {}
+) {
+  return render(
+    <MenuBar
+      name="Bot"
+      onRename={() => {}}
+      onDashboard={overrides.onDashboard ?? (() => {})}
+      saved
+      problem={overrides.problem}
+      exporting={exporting}
+    />
+  )
 }
 
 // Testing Library only registers its own cleanup when Vitest runs with globals,
@@ -98,30 +95,34 @@ async function pick(label: string) {
 }
 
 describe("the Project menu", () => {
-  for (const [entry, key, expected] of [
-    ["a new Project", "project.file.new", "create"],
-    ["opening one", "project.file.open", "open"],
-    ["saving", "project.file.save", "save"],
-    ["saving somewhere else", "project.file.saveAs", "saveAs"]
-  ] as const) {
-    it(`asks the file editor for ${entry}`, async () => {
-      const { asked, file, exporting } = fakeEditors()
-      render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
-
-      openProjectMenu()
-      await pick(translate(key))
-
-      expect(asked.file).toEqual([expected])
+  /**
+   * The one way out of the editor. With the application owning where Projects
+   * live, this entry stands in for New, Open, Save and Save as… all four at
+   * once, so an entry that is on the row and wired to nothing strands the user
+   * inside the Project they opened.
+   */
+  it("takes the user back to the Dashboard", async () => {
+    let asked = 0
+    const { exporting } = fakeExporting()
+    renderMenuBar(exporting, {
+      onDashboard: () => {
+        asked += 1
+      }
     })
-  }
+
+    openProjectMenu()
+    await pick(translate("menu.project.dashboard"))
+
+    expect(asked).toBe(1)
+  })
 
   for (const [entry, key, expected] of [
     ["a Single File", "export.singleFile", "single-file"],
     ["a Node Project", "export.nodeProject", "node-project"]
   ] as const) {
     it(`asks for ${entry} when that is the format picked`, async () => {
-      const { asked, file, exporting } = fakeEditors()
-      render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+      const { asked, exporting } = fakeExporting()
+      renderMenuBar(exporting)
 
       openProjectMenu()
       await pick(translate("export.title"))
@@ -132,8 +133,8 @@ describe("the Project menu", () => {
   }
 
   it("explains each Export format, because that is what makes the choice possible", async () => {
-    const { file, exporting } = fakeEditors()
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+    const { exporting } = fakeExporting()
+    renderMenuBar(exporting)
 
     openProjectMenu()
     await pick(translate("export.title"))
@@ -143,8 +144,8 @@ describe("the Project menu", () => {
   })
 
   it("says it is working and cannot be asked again while it is", async () => {
-    const { file, exporting } = fakeEditors({ busy: true })
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+    const { exporting } = fakeExporting({ busy: true })
+    renderMenuBar(exporting)
 
     openProjectMenu()
 
@@ -152,141 +153,6 @@ describe("the Project menu", () => {
     expect(trigger.closest("[data-disabled]")).not.toBeNull()
   })
 })
-
-/**
- * The keyboard doing what the menu does.
- *
- * A shortcut drawn beside an entry and never registered is the interface lying
- * to the user, so both halves are held to here: that the keys are written where
- * they can be learned, and that pressing them does the thing.
- */
-describe("the Project menu's shortcuts", () => {
-  for (const [entry, key, shortcut] of [
-    ["a new Project", "project.file.new", "project.file.new.shortcut"],
-    ["opening one", "project.file.open", "project.file.open.shortcut"],
-    ["saving", "project.file.save", "project.file.save.shortcut"],
-    ["saving somewhere else", "project.file.saveAs", "project.file.saveAs.shortcut"]
-  ] as const) {
-    it(`writes the keys for ${entry} beside the entry`, async () => {
-      const { file, exporting } = fakeEditors()
-      render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
-
-      openProjectMenu()
-
-      const item = (await screen.findByText(translate(key))).closest("[role='menuitem']")
-      expect(item?.textContent).toContain(translate(shortcut))
-    })
-  }
-
-  for (const [keys, press, expected] of [
-    ["Ctrl+N", { key: "n" }, "create"],
-    ["Ctrl+O", { key: "o" }, "open"],
-    ["Ctrl+S", { key: "s" }, "save"],
-    ["Ctrl+Shift+S", { key: "S", shiftKey: true }, "saveAs"]
-  ] as const) {
-    it(`asks for ${expected} when ${keys} is pressed`, async () => {
-      const { asked, file, exporting } = fakeEditors()
-      render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
-
-      await act(async () => {
-        fireEvent.keyDown(window, { ctrlKey: true, ...press })
-      })
-
-      expect(asked.file).toEqual([expected])
-    })
-  }
-
-  /**
-   * The Project name is a text field on the row itself, so it is the field a
-   * user is most likely to be inside when they reach for one of these.
-   */
-  it("does nothing but save while the bot's name is being typed", async () => {
-    const { asked, file, exporting } = fakeEditors()
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
-
-    fireEvent.click(screen.getByTestId("project-name-edit"))
-    const field = await screen.findByTestId("project-name-field")
-
-    for (const press of [{ key: "n" }, { key: "o" }, { key: "S", shiftKey: true }]) {
-      await act(async () => {
-        fireEvent.keyDown(field, { ctrlKey: true, ...press })
-      })
-    }
-    expect(asked.file).toEqual([])
-
-    await act(async () => {
-      fireEvent.keyDown(field, { ctrlKey: true, key: "s" })
-    })
-    await settle()
-    expect(asked.file).toEqual(["save"])
-  })
-
-  /**
-   * The name is only handed over when the field loses the focus, so a Save that
-   * read the Project straight away would write the name from before the edit —
-   * which is the very edit the user pressed Ctrl+S to keep.
-   */
-  it("saves the name the user has just typed, not the one it is replacing", async () => {
-    const { file, exporting } = fakeEditors()
-    const stored: string[] = []
-
-    /** Holds the name the way the editor does, so Save can read what it is now. */
-    function Editing() {
-      const [name, setName] = useState("Bot")
-      return (
-        <MenuBar
-          name={name}
-          onRename={setName}
-          file={{
-            ...file,
-            save: async () => {
-              stored.push(name)
-            }
-          }}
-          exporting={exporting}
-        />
-      )
-    }
-
-    render(<Editing />)
-    fireEvent.click(screen.getByTestId("project-name-edit"))
-    const field = await screen.findByTestId("project-name-field")
-
-    await act(async () => {
-      fireEvent.change(field, { target: { value: "Helper" } })
-    })
-    await act(async () => {
-      fireEvent.keyDown(field, { ctrlKey: true, key: "s" })
-    })
-    await settle()
-
-    expect(stored).toEqual(["Helper"])
-  })
-
-  /**
-   * "From anywhere in the editor" includes the menu the shortcut is written in:
-   * the popup is where a user reading the keys for the first time is standing.
-   */
-  it("still saves while the Project menu is open", async () => {
-    const { asked, file, exporting } = fakeEditors()
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
-
-    openProjectMenu()
-    const entry = await screen.findByText(translate("project.file.save"))
-    await act(async () => {
-      fireEvent.keyDown(entry, { ctrlKey: true, key: "s" })
-    })
-
-    expect(asked.file).toEqual(["save"])
-  })
-})
-
-/** Lets a Save that waited for a field to give up its name arrive. */
-async function settle() {
-  await act(async () => {
-    await new Promise(resolve => setTimeout(resolve))
-  })
-}
 
 /**
  * The View menu holds what the editor shows and what it looks like, and what
@@ -299,8 +165,8 @@ describe("the View menu", () => {
     ["the Minimap is turned on and off", "minimap.title"]
   ] as const) {
     it(`is where ${what}`, async () => {
-      const { file, exporting } = fakeEditors()
-      render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+      const { exporting } = fakeExporting()
+      renderMenuBar(exporting)
 
       fireEvent.click(screen.getByRole("menuitem", { name: translate("menu.view") }))
 
@@ -317,8 +183,8 @@ describe("the View menu", () => {
  */
 describe("the Help menu", () => {
   it("opens About", async () => {
-    const { file, exporting } = fakeEditors()
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+    const { exporting } = fakeExporting()
+    renderMenuBar(exporting)
 
     expect(screen.queryByTestId("about-dialog")).toBeNull()
 
@@ -326,17 +192,6 @@ describe("the Help menu", () => {
     await pick(translate("about.menu"))
 
     expect(await screen.findByTestId("about-dialog")).toBeDefined()
-  })
-
-  it("tells About where this Project is saved", async () => {
-    const { file, exporting } = fakeEditors({}, { path: "C:/bots/helper.botinv" })
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
-
-    fireEvent.click(screen.getByRole("menuitem", { name: translate("menu.help") }))
-    await pick(translate("about.menu"))
-
-    const where = await screen.findByTestId("about-project")
-    expect(where.textContent).toBe("C:/bots/helper.botinv")
   })
 })
 
@@ -347,42 +202,47 @@ describe("the Help menu", () => {
  */
 describe("what the Menu Bar says back", () => {
   it("stays quiet while there is nothing to say", () => {
-    const { file, exporting } = fakeEditors()
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+    const { exporting } = fakeExporting()
+    renderMenuBar(exporting)
 
     expect(raised).toEqual([])
   })
 
-  it("says a file problem the moment there is one", () => {
-    const { file, exporting } = fakeEditors({}, { problem: "This Project could not be saved." })
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+  /**
+   * Autosave is the one thing in the editor that can lose work without anybody
+   * pressing anything, so a write that did not happen is the message that
+   * matters most on this row.
+   */
+  it("says a write that did not happen, the moment it did not", () => {
+    const { exporting } = fakeExporting()
+    renderMenuBar(exporting, { problem: "This Project could not be saved." })
 
     expect(raised).toEqual([{ kind: "error", message: "This Project could not be saved." }])
   })
 
   it("says an export problem the moment there is one", () => {
-    const { file, exporting } = fakeEditors({ problem: "Your bot could not be exported." })
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+    const { exporting } = fakeExporting({ problem: "Your bot could not be exported." })
+    renderMenuBar(exporting)
 
     expect(raised).toEqual([{ kind: "error", message: "Your bot could not be exported." }])
   })
 
   it("says where an export was written", () => {
-    const { file, exporting } = fakeEditors({ written: "Written to C:/bots/bot.mjs" })
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+    const { exporting } = fakeExporting({ written: "Written to C:/bots/bot.mjs" })
+    renderMenuBar(exporting)
 
     expect(raised).toEqual([{ kind: "success", message: "Written to C:/bots/bot.mjs" }])
   })
 
   it("offers to open the folder the export went to", () => {
     let opened = 0
-    const { file, exporting } = fakeEditors({
+    const { exporting } = fakeExporting({
       written: "Written to C:/bots/bot.mjs",
       showWritten: async () => {
         opened += 1
       }
     })
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+    renderMenuBar(exporting)
 
     const [announced] = raised
     expect(announced?.message).toBe("Written to C:/bots/bot.mjs")
@@ -395,8 +255,8 @@ describe("what the Menu Bar says back", () => {
   // In a plain browser there is no folder to open, and the message still has to
   // arrive: where the Export went is the whole of what the user is owed.
   it("still says where the export went when nothing can open it", () => {
-    const { file, exporting } = fakeEditors({ written: "Written to C:/bots/bot.mjs" })
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+    const { exporting } = fakeExporting({ written: "Written to C:/bots/bot.mjs" })
+    renderMenuBar(exporting)
 
     expect(raised[0]?.message).toBe("Written to C:/bots/bot.mjs")
     expect(raised[0]?.action).toBeUndefined()
@@ -404,17 +264,32 @@ describe("what the Menu Bar says back", () => {
 
   it("says the same problem again when it happens again", () => {
     const problem = "This Project could not be saved."
-    const { file, exporting } = fakeEditors()
-    const failed = { ...file, problem }
+    const { exporting } = fakeExporting()
 
-    // What the hooks underneath do between two goes at the same thing: the
-    // message is dropped when the next one is asked for, and comes back when it
-    // fails the same way. A user who presses Save twice is told twice.
-    const view = render(
-      <MenuBar name="Bot" onRename={() => {}} file={failed} exporting={exporting} />
+    // What the hook underneath does between two goes at the same thing: the
+    // message is dropped before the next write is attempted, and comes back
+    // when that one fails the same way. A user losing work twice is told twice.
+    const view = renderMenuBar(exporting, { problem })
+    view.rerender(
+      <MenuBar
+        name="Bot"
+        onRename={() => {}}
+        onDashboard={() => {}}
+        saved
+        problem={undefined}
+        exporting={exporting}
+      />
     )
-    view.rerender(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
-    view.rerender(<MenuBar name="Bot" onRename={() => {}} file={failed} exporting={exporting} />)
+    view.rerender(
+      <MenuBar
+        name="Bot"
+        onRename={() => {}}
+        onDashboard={() => {}}
+        saved={false}
+        problem={problem}
+        exporting={exporting}
+      />
+    )
 
     expect(raised).toEqual([
       { kind: "error", message: problem },

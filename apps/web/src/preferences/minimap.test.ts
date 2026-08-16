@@ -5,7 +5,7 @@ import { act, cleanup, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { MINIMAP_STORAGE_KEY, useMinimap } from "@/preferences/minimap"
-import { serializeProject } from "@/project/project-file"
+import { serializeProject } from "@/project/project-store"
 
 /**
  * Whether the Minimap is shown, as the preference the editor keeps for the

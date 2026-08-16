@@ -2,7 +2,7 @@ import { readSessionLine, redactSecret, renderDevelopmentSession } from "@bot-in
 import type { Project } from "@bot-inventor/schema"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { type MessageKey, translate } from "@/i18n/messages"
-import { describeError } from "@/project/project-file"
+import { describeError } from "@/project/describe-error"
 import type { SessionId } from "@/session/events"
 import { describeRefusal } from "@/session/refusal"
 import type { SessionGateway } from "@/session/session-gateway"
