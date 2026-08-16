@@ -3,6 +3,7 @@ import {
   Command,
   CommandDialog,
   CommandEmpty,
+  CommandGroup,
   CommandInput,
   CommandItem,
   CommandList
@@ -20,12 +21,16 @@ import { translate, translateDefinitionKey } from "@/i18n/messages"
  * Putting a Node on the Canvas: right-click, "Add a node", then the catalogue
  * as a list you type into.
  *
- * The list is flat and searched by the Node's translated label, because the
- * user is looking for the words the Canvas would show them — a Node they know
- * as "Responder" is not one they will find under `discord.interaction.reply`,
- * and the id is not text they are ever shown. It is flat rather than grouped
- * for the same reason: a catalogue small enough to read is one where a
- * category is a second decision before the first one.
+ * The list is searched by the Node's translated label, because the user is
+ * looking for the words the Canvas would show them — a Node they know as
+ * "Responder" is not one they will find under `discord.interaction.reply`, and
+ * the id is not text they are ever shown.
+ *
+ * It is split in two: the Nodes that start a Flow, and everything else. That is
+ * the one distinction that decides whether a Flow ever runs, so the user meets
+ * it while they choose rather than afterwards, from the mark on the Flow row.
+ * No other category is worth a heading — a catalogue small enough to read is one
+ * where a category is a second decision before the first one.
  *
  * The menu belongs to empty Canvas. A right-click on a Node offers that Node's
  * own menu instead, drawn by `FlowNode`, which stops the gesture before this
@@ -83,6 +88,39 @@ export function AddNodeMenu({
   const [at, setAt] = useState<ScreenPoint>({ x: 0, y: 0 })
   const [picking, setPicking] = useState(false)
 
+  // Which side of the list a Node belongs on is the catalogue's answer, not a
+  // shape of the dialog: a Trigger is a Trigger wherever it is offered.
+  const triggers = choices.filter(choice => choice.definition.isTrigger)
+  const rest = choices.filter(choice => !choice.definition.isTrigger)
+
+  function renderChoice({ definition, addable, refusalKey }: NodeChoice) {
+    return (
+      <CommandItem
+        key={definition.id}
+        // The reason is named to the item, so a screen reader reads why the
+        // Node is refused rather than only that it is disabled.
+        aria-describedby={refusalKey === undefined ? undefined : reasonId(definition.id)}
+        data-testid={`add-node-${definition.id}`}
+        disabled={!addable}
+        onSelect={() => {
+          setPicking(false)
+          place(definition, at)
+        }}
+        // What the list searches. It is the label alone: the id is not text the
+        // user has ever been shown, and a Node found by typing one is a Node
+        // found by accident.
+        value={translateDefinitionKey(definition.labelKey)}
+      >
+        {translateDefinitionKey(definition.labelKey)}
+        {refusalKey === undefined ? null : (
+          <span className="ml-auto text-muted-foreground text-xs" id={reasonId(definition.id)}>
+            {translateDefinitionKey(refusalKey)}
+          </span>
+        )}
+      </CommandItem>
+    )
+  }
+
   return (
     <>
       <ContextMenu>
@@ -121,34 +159,23 @@ export function AddNodeMenu({
           <CommandInput placeholder={translate("canvas.addNode.search")} />
           <CommandList>
             <CommandEmpty>{translate("canvas.addNode.noMatch")}</CommandEmpty>
-            {choices.map(({ definition, addable, refusalKey }) => (
-              <CommandItem
-                key={definition.id}
-                // The reason is named to the item, so a screen reader reads why
-                // the Node is refused rather than only that it is disabled.
-                aria-describedby={refusalKey === undefined ? undefined : reasonId(definition.id)}
-                data-testid={`add-node-${definition.id}`}
-                disabled={!addable}
-                onSelect={() => {
-                  setPicking(false)
-                  place(definition, at)
-                }}
-                // What the list searches. It is the label alone: the id is not
-                // text the user has ever been shown, and a Node found by typing
-                // one is a Node found by accident.
-                value={translateDefinitionKey(definition.labelKey)}
-              >
-                {translateDefinitionKey(definition.labelKey)}
-                {refusalKey === undefined ? null : (
-                  <span
-                    className="ml-auto text-muted-foreground text-xs"
-                    id={reasonId(definition.id)}
-                  >
-                    {translateDefinitionKey(refusalKey)}
-                  </span>
-                )}
-              </CommandItem>
-            ))}
+            {/*
+              A group whose every item is filtered out hides itself, heading and
+              all: that is the list's own doing, so a search never leaves a
+              heading standing over nothing.
+            */}
+            <CommandGroup
+              data-testid="add-node-group-triggers"
+              heading={translate("canvas.addNode.group.triggers")}
+            >
+              {triggers.map(renderChoice)}
+            </CommandGroup>
+            <CommandGroup
+              data-testid="add-node-group-rest"
+              heading={translate("canvas.addNode.group.rest")}
+            >
+              {rest.map(renderChoice)}
+            </CommandGroup>
           </CommandList>
         </Command>
       </CommandDialog>

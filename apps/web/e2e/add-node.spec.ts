@@ -107,6 +107,30 @@ test.describe("adding a Node", () => {
     )
   })
 
+  test("tells the Nodes that start a Flow from the rest", async () => {
+    await canvas.rightClickPane(empty)
+    await canvas.addNode().click()
+
+    await expect(canvas.nodeGroup("triggers")).toContainText("Starts a flow")
+    await expect(canvas.nodeGroup("triggers")).toContainText("Slash command")
+    await expect(canvas.nodeGroup("rest")).toContainText("Everything else")
+    await expect(canvas.nodeGroup("rest")).toContainText("Reply")
+  })
+
+  test("searches across both groups and drops a heading with nothing under it", async () => {
+    await canvas.rightClickPane(empty)
+    await canvas.addNode().click()
+    const search = canvas.nodeList().getByRole("combobox")
+
+    await search.fill("Slash")
+    await expect(canvas.nodeGroup("triggers")).toBeVisible()
+    await expect(canvas.nodeGroup("rest")).toBeHidden()
+
+    await search.fill("Repl")
+    await expect(canvas.nodeGroup("rest")).toBeVisible()
+    await expect(canvas.nodeGroup("triggers")).toBeHidden()
+  })
+
   test("marks the Project as unsaved", async ({ page }) => {
     const toolbar = new ToolbarPage(page)
     await expect(toolbar.unsavedMark()).toHaveCount(0)
