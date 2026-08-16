@@ -64,6 +64,13 @@ const en = {
   "project.file.open": "Open",
   "project.file.save": "Save",
   "project.file.saveAs": "Save as…",
+  // The keys themselves are printed on the keyboard the user has in front of
+  // them, so they read the same in every language — but they are still text on
+  // the screen, and text on the screen comes from here.
+  "project.file.new.shortcut": "Ctrl+N",
+  "project.file.open.shortcut": "Ctrl+O",
+  "project.file.save.shortcut": "Ctrl+S",
+  "project.file.saveAs.shortcut": "Ctrl+Shift+S",
   "project.file.unsaved": "You have changes that are not saved yet.",
   "project.file.unsavedMark": "Unsaved",
   "project.file.location": "Saved in {path}",
@@ -219,6 +226,10 @@ const es: Record<MessageKey, string> = {
   "project.file.open": "Abrir",
   "project.file.save": "Guardar",
   "project.file.saveAs": "Guardar como…",
+  "project.file.new.shortcut": "Ctrl+N",
+  "project.file.open.shortcut": "Ctrl+O",
+  "project.file.save.shortcut": "Ctrl+S",
+  "project.file.saveAs.shortcut": "Ctrl+Shift+S",
   "project.file.unsaved": "Tienes cambios sin guardar.",
   "project.file.unsavedMark": "Sin guardar",
   "project.file.location": "Guardado en {path}",
