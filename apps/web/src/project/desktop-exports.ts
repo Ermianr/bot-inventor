@@ -4,6 +4,7 @@ import { confirm, open } from "@tauri-apps/plugin-dialog"
 
 import { translate } from "@/i18n/messages"
 import type { ExportGateway } from "@/project/export-gateway"
+import { inDesktopShell } from "@/session/desktop"
 
 /**
  * Exporting through the desktop shell: the operating system's own dialogs for
@@ -39,5 +40,9 @@ export const desktopExports: ExportGateway = {
     }),
 
   run: async request =>
-    readExportResult(await invoke<string>("export_project", { request: JSON.stringify(request) }))
+    readExportResult(await invoke<string>("export_project", { request: JSON.stringify(request) })),
+
+  // Only inside the shell: outside it there is no file manager to open, and the
+  // gateway says so by not carrying this at all.
+  show: inDesktopShell() ? path => invoke("show_export", { path }) : undefined
 }

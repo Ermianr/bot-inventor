@@ -117,6 +117,7 @@ const en = {
   "export.destination.folder": "Which folder should your bot go in?",
   "export.written.file": "Written to {path}",
   "export.written.folder": "Written to {path}. Run npm install there, then start it.",
+  "export.show": "Open folder",
   "export.overwrite.title": "There is already an export here",
   "export.overwrite.message":
     "{path} already holds an export. Exporting again replaces it, including any changes you made to it by hand.",
@@ -290,6 +291,7 @@ const es: Record<MessageKey, string> = {
   "export.destination.folder": "¿En qué carpeta quieres tu bot?",
   "export.written.file": "Escrito en {path}",
   "export.written.folder": "Escrito en {path}. Ejecuta npm install ahí y luego inícialo.",
+  "export.show": "Abrir carpeta",
   "export.overwrite.title": "Ya hay una exportación aquí",
   "export.overwrite.message":
     "{path} ya tiene una exportación. Exportar de nuevo la reemplaza, incluyendo los cambios que le hayas hecho a mano.",

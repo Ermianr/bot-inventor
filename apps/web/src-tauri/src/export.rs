@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager};
+use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
@@ -82,6 +83,28 @@ pub async fn export_project(app: AppHandle, request: String) -> Result<String, S
         return Ok(complained);
     }
     Ok(said)
+}
+
+/// Shows the user an Export where they can pick it up.
+///
+/// Being told a path and left to find it by hand is the gap between having
+/// exported and having the bot, and the webview cannot close it: only this side
+/// can hand a path to the machine's own file manager.
+///
+/// A folder is opened, and a file is shown inside the folder it went to — which
+/// is the difference between the two Export formats, and the reason this is one
+/// command rather than two. Nothing is run: a file manager is asked to look at a
+/// path, never to execute what is there.
+#[tauri::command]
+pub fn show_export(app: AppHandle, path: String) -> Result<(), String> {
+    let path = PathBuf::from(path);
+
+    if path.is_dir() {
+        app.opener().open_path(path.to_string_lossy(), None::<&str>)
+    } else {
+        app.opener().reveal_item_in_dir(&path)
+    }
+    .map_err(|error| format!("{} could not be opened: {error}", path.display()))
 }
 
 /// Where the request is written down while the exporter reads it.

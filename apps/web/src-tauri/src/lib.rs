@@ -17,6 +17,7 @@ pub fn run() {
       about::describe_application,
       about::open_repository,
       export::export_project,
+      export::show_export,
       project_file::back_up_project_file,
       project_file::read_project_file,
       project_file::write_project_file,
