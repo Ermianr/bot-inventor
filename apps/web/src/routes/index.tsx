@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 
 import { Canvas } from "@/canvas/canvas"
 import { FlowList } from "@/canvas/flow-list"
-import { ProjectToolbar } from "@/components/project-toolbar"
+import { MenuBar } from "@/components/menu-bar"
 import { RunPanel } from "@/components/run-panel"
 import { desktopExports } from "@/project/desktop-exports"
 import { desktopProjectFiles } from "@/project/desktop-project-files"
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/")({
 })
 
 /**
- * The editor: what the Project is called and where it is saved on top, the
+ * The editor: the Menu Bar and what the Project is called on top, the
  * Flows on the left, the one being edited in the middle, and running it on the
  * right. The Canvas takes the room, because it is what the user came here to
  * look at.
@@ -39,7 +39,7 @@ function HomeComponent() {
 
   return (
     <div className="grid h-full grid-rows-[auto_1fr] overflow-hidden">
-      <ProjectToolbar
+      <MenuBar
         name={editor.project.name}
         onRename={editor.renameProject}
         file={file}

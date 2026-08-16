@@ -1,13 +1,13 @@
 import type { Locator, Page } from "@playwright/test"
 
 /**
- * The Project toolbar: what the Project is called, and whether the file on disk
- * is out of date.
+ * The Menu Bar: what the Project is called, and whether the file on disk is out
+ * of date.
  *
  * Everything is found by test id rather than by its words, because the words
  * are translated and the test would otherwise only pass in English.
  */
-export class ToolbarPage {
+export class MenuBarPage {
   constructor(private readonly page: Page) {}
 
   async open() {
