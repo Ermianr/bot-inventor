@@ -42,6 +42,18 @@ _Avoid_: catch, error handler, error output
 
 ### The application
 
+**Dashboard**:
+The screen listing the user's Projects, and the first thing the application shows. It is where a Project is created, renamed, duplicated, shared and deleted; opening one from here leads to the editor.
+_Avoid_: home, start screen, launcher, library
+
+**Console**:
+The collapsible panel along the bottom of the editor, showing what a Session is saying while it runs.
+_Avoid_: log, terminal, output panel
+
+**Session Output**:
+One line the Console shows: something the bot printed, a note from the application, or a problem.
+_Avoid_: log line, console line
+
 **Menu Bar**:
 The row along the top of the application, holding every menu the user opens: what they do with the Project as a whole, what the editor shows them, and what the application is. It is the only place an action lives that belongs to no single Flow.
 _Avoid_: toolbar, ribbon, main menu
@@ -57,8 +69,12 @@ The unit the user opens, edits and saves: the complete definition of one bot, wi
 _Avoid_: bot, workspace, file
 
 **Project File**:
-The `.botinv` file a Project is saved to and opened from. It holds the Project and nothing else: never a Secret, so it can be sent to somebody else as it is.
+The `.botinv` file a Project is written to. It holds the Project and nothing else: never a Secret, so it can be sent to somebody else as it is.
 _Avoid_: save file, document, botinv (on its own)
+
+**Share**:
+Writing a Project to a `.botinv` somewhere outside the application's own storage, for somebody else to import. What is shared is the Project and never a Secret. Sharing hands over a bot's design; an Export hands over a bot that runs.
+_Avoid_: export, publish, save as
 
 **Compiler**:
 Translates a Project into JavaScript. It emits the same behaviour in two modes — Development Mode (with Tracing) and Build — from a single definition of each Node.
