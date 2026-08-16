@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test"
+import { waitForMenuToClose } from "./menu-bar-page"
 
 /** The three colours a surface in this application is made of. */
 type Paint = { surface: string; border: string; ink: string }
@@ -23,10 +24,7 @@ export class ThemePage {
     await this.page.getByTestId(`theme-${theme}`).click()
     await this.page.locator(`html.${theme}`).waitFor()
 
-    // The menu is animating out at this point, and it is still on the screen
-    // while it does. Waiting for it to be gone leaves the bar in a state the
-    // next choice can open from.
-    await this.page.getByTestId("menu-theme").waitFor({ state: "detached" })
+    await waitForMenuToClose(this.page.getByTestId("menu-theme"))
   }
 
   /**

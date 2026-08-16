@@ -33,26 +33,21 @@ const HIDDEN = "hidden"
 const SHOWN = "shown"
 
 /**
- * Everyone currently asking. The browser only raises `storage` for other
- * windows, and this application is one window: a change made here has to be
- * announced here.
+ * Everyone currently asking, to be told when the answer changes. The browser
+ * only raises `storage` for other windows, and this application is one window:
+ * a change made here has to be announced here.
  */
-const asking = new Set<() => void>()
+const listeners = new Set<() => void>()
 
 function subscribe(listener: () => void): () => void {
-  asking.add(listener)
+  listeners.add(listener)
   return () => {
-    asking.delete(listener)
+    listeners.delete(listener)
   }
 }
 
 function readShown(): boolean {
   return window.localStorage.getItem(MINIMAP_STORAGE_KEY) !== HIDDEN
-}
-
-/** Rendered without a browser, the Minimap is shown, as it is by default. */
-function readShownWithoutBrowser(): boolean {
-  return true
 }
 
 export type MinimapPreference = {
@@ -61,11 +56,11 @@ export type MinimapPreference = {
 }
 
 export function useMinimap(): MinimapPreference {
-  const shown = useSyncExternalStore(subscribe, readShown, readShownWithoutBrowser)
+  const shown = useSyncExternalStore(subscribe, readShown)
 
   const setShown = useCallback((next: boolean) => {
     window.localStorage.setItem(MINIMAP_STORAGE_KEY, next ? SHOWN : HIDDEN)
-    for (const listener of asking) listener()
+    for (const listener of listeners) listener()
   }, [])
 
   return { shown, setShown }

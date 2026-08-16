@@ -62,26 +62,42 @@ test.describe("the Minimap", () => {
   })
 
   test("shows in the menu whether it is on", async () => {
-    await expect(await menu.minimapEntry()).toHaveAttribute("aria-checked", "true")
-    await menu.closeMenu()
+    await menu.openViewMenu()
+    await expect(menu.minimapEntry()).toHaveAttribute("aria-checked", "true")
+    await menu.closeViewMenu()
 
     await menu.toggleMinimap()
 
-    await expect(await menu.minimapEntry()).toHaveAttribute("aria-checked", "false")
+    await menu.openViewMenu()
+    await expect(menu.minimapEntry()).toHaveAttribute("aria-checked", "false")
   })
 
   /**
    * The choice belongs to the person, not to the bot: it is kept beside the
    * browser rather than in the Project, so a reload — which is as close to a
    * restart as a plain browser gets — still finds it.
+   *
+   * Both answers are walked, because changing your mind twice is what a user
+   * does with a toggle. Only the first of the two can fail on the storage
+   * alone — being shown is also what an editor that remembered nothing would
+   * do — so which value is written is held to where the entry is.
    */
-  test("remembers being turned off", async ({ page }) => {
+  test("remembers being turned off", async () => {
     await menu.toggleMinimap()
     await expect(canvas.minimap()).toBeHidden()
 
-    await page.reload()
-    await canvas.node("node-trigger").waitFor()
+    await canvas.reload()
 
     await expect(canvas.minimap()).toBeHidden()
+  })
+
+  test("remembers being turned back on", async () => {
+    await menu.toggleMinimap()
+    await menu.toggleMinimap()
+    await expect(canvas.minimap()).toBeVisible()
+
+    await canvas.reload()
+
+    await expect(canvas.minimap()).toBeVisible()
   })
 })

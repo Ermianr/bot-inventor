@@ -35,28 +35,39 @@ export class MenuBarPage {
     return this.page.getByTestId("project-unsaved")
   }
 
-  /** View ▸ Minimap, as the entry itself, with the View menu opened for it. */
-  async minimapEntry(): Promise<Locator> {
+  /** Opens the View menu, and waits for what hangs under it to be there. */
+  async openViewMenu() {
     await this.page.getByTestId("menu-view").click()
-    const entry = this.page.getByTestId("menu-minimap")
-    await entry.waitFor()
-    return entry
+    await this.minimapEntry().waitFor()
+  }
+
+  /** View ▸ Minimap, which is only on the screen while View is open. */
+  minimapEntry(): Locator {
+    return this.page.getByTestId("menu-minimap")
   }
 
   /** Ticks or unticks View ▸ Minimap, and waits for the menu to be gone. */
   async toggleMinimap() {
-    const entry = await this.minimapEntry()
-    await entry.click()
-
-    // The menu is animating out at this point, and it is still on the screen
-    // while it does. Waiting for it to be gone leaves the bar in a state the
-    // next thing the test does can open from.
-    await entry.waitFor({ state: "detached" })
+    await this.openViewMenu()
+    await this.minimapEntry().click()
+    await waitForMenuToClose(this.minimapEntry())
   }
 
-  /** Closes whatever menu is open, without choosing anything from it. */
-  async closeMenu() {
+  /** Leaves the View menu without choosing anything from it. */
+  async closeViewMenu() {
     await this.page.keyboard.press("Escape")
-    await this.page.getByTestId("menu-minimap").waitFor({ state: "detached" })
+    await waitForMenuToClose(this.minimapEntry())
   }
+}
+
+/**
+ * Waits for a menu to be off the screen, given anything that was inside it.
+ *
+ * A menu that has been chosen from is animating out, and it is still on the
+ * screen while it does: the next thing a test does would otherwise land on the
+ * copy that is on its way off. Every Page Object driving the Menu Bar needs
+ * this, so it lives beside them rather than in each of them.
+ */
+export async function waitForMenuToClose(inside: Locator) {
+  await inside.waitFor({ state: "detached" })
 }

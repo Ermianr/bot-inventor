@@ -53,9 +53,12 @@ export function FlowMinimap() {
       className="rounded-md border"
       nodeColor={minimapNodePaint}
       nodeStrokeColor="var(--border)"
+      // Dragging the map moves the Canvas under it, which is the whole of what
+      // "a Flow too big for the screen can still be navigated" asks for.
+      // Zooming from the corner is not: it is a second set of zoom controls,
+      // three inches from the ones the Canvas already has.
       pannable
       style={minimapTokens}
-      zoomable
     />
   )
 }

@@ -15,6 +15,12 @@ export class CanvasPage {
     await this.node("node-trigger").waitFor()
   }
 
+  /** Starts the editor again, which is as close to a restart as a browser gets. */
+  async reload() {
+    await this.page.reload()
+    await this.node("node-trigger").waitFor()
+  }
+
   node(nodeId: string): Locator {
     return this.page.getByTestId(`node-${nodeId}`)
   }

@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 
+import { helloProject } from "@bot-inventor/schema/fixtures"
 import { act, cleanup, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { MINIMAP_STORAGE_KEY, useMinimap } from "@/preferences/minimap"
+import { serializeProject } from "@/project/project-file"
 
 /**
  * Whether the Minimap is shown, as the preference the editor keeps for the
@@ -64,6 +66,22 @@ describe("whether the Minimap is shown", () => {
     act(() => menu.result.current.setShown(false))
 
     expect(canvas.result.current.shown).toBe(false)
+  })
+
+  /**
+   * The choice belongs to the person, not to the bot. A Project File holds the
+   * Project and nothing else so it can be handed to somebody else as it is, and
+   * a preference that found its way in would rearrange their editor when they
+   * opened it.
+   */
+  it("stays out of the Project File", () => {
+    const { result } = renderHook(() => useMinimap())
+    act(() => result.current.setShown(false))
+
+    const document = serializeProject(helloProject())
+
+    expect(document).not.toContain("minimap")
+    expect(document).not.toContain(MINIMAP_STORAGE_KEY)
   })
 
   /** Nothing else the application saves is the answer to this question. */
