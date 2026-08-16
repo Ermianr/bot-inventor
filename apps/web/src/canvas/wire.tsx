@@ -89,9 +89,9 @@ export function Wire({
                   ? `${data.carried.slice(0, CARRIED_LIMIT)}…`
                   : data.carried}
               </TooltipTrigger>
-              <TooltipContent className="max-w-sm break-all font-mono">
-                {data.carried}
-              </TooltipContent>
+              {/* A carried value can be one long unbroken run of characters,
+                  which has nowhere to wrap without being told to. */}
+              <TooltipContent className="break-all font-mono">{data.carried}</TooltipContent>
             </Tooltip>
           )}
           {data?.coercionLabelKey !== undefined && (

@@ -41,9 +41,19 @@ export class FlowListPage {
     return this.page.getByTestId(`flow-${flowId}-remove`)
   }
 
+  /** The row of whichever Flow is open, whose id a test may not know. */
+  openRow(): Locator {
+    return this.page.locator('li[aria-current="true"]')
+  }
+
   /** The bin on whichever Flow is open, whose id a test may not know. */
   removeOpen(): Locator {
-    return this.page.locator('li[aria-current="true"] [data-testid$="-remove"]')
+    return this.openRow().locator('[data-testid$="-remove"]')
+  }
+
+  /** The pencil on whichever Flow is open, whose id a test may not know. */
+  editNameOpen(): Locator {
+    return this.openRow().locator('[data-testid$="-edit"]')
   }
 
   /** The question a removal puts before it happens. */
@@ -68,7 +78,7 @@ export class FlowListPage {
 
   /** The same mark on whichever Flow is open, whose id a test may not know. */
   neverRunsOpen(): Locator {
-    return this.page.locator('li[aria-current="true"] [data-testid$="-never-runs"]')
+    return this.openRow().locator('[data-testid$="-never-runs"]')
   }
 
   /** Every Flow's name, in the order the list holds them. */

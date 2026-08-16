@@ -74,11 +74,18 @@ test.describe("the controls on a Flow row", () => {
   })
 
   test("shows the hover of a control on the Flow that is open", async () => {
-    const row = flows.row("flow-hello")
-    const background = await row.evaluate(element => getComputedStyle(element).backgroundColor)
+    // A Flow made here and left alone is both open and without a Trigger, so
+    // all three controls are on the one row.
+    await flows.create().click()
+    await flows.openField().press("Enter")
 
-    expect(await hoveredBackground(flows.editName("flow-hello"))).not.toBe(background)
-    expect(await hoveredBackground(flows.remove("flow-hello"))).not.toBe(background)
+    const background = await flows
+      .openRow()
+      .evaluate(element => getComputedStyle(element).backgroundColor)
+
+    expect(await hoveredBackground(flows.editNameOpen())).not.toBe(background)
+    expect(await hoveredBackground(flows.removeOpen())).not.toBe(background)
+    expect(await hoveredBackground(flows.neverRunsOpen())).not.toBe(background)
   })
 
   test("shows the hover of a control on a Flow that is not open", async () => {
@@ -90,5 +97,6 @@ test.describe("the controls on a Flow row", () => {
 
     expect(await hoveredBackground(flows.editName("flow-goodbye"))).not.toBe(background)
     expect(await hoveredBackground(flows.remove("flow-goodbye"))).not.toBe(background)
+    expect(await hoveredBackground(flows.neverRuns("flow-goodbye"))).not.toBe(background)
   })
 })

@@ -58,6 +58,10 @@ export function ProjectToolbar({
           <Tooltip>
             <TooltipTrigger
               render={<span />}
+              // The whole sentence, and not only the word the mark shows: the
+              // `title` that went used to carry it for anyone who could not
+              // see the tooltip, and the accessible name carries it now.
+              aria-label={translate("project.file.unsaved")}
               className="text-muted-foreground text-xs"
               data-testid="project-unsaved"
             >

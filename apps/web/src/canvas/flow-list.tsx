@@ -96,7 +96,7 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
                 className="w-full gap-0"
                 editLabel={translate("flows.name.edit")}
                 fieldLabel={translate("flows.name.field")}
-                editClassName={rowControl(open)}
+                editClassName={rowControlClasses(open)}
                 startEditing={flow.id === created}
                 testId={`flow-${flow.id}`}
                 onSelect={() => editor.openFlow(flow.id)}
@@ -118,7 +118,7 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
                     // Not muted: it is the same kind of statement the run panel
                     // makes when something is wrong, and a mark nobody notices
                     // is one the user still spends their afternoon on.
-                    className={`shrink-0 rounded-md px-1 text-destructive ${HOVERED}`}
+                    className={`shrink-0 rounded-md px-1 text-destructive ${HOVER_WASH}`}
                   >
                     <CircleAlertIcon className="size-3.5" />
                   </TooltipTrigger>
@@ -130,7 +130,7 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
                   render={<Button size="icon-xs" variant="ghost" />}
                   aria-label={translate("flows.remove")}
                   data-testid={`flow-${flow.id}-remove`}
-                  className={rowControl(open)}
+                  className={rowControlClasses(open)}
                   onClick={() => askOrExplain(editor, flow, setRemoving)}
                 >
                   <Trash2Icon />
@@ -175,18 +175,22 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
 }
 
 /**
- * What a control on a Flow row looks like under the pointer.
+ * What a control on a Flow row is painted under the pointer.
  *
  * A row is already coloured while it is hovered, and coloured again while it is
- * open, and `ghost`'s own hover reaches for those very same colours — so a
- * control sitting on either kind of row has no hover left to show. A wash of
- * the foreground has one against every background a row can take, in both
- * themes.
+ * open, and `ghost`'s own hover reaches for those very same colours — `--muted`
+ * and `--accent` are one colour in both themes — so a control sitting on either
+ * kind of row had no hover left to show. A wash of the foreground has one
+ * against every background a row can take.
+ *
+ * The dark half is not a repetition: it is what displaces `ghost`'s own
+ * `dark:hover:bg-muted/50`, which would otherwise survive the merge and win
+ * back the dark theme.
  */
-const HOVERED = "hover:bg-foreground/10 dark:hover:bg-foreground/10"
+const HOVER_WASH = "hover:bg-foreground/10 dark:hover:bg-foreground/10"
 
 /**
- * The classes the pencil and the bin wear on a row.
+ * The classes the pencil and the bin on a Flow row wear.
  *
  * Beyond being visible under the pointer they are out of the way until they are
  * wanted: a row is a place to work, not a row of buttons. Hidden rather than
@@ -195,8 +199,10 @@ const HOVERED = "hover:bg-foreground/10 dark:hover:bg-foreground/10"
  * since tabbing into the row is what reveals them. The Flow that is open keeps
  * its controls out: that one is where the user already is.
  */
-function rowControl(open: boolean): string {
-  return open ? HOVERED : `${HOVERED} invisible group-focus-within:visible group-hover:visible`
+function rowControlClasses(open: boolean): string {
+  return open
+    ? HOVER_WASH
+    : `${HOVER_WASH} invisible group-focus-within:visible group-hover:visible`
 }
 
 /**
