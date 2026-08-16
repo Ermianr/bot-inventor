@@ -296,6 +296,37 @@ describe("the View menu", () => {
 })
 
 /**
+ * The Help menu, which holds About. What About says is covered where it is;
+ * what only the Menu Bar can be held to is that the entry opens it at all — the
+ * dialog is a sibling of the menu that is closing under it, which is exactly
+ * the wiring that can be got wrong without anything failing to type-check.
+ */
+describe("the Help menu", () => {
+  it("opens About", async () => {
+    const { file, exporting } = fakeEditors()
+    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+    expect(screen.queryByTestId("about-dialog")).toBeNull()
+
+    fireEvent.click(screen.getByRole("menuitem", { name: translate("menu.help") }))
+    await pick(translate("about.menu"))
+
+    expect(await screen.findByTestId("about-dialog")).toBeDefined()
+  })
+
+  it("tells About where this Project is saved", async () => {
+    const { file, exporting } = fakeEditors({}, { path: "C:/bots/helper.botproj" })
+    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+    fireEvent.click(screen.getByRole("menuitem", { name: translate("menu.help") }))
+    await pick(translate("about.menu"))
+
+    const where = await screen.findByTestId("about-project")
+    expect(where.textContent).toBe("C:/bots/helper.botproj")
+  })
+})
+
+/**
  * What an action has to say back. It used to be a line inside the row, and the
  * row is now a Menu Bar with nowhere to put one — so a message that never
  * reaches the toaster is a failure the user is never told about.

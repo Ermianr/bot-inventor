@@ -10,9 +10,10 @@ import {
   MenubarTrigger
 } from "@bot-inventor/ui/components/menubar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@bot-inventor/ui/components/tooltip"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
+import { AboutDialog } from "@/components/about-dialog"
 import { InlineName } from "@/components/inline-name"
 import { ThemeMenu } from "@/components/theme-menu"
 import { useMenuShortcuts } from "@/components/use-menu-shortcuts"
@@ -30,8 +31,7 @@ import type { ProjectFileEditor } from "@/project/use-project-file"
  * did not; a toast arrives where the user is already looking and leaves on its
  * own.
  *
- * Project and View live here so far. Help comes later, and the row is shaped to
- * take it.
+ * Project, View and Help live here.
  */
 export function MenuBar({
   name,
@@ -50,6 +50,8 @@ export function MenuBar({
     save: () => void file.save(),
     saveAs: () => void file.saveAs()
   })
+
+  const [aboutOpen, setAboutOpen] = useState(false)
 
   useAnnounce(file.problem, toast.error)
   useAnnounce(exporting.problem, toast.error)
@@ -132,7 +134,28 @@ export function MenuBar({
             <ThemeMenu />
           </MenubarContent>
         </MenubarMenu>
+
+        {/*
+          Help holds one entry, and About is the whole of what this application
+          has to say about itself: a user who is asked what they are running has
+          nowhere else to look.
+        */}
+        <MenubarMenu>
+          <MenubarTrigger data-testid="menu-help">{translate("menu.help")}</MenubarTrigger>
+          <MenubarContent>
+            <MenubarItem data-testid="menu-about" onClick={() => setAboutOpen(true)}>
+              {translate("about.menu")}
+            </MenubarItem>
+          </MenubarContent>
+        </MenubarMenu>
       </Menubar>
+
+      {/*
+        The dialog is a sibling of the menu rather than a child of it: the menu
+        is gone the moment the entry is clicked, and it would take the dialog
+        with it.
+      */}
+      <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} projectPath={file.path} />
 
       {/*
         Where the Project is saved is what somebody about to close the
