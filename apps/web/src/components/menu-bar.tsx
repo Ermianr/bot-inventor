@@ -64,21 +64,24 @@ export function MenuBar({
             {/*
               The shortcut is written beside the entry it belongs to, which is
               how somebody who has never been told about it learns it: they came
-              to the menu for the action and leave knowing the keys.
+              to the menu for the action and leave knowing the keys. They are
+              held off the label rather than sitting against it: read at a
+              glance, an entry is a thing to do and the keys are an aside, and
+              two words touching are read as one.
             */}
-            <MenubarItem onClick={() => void file.create()}>
+            <MenubarItem className="gap-6" onClick={() => void file.create()}>
               {translate("project.file.new")}
               <MenubarShortcut>{translate("project.file.new.shortcut")}</MenubarShortcut>
             </MenubarItem>
-            <MenubarItem onClick={() => void file.open()}>
+            <MenubarItem className="gap-6" onClick={() => void file.open()}>
               {translate("project.file.open")}
               <MenubarShortcut>{translate("project.file.open.shortcut")}</MenubarShortcut>
             </MenubarItem>
-            <MenubarItem onClick={() => void file.save()}>
+            <MenubarItem className="gap-6" onClick={() => void file.save()}>
               {translate("project.file.save")}
               <MenubarShortcut>{translate("project.file.save.shortcut")}</MenubarShortcut>
             </MenubarItem>
-            <MenubarItem onClick={() => void file.saveAs()}>
+            <MenubarItem className="gap-6" onClick={() => void file.saveAs()}>
               {translate("project.file.saveAs")}
               <MenubarShortcut>{translate("project.file.saveAs.shortcut")}</MenubarShortcut>
             </MenubarItem>
