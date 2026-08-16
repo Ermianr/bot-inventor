@@ -1,12 +1,12 @@
 import type { Locator, Page } from "@playwright/test"
 
+/** The three colours a surface in this application is made of. */
+type Paint = { surface: string; border: string; ink: string }
+
 /**
  * The theme the user chose, as a test changes it: the menu in the header and
  * the two themes it offers.
  */
-/** The three colours a surface in this application is made of. */
-type Paint = { surface: string; border: string; ink: string }
-
 export class ThemePage {
   constructor(private readonly page: Page) {}
 

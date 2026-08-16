@@ -24,7 +24,6 @@ import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState }
 import { AddNodeMenu, type ScreenPoint } from "@/canvas/add-node"
 import { FlowNode, type FlowNodeData, type FlowNodeType } from "@/canvas/flow-node"
 import { Wire, type WireData, type WireType } from "@/canvas/wire"
-import { useTheme } from "@/components/theme-provider"
 import { translate, translateDefinitionKey } from "@/i18n/messages"
 import type { ProjectEditor } from "@/project/use-project"
 import type { RunTrace } from "@/session/trace"
@@ -86,16 +85,6 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
   const { flow } = editor
   const { screenToFlowPosition } = useReactFlow()
   const [refusal, setRefusal] = useState<string | undefined>(undefined)
-
-  /**
-   * Which theme React Flow is drawing under. It has no idea on its own, and
-   * left untold it draws everything light. `resolvedTheme` is what the user is
-   * actually looking at, so a theme that follows the system follows it here
-   * too; it is unknown for the first render, and the application's own default
-   * is dark.
-   */
-  const { resolvedTheme } = useTheme()
-  const colorMode = resolvedTheme === "light" ? "light" : "dark"
 
   /**
    * What the run being watched did in this Flow. A run of another Flow lights
@@ -275,7 +264,6 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
     <section aria-label={translate("canvas.label")} className="relative h-full w-full">
       <AddNodeMenu choices={choices} landsOnNode={landsOnNode} place={placeNode}>
         <ReactFlow
-          colorMode={colorMode}
           edgeTypes={wireTypes}
           edges={wires}
           fitView
