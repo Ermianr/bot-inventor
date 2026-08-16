@@ -41,9 +41,19 @@ export class FlowListPage {
     return this.page.getByTestId(`flow-${flowId}-remove`)
   }
 
+  /** The row of whichever Flow is open, whose id a test may not know. */
+  openRow(): Locator {
+    return this.page.locator('li[aria-current="true"]')
+  }
+
   /** The bin on whichever Flow is open, whose id a test may not know. */
   removeOpen(): Locator {
-    return this.page.locator('li[aria-current="true"] [data-testid$="-remove"]')
+    return this.openRow().locator('[data-testid$="-remove"]')
+  }
+
+  /** The pencil on whichever Flow is open, whose id a test may not know. */
+  editNameOpen(): Locator {
+    return this.openRow().locator('[data-testid$="-edit"]')
   }
 
   /** The question a removal puts before it happens. */
@@ -68,7 +78,7 @@ export class FlowListPage {
 
   /** The same mark on whichever Flow is open, whose id a test may not know. */
   neverRunsOpen(): Locator {
-    return this.page.locator('li[aria-current="true"] [data-testid$="-never-runs"]')
+    return this.openRow().locator('[data-testid$="-never-runs"]')
   }
 
   /** Every Flow's name, in the order the list holds them. */
@@ -84,6 +94,23 @@ export class FlowListPage {
    */
   openField(): Locator {
     return this.page.locator('[data-testid^="flow-"][data-testid$="-field"]')
+  }
+
+  /** A whole row, which is what the controls on it are coloured against. */
+  row(flowId: string): Locator {
+    return this.page.locator(`li:has([data-testid="flow-${flowId}"])`)
+  }
+
+  /**
+   * Whatever explanation the editor is currently showing under the pointer.
+   *
+   * Found by the slot the tooltip component names itself with rather than by a
+   * role: the popup is a plain element, since what it says is already the
+   * accessible name of the control it belongs to. Only the open one counts —
+   * the one the pointer just left is still on the page while it fades.
+   */
+  tooltip(): Locator {
+    return this.page.locator('[data-slot="tooltip-content"][data-open]')
   }
 
   /** Whatever the editor is saying about a refused rename. */

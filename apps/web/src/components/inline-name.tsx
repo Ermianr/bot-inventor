@@ -1,5 +1,6 @@
 import { Button } from "@bot-inventor/ui/components/button"
 import { Input } from "@bot-inventor/ui/components/input"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@bot-inventor/ui/components/tooltip"
 import { cn } from "@bot-inventor/ui/lib/utils"
 import { PencilIcon } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
@@ -97,20 +98,27 @@ export function InlineName({
             {name}
           </button>
         )}
-        <Button
-          ref={pencil}
-          size="icon-xs"
-          variant="ghost"
-          aria-label={editLabel}
-          className={editClassName}
-          data-testid={`${testId}-edit`}
-          onClick={() => {
-            settled.current = false
-            setTyped(name)
-          }}
-        >
-          <PencilIcon />
-        </Button>
+        {/*
+          A pencil is only a pencil until someone says what it renames, and the
+          words that say it are the ones it already answers to: the tooltip and
+          the accessible name are the same sentence, so what the pointer reads
+          and what a screen reader announces cannot drift apart.
+        */}
+        <Tooltip>
+          <TooltipTrigger
+            render={<Button ref={pencil} size="icon-xs" variant="ghost" />}
+            aria-label={editLabel}
+            className={editClassName}
+            data-testid={`${testId}-edit`}
+            onClick={() => {
+              settled.current = false
+              setTyped(name)
+            }}
+          >
+            <PencilIcon />
+          </TooltipTrigger>
+          <TooltipContent>{editLabel}</TooltipContent>
+        </Tooltip>
       </span>
     )
   }

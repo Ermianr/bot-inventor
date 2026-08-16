@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@bot-inventor/ui/components/dialog"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@bot-inventor/ui/components/tooltip"
 import { CircleAlertIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -35,6 +36,11 @@ import type { ProjectEditor } from "@/project/use-project"
  * a user finds out before spending an afternoon wondering why their bot ignores
  * them. The mark is read off the Flow's Nodes, so it goes the moment a Trigger
  * lands on the Canvas.
+ *
+ * The pencil, the bin and the mark are three icons on a row narrow enough that
+ * none of them can carry its own sentence, so each says what it is when the
+ * pointer rests on it — in the editor's tooltip, with the same words it already
+ * answers to, and never in the operating system's `title`.
  */
 export function FlowList({ editor }: { editor: ProjectEditor }) {
   /**
@@ -90,13 +96,7 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
                 className="w-full gap-0"
                 editLabel={translate("flows.name.edit")}
                 fieldLabel={translate("flows.name.field")}
-                editClassName={
-                  // Hidden rather than merely transparent: a pencil nobody can
-                  // see is not one they should be able to click by accident.
-                  // The keyboard still reaches it — tabbing to the row's name
-                  // is what reveals it.
-                  open ? undefined : "invisible group-focus-within:visible group-hover:visible"
-                }
+                editClassName={rowControlClasses(open)}
                 startEditing={flow.id === created}
                 testId={`flow-${flow.id}`}
                 onSelect={() => editor.openFlow(flow.id)}
@@ -104,38 +104,39 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
               />
               {hasTrigger(flow, catalogue) ? null : (
                 // A sentence would not fit a row this narrow, so the mark is an
-                // icon carrying the sentence: `title` for the pointer, the same
-                // words as its accessible name for everyone else. It stays put
-                // while the row is hovered, unlike the pencil and the bin —
-                // what it says is true whether or not the user is reaching for
-                // anything.
-                <span
-                  role="img"
-                  aria-label={translate("flows.neverRuns")}
-                  title={translate("flows.neverRuns")}
-                  data-testid={`flow-${flow.id}-never-runs`}
-                  // Not muted: it is the same kind of statement the run panel
-                  // makes when something is wrong, and a mark nobody notices is
-                  // one the user still spends their afternoon on.
-                  className="shrink-0 px-1 text-destructive"
-                >
-                  <CircleAlertIcon className="size-3.5" />
-                </span>
+                // icon carrying the sentence: the editor's own tooltip for the
+                // pointer, the same words as its accessible name for everyone
+                // else. It stays put while the row is hovered, unlike the
+                // pencil and the bin — what it says is true whether or not the
+                // user is reaching for anything.
+                <Tooltip>
+                  <TooltipTrigger
+                    render={<span />}
+                    role="img"
+                    aria-label={translate("flows.neverRuns")}
+                    data-testid={`flow-${flow.id}-never-runs`}
+                    // Not muted: it is the same kind of statement the run panel
+                    // makes when something is wrong, and a mark nobody notices
+                    // is one the user still spends their afternoon on.
+                    className={`shrink-0 rounded-md px-1 text-destructive ${HOVER_WASH}`}
+                  >
+                    <CircleAlertIcon className="size-3.5" />
+                  </TooltipTrigger>
+                  <TooltipContent>{translate("flows.neverRuns")}</TooltipContent>
+                </Tooltip>
               )}
-              <Button
-                size="icon-xs"
-                variant="ghost"
-                aria-label={translate("flows.remove")}
-                data-testid={`flow-${flow.id}-remove`}
-                // Hidden for the same reason the pencil is: a row is a place to
-                // work, not a row of buttons. The keyboard still reaches it.
-                className={
-                  open ? undefined : "invisible group-focus-within:visible group-hover:visible"
-                }
-                onClick={() => askOrExplain(editor, flow, setRemoving)}
-              >
-                <Trash2Icon />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={<Button size="icon-xs" variant="ghost" />}
+                  aria-label={translate("flows.remove")}
+                  data-testid={`flow-${flow.id}-remove`}
+                  className={rowControlClasses(open)}
+                  onClick={() => askOrExplain(editor, flow, setRemoving)}
+                >
+                  <Trash2Icon />
+                </TooltipTrigger>
+                <TooltipContent>{translate("flows.remove")}</TooltipContent>
+              </Tooltip>
             </li>
           )
         })}
@@ -171,6 +172,37 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
       </Dialog>
     </nav>
   )
+}
+
+/**
+ * What a control on a Flow row is painted under the pointer.
+ *
+ * A row is already coloured while it is hovered, and coloured again while it is
+ * open, and `ghost`'s own hover reaches for those very same colours — `--muted`
+ * and `--accent` are one colour in both themes — so a control sitting on either
+ * kind of row had no hover left to show. A wash of the foreground has one
+ * against every background a row can take.
+ *
+ * The dark half is not a repetition: it is what displaces `ghost`'s own
+ * `dark:hover:bg-muted/50`, which would otherwise survive the merge and win
+ * back the dark theme.
+ */
+const HOVER_WASH = "hover:bg-foreground/10 dark:hover:bg-foreground/10"
+
+/**
+ * The classes the pencil and the bin on a Flow row wear.
+ *
+ * Beyond being visible under the pointer they are out of the way until they are
+ * wanted: a row is a place to work, not a row of buttons. Hidden rather than
+ * merely transparent, because a control nobody can see is not one they should
+ * be able to click by accident — and the keyboard reaches them all the same,
+ * since tabbing into the row is what reveals them. The Flow that is open keeps
+ * its controls out: that one is where the user already is.
+ */
+function rowControlClasses(open: boolean): string {
+  return open
+    ? HOVER_WASH
+    : `${HOVER_WASH} invisible group-focus-within:visible group-hover:visible`
 }
 
 /**
