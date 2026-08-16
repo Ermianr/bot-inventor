@@ -71,8 +71,13 @@ export function MenuBar({
   )
 
   return (
-    <div className="flex items-center gap-2 border-b px-3 py-2">
-      <Menubar className="border-0 shadow-none">
+    <div className="flex items-center gap-2 border-b px-3 py-1">
+      {/*
+        The row is the thinnest thing in the window on purpose: every pixel it
+        takes is a pixel the Canvas does not have, and nothing in it is read
+        for longer than it takes to click.
+      */}
+      <Menubar className="h-8 border-0 shadow-none">
         <MenubarMenu>
           <MenubarTrigger>{translate("menu.project")}</MenubarTrigger>
           <MenubarContent>
