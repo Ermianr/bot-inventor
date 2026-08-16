@@ -40,6 +40,18 @@ test.describe("removing a Node", () => {
     await expect(canvas.wires()).toHaveCount(0)
   })
 
+  test("takes the Wires with it however the Node was removed", async ({ page }) => {
+    // The Canvas's own Backspace is the other route, and it goes through the
+    // same removal: a Node taken off the screen and left in the Project would
+    // still be compiled and still run, with its Wires pointing at nothing.
+    await canvas.node("node-reply").locator("header").click()
+    await page.keyboard.press("Backspace")
+
+    await expect(canvas.node("node-reply")).toHaveCount(0)
+    await expect(canvas.wires()).toHaveCount(0)
+    await expect(canvas.node("node-trigger")).toBeVisible()
+  })
+
   test("changes nothing when Escape closes the menu", async ({ page }) => {
     await canvas.rightClickNode("node-reply")
     await expect(canvas.removeNode("node-reply")).toBeVisible()

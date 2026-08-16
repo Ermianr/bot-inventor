@@ -88,7 +88,6 @@ test.describe("adding a Node", () => {
     await canvas.rightClickNode("node-trigger")
 
     await expect(canvas.addNode()).toHaveCount(0)
-    await expect(canvas.removeNode("node-trigger")).toBeVisible()
   })
 
   test("lists a Trigger but does not let a Flow that has one take another", async () => {

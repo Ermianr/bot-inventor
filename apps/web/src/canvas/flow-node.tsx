@@ -75,10 +75,19 @@ export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
     /*
       A right-click on a Node is the Node's question, not the Canvas's. The
       Canvas is the outer context menu, and this stops the event once this one
-      has answered it, so the user is never offered both menus at once.
+      has answered it, so the user is never offered both menus at once. The
+      browser's own menu is turned down here as well: a right-click that offers
+      the editor's menu in one place and Chrome's in another reads as the
+      application breaking, and that must hold anywhere on the Node, including
+      the edges the trigger under this does not itself cover.
     */
     // biome-ignore lint/a11y/noStaticElementInteractions: the menu the handler guards is the interactive element.
-    <div onContextMenu={event => event.stopPropagation()}>
+    <div
+      onContextMenu={event => {
+        event.preventDefault()
+        event.stopPropagation()
+      }}
+    >
       <ContextMenu>
         <ContextMenuTrigger
           className={`w-64 rounded-lg border bg-card text-card-foreground shadow-sm${highlight}`}
