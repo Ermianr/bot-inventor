@@ -20,7 +20,7 @@ test.describe("About", () => {
   })
 
   test("says what the application is and which one the user has", async () => {
-    for (const fact of ["version", "licence", "node", "project", "repository"] as const) {
+    for (const fact of ["version", "licence", "node", "repository"] as const) {
       await expect(about.fact(fact)).toBeVisible()
     }
   })

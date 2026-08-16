@@ -35,8 +35,8 @@ afterEach(() => {
 })
 
 /** The dialog as the Menu Bar opens it. */
-function open(projectPath?: string) {
-  render(<AboutDialog open onOpenChange={() => {}} projectPath={projectPath} />)
+function open() {
+  render(<AboutDialog open onOpenChange={() => {}} />)
 }
 
 describe("About", () => {
@@ -64,18 +64,6 @@ describe("About", () => {
     open()
 
     expect(screen.getByTestId("about-node").textContent).toBe("22.20.0")
-  })
-
-  it("says where the Project is saved", () => {
-    open("C:/bots/helper.botinv")
-
-    expect(screen.getByTestId("about-project").textContent).toBe("C:/bots/helper.botinv")
-  })
-
-  it("says a Project that was never saved has nowhere, rather than nothing", () => {
-    open()
-
-    expect(screen.getByTestId("about-project").textContent).toBe(translate("project.file.nowhere"))
   })
 
   it("links to the repository, opened away from the editor", () => {
@@ -125,7 +113,7 @@ describe("About", () => {
   })
 
   it("is not on the screen until it is opened", () => {
-    render(<AboutDialog open={false} onOpenChange={() => {}} projectPath={undefined} />)
+    render(<AboutDialog open={false} onOpenChange={() => {}} />)
 
     expect(screen.queryByTestId("about-dialog")).toBeNull()
   })

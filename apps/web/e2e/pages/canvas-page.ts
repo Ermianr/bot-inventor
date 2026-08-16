@@ -1,5 +1,8 @@
 import type { Locator, Page } from "@playwright/test"
 
+import { DashboardPage } from "./dashboard-page"
+import { MenuBarPage } from "./menu-bar-page"
+
 /**
  * The Canvas, as a test drives it: Nodes, Ports, Wires and the words the editor
  * says when it refuses one.
@@ -10,13 +13,22 @@ import type { Locator, Page } from "@playwright/test"
 export class CanvasPage {
   constructor(private readonly page: Page) {}
 
+  /**
+   * Opens the demonstration Project from the Dashboard, which is the only way
+   * into a Canvas now that the application owns where Projects live.
+   */
   async open() {
-    await this.page.goto("/")
+    await new DashboardPage(this.page).openExample()
     await this.node("node-trigger").waitFor()
   }
 
-  /** Starts the editor again, which is as close to a restart as a browser gets. */
+  /**
+   * Starts the editor again, which is as close to a restart as a browser gets.
+   * It waits for autosave to have caught up first: a reload is only a fair test
+   * of what survives once what the user did has been written.
+   */
   async reload() {
+    await new MenuBarPage(this.page).waitUntilSaved()
     await this.page.reload()
     await this.node("node-trigger").waitFor()
   }

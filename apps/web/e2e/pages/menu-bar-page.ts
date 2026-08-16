@@ -1,8 +1,9 @@
-import type { Locator, Page } from "@playwright/test"
+import { expect, type Locator, type Page } from "@playwright/test"
+
+import { DashboardPage } from "./dashboard-page"
 
 /**
- * The Menu Bar: what the Project is called, and whether the file on disk is out
- * of date.
+ * The Menu Bar: what the Project is called, and the way back to the Dashboard.
  *
  * Everything is found by test id rather than by its words, because the words
  * are translated and the test would otherwise only pass in English.
@@ -11,7 +12,7 @@ export class MenuBarPage {
   constructor(private readonly page: Page) {}
 
   async open() {
-    await this.page.goto("/")
+    await new DashboardPage(this.page).openExample()
     await this.name().waitFor()
   }
 
@@ -30,9 +31,39 @@ export class MenuBarPage {
     return this.page.getByTestId("project-name-field")
   }
 
-  /** The mark saying the file on disk is behind what is on the Canvas. */
-  unsavedMark(): Locator {
-    return this.page.getByTestId("project-unsaved")
+  /**
+   * The row itself, which carries whether the Canvas has reached storage.
+   *
+   * Autosave waits a moment before it writes, so a test that reloads the
+   * instant it has typed reloads before the write. Nothing is drawn about it —
+   * there is nothing the user could do — so the row says it as an attribute and
+   * this is what a spec waits on instead of a guess at how long is enough.
+   */
+  async waitUntilSaved() {
+    await expect(this.row()).toHaveAttribute("data-saved", "true")
+  }
+
+  /** The row itself, found by test id like everything else here. */
+  row(): Locator {
+    return this.page.getByTestId("menu-bar")
+  }
+
+  /** Opens the Project menu, and waits for what hangs under it to be there. */
+  async openProjectMenu() {
+    await this.page.getByTestId("menu-project").click()
+    await this.dashboardEntry().waitFor()
+  }
+
+  /** Project ▸ the way back to the Dashboard. */
+  dashboardEntry(): Locator {
+    return this.page.getByTestId("menu-dashboard")
+  }
+
+  /** Goes back to the Dashboard through the menu, the way a user does. */
+  async goToDashboard() {
+    await this.openProjectMenu()
+    await this.dashboardEntry().click()
+    await waitForMenuToClose(this.dashboardEntry())
   }
 
   /** Opens the View menu, and waits for what hangs under it to be there. */

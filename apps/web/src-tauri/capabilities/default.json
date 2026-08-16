@@ -1,13 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The default permissions, plus the file dialogs a Project is saved and opened through, and closing the window: listening for the close asks the editor first, and it is then the editor that closes the window.",
+  "description": "The default permissions, plus the dialogs an Export asks its destination through: where the folder goes, and whether an Export already there may be replaced. A Project needs none of them — the application owns where Projects live.",
   "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "core:window:allow-destroy",
-    "dialog:allow-open",
-    "dialog:allow-save",
-    "dialog:allow-confirm"
-  ]
+  "permissions": ["core:default", "dialog:allow-open", "dialog:allow-confirm"]
 }

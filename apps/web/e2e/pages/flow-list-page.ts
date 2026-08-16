@@ -1,5 +1,7 @@
 import type { Locator, Page } from "@playwright/test"
 
+import { DashboardPage } from "./dashboard-page"
+
 /**
  * The Flow list: which Flows the Project has, which one is open, and renaming
  * one of them.
@@ -12,7 +14,7 @@ export class FlowListPage {
   constructor(private readonly page: Page) {}
 
   async open() {
-    await this.page.goto("/")
+    await new DashboardPage(this.page).openExample()
     await this.name("flow-hello").waitFor()
   }
 

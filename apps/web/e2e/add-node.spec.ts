@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test"
 import { CanvasPage } from "./pages/canvas-page"
-import { MenuBarPage } from "./pages/menu-bar-page"
 
 /**
  * Putting a Node on the Canvas: the gesture that makes an empty Flow usable.
@@ -129,17 +128,6 @@ test.describe("adding a Node", () => {
     await search.fill("Repl")
     await expect(canvas.nodeGroup("rest")).toBeVisible()
     await expect(canvas.nodeGroup("triggers")).toBeHidden()
-  })
-
-  test("marks the Project as unsaved", async ({ page }) => {
-    const menuBar = new MenuBarPage(page)
-    await expect(menuBar.unsavedMark()).toHaveCount(0)
-
-    await canvas.rightClickPane(empty)
-    await canvas.addNode().click()
-    await canvas.nodeChoice("discord.interaction.reply").click()
-
-    await expect(menuBar.unsavedMark()).toBeVisible()
   })
 })
 

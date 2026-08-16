@@ -3,8 +3,8 @@ import type { Project } from "@bot-inventor/schema"
 import { useCallback, useMemo, useState } from "react"
 
 import { translate } from "@/i18n/messages"
+import { describeError } from "@/project/describe-error"
 import type { ExportGateway } from "@/project/export-gateway"
-import { describeError } from "@/project/project-file"
 
 /**
  * Taking the bot away: the Project as something that runs without Bot Inventor.

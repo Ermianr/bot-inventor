@@ -28,12 +28,10 @@ import { translate } from "@/i18n/messages"
  */
 export function AboutDialog({
   open,
-  onOpenChange,
-  projectPath
+  onOpenChange
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  projectPath: string | undefined
 }) {
   // Reading this runs the Sidecar, so it is only asked for once the dialog is
   // on its way open.
@@ -67,10 +65,6 @@ export function AboutDialog({
 
           <Fact label={translate("about.node")} testId="about-node">
             {nodeVersion ?? translate("about.unknown")}
-          </Fact>
-
-          <Fact label={translate("about.project")} testId="about-project">
-            {projectPath ?? translate("project.file.nowhere")}
           </Fact>
 
           <Fact label={translate("about.repository")} testId="about-repository">
@@ -117,7 +111,7 @@ function Fact({
   return (
     <>
       <dt className="text-muted-foreground">{label}</dt>
-      {/* Long paths and the repository's address are the two that overflow. */}
+      {/* The repository's address is the one that overflows. */}
       <dd className="break-all" data-testid={testId}>
         {children}
       </dd>
