@@ -102,26 +102,22 @@ export function MenuBar({
 
       {/*
         Where the Project is saved is what somebody about to close the
-        application wants, and not what they need while working: it is on the
-        name rather than taking a piece of the row for good.
+        application wants, and not what they need while working: it hangs off
+        the name rather than taking a piece of the row for good.
       */}
-      <Tooltip>
-        <TooltipTrigger render={<span />}>
-          <InlineName
-            name={name}
-            className="font-medium text-sm"
-            editLabel={translate("project.name.edit")}
-            fieldLabel={translate("project.name.field")}
-            testId="project-name"
-            onRename={onRename}
-          />
-        </TooltipTrigger>
-        <TooltipContent>
-          {file.path === undefined
+      <InlineName
+        name={name}
+        className="font-medium text-sm"
+        editLabel={translate("project.name.edit")}
+        fieldLabel={translate("project.name.field")}
+        testId="project-name"
+        hint={
+          file.path === undefined
             ? translate("project.file.nowhere")
-            : translate("project.file.location", { path: file.path })}
-        </TooltipContent>
-      </Tooltip>
+            : translate("project.file.location", { path: file.path })
+        }
+        onRename={onRename}
+      />
 
       {file.saved ? null : (
         // The mark is a word wide, so what it means is said by the editor's own
@@ -131,8 +127,7 @@ export function MenuBar({
           <TooltipTrigger
             render={<span />}
             // The whole sentence, and not only the word the mark shows: the
-            // `title` that went used to carry it for anyone who could not see
-            // the tooltip, and the accessible name carries it now.
+            // accessible name carries it for anyone who cannot see the tooltip.
             aria-label={translate("project.file.unsaved")}
             className="text-muted-foreground text-xs"
             data-testid="project-unsaved"

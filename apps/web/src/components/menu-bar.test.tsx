@@ -2,11 +2,21 @@
 
 import type { ExportFormat } from "@bot-inventor/compiler"
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MenuBar } from "@/components/menu-bar"
 import { translate } from "@/i18n/messages"
 import type { Exporting } from "@/project/use-export"
 import type { ProjectFileEditor } from "@/project/use-project-file"
+
+// The toaster itself belongs to the root route, so what the Menu Bar can be
+// held to is which toast it raised and what it said.
+const raised: { kind: string; message: string }[] = []
+vi.mock("sonner", () => ({
+  toast: {
+    error: (message: string) => raised.push({ kind: "error", message }),
+    success: (message: string) => raised.push({ kind: "success", message })
+  }
+}))
 
 /**
  * The Project menu, opened the way a user opens it.
@@ -21,7 +31,10 @@ import type { ProjectFileEditor } from "@/project/use-project-file"
 /** Every call the Menu Bar can make, in the order it made them. */
 type Asked = { file: string[]; exports: ExportFormat[] }
 
-function fakeEditors(exportOverrides: Partial<Exporting> = {}) {
+function fakeEditors(
+  exportOverrides: Partial<Exporting> = {},
+  fileOverrides: Partial<ProjectFileEditor> = {}
+) {
   const asked: Asked = { file: [], exports: [] }
   const record = (what: string) => async () => {
     asked.file.push(what)
@@ -35,7 +48,8 @@ function fakeEditors(exportOverrides: Partial<Exporting> = {}) {
     open: record("open"),
     save: record("save"),
     saveAs: record("saveAs"),
-    confirmDiscard: async () => true
+    confirmDiscard: async () => true,
+    ...fileOverrides
   }
 
   const exporting: Exporting = {
@@ -56,6 +70,9 @@ function fakeEditors(exportOverrides: Partial<Exporting> = {}) {
 // of one test is still in the document during the next, and the entry it is
 // looking for is there twice.
 afterEach(cleanup)
+beforeEach(() => {
+  raised.length = 0
+})
 
 /** Opens the Project menu. */
 function openProjectMenu() {
@@ -123,5 +140,60 @@ describe("the Project menu", () => {
 
     const trigger = await screen.findByText(translate("export.working"))
     expect(trigger.closest("[data-disabled]")).not.toBeNull()
+  })
+})
+
+/**
+ * What an action has to say back. It used to be a line inside the row, and the
+ * row is now a Menu Bar with nowhere to put one — so a message that never
+ * reaches the toaster is a failure the user is never told about.
+ */
+describe("what the Menu Bar says back", () => {
+  it("stays quiet while there is nothing to say", () => {
+    const { file, exporting } = fakeEditors()
+    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+    expect(raised).toEqual([])
+  })
+
+  it("says a file problem the moment there is one", () => {
+    const { file, exporting } = fakeEditors({}, { problem: "This Project could not be saved." })
+    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+    expect(raised).toEqual([{ kind: "error", message: "This Project could not be saved." }])
+  })
+
+  it("says an export problem the moment there is one", () => {
+    const { file, exporting } = fakeEditors({ problem: "Your bot could not be exported." })
+    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+    expect(raised).toEqual([{ kind: "error", message: "Your bot could not be exported." }])
+  })
+
+  it("says where an export was written", () => {
+    const { file, exporting } = fakeEditors({ written: "Written to C:/bots/bot.mjs" })
+    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+    expect(raised).toEqual([{ kind: "success", message: "Written to C:/bots/bot.mjs" }])
+  })
+
+  it("says the same problem again when it happens again", () => {
+    const problem = "This Project could not be saved."
+    const { file, exporting } = fakeEditors()
+    const failed = { ...file, problem }
+
+    // What the hooks underneath do between two goes at the same thing: the
+    // message is dropped when the next one is asked for, and comes back when it
+    // fails the same way. A user who presses Save twice is told twice.
+    const view = render(
+      <MenuBar name="Bot" onRename={() => {}} file={failed} exporting={exporting} />
+    )
+    view.rerender(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+    view.rerender(<MenuBar name="Bot" onRename={() => {}} file={failed} exporting={exporting} />)
+
+    expect(raised).toEqual([
+      { kind: "error", message: problem },
+      { kind: "error", message: problem }
+    ])
   })
 })

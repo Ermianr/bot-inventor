@@ -27,6 +27,7 @@ export function InlineName({
   editLabel,
   fieldLabel,
   testId,
+  hint,
   className,
   editClassName,
   startEditing = false,
@@ -47,6 +48,13 @@ export function InlineName({
   fieldLabel: string
   /** Names the pencil `{testId}-edit` and the field `{testId}-field`. */
   testId: string
+  /**
+   * Something about what this name belongs to, shown on the name itself: where
+   * the Project is saved. It is on the name and not on the whole control, so it
+   * does not follow the user into the field they are typing in, and the name
+   * takes the focus so a keyboard reaches it.
+   */
+  hint?: string
   className?: string
   /** For a pencil that is not always shown: the Flow list reveals it on hover. */
   editClassName?: string
@@ -84,19 +92,34 @@ export function InlineName({
   }, [typed])
 
   if (typed === undefined) {
+    const read =
+      onSelect === undefined ? (
+        <span data-testid={testId}>{name}</span>
+      ) : (
+        <button
+          type="button"
+          className="flex-1 truncate text-left"
+          data-testid={testId}
+          onClick={onSelect}
+        >
+          {name}
+        </button>
+      )
+
     return (
       <span className={cn("flex items-center gap-1", className)}>
-        {onSelect === undefined ? (
-          <span data-testid={testId}>{name}</span>
+        {hint === undefined ? (
+          read
         ) : (
-          <button
-            type="button"
-            className="flex-1 truncate text-left"
-            data-testid={testId}
-            onClick={onSelect}
-          >
-            {name}
-          </button>
+          <Tooltip>
+            {/*
+              The name is what carries the hint, and a name that is only read is
+              not something the keyboard stops at on its own: without this the
+              hint is reachable by pointer alone.
+            */}
+            <TooltipTrigger render={read} tabIndex={0} />
+            <TooltipContent>{hint}</TooltipContent>
+          </Tooltip>
         )}
         {/*
           A pencil is only a pencil until someone says what it renames, and the
