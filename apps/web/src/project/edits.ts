@@ -206,6 +206,25 @@ function nextNodeId(flow: Flow): string {
   return `node-${index}`
 }
 
+/**
+ * Takes a Node off the Canvas, and its Wires with it.
+ *
+ * A Wire with either end on the Node goes at the same time: a Project holding a
+ * Wire that points at a Node that is gone is one the Compiler refuses and the
+ * Canvas cannot draw, so leaving them would break the Project rather than edit
+ * it. Everything else in the Flow is left exactly as it was.
+ *
+ * A Trigger is removed like anything else. Refusing would trap the user with
+ * the Trigger they happened to pick first and no way to change their mind.
+ */
+export function removeNode(flow: Flow, nodeId: string): Flow {
+  return {
+    ...flow,
+    nodes: flow.nodes.filter(node => node.id !== nodeId),
+    wires: flow.wires.filter(wire => wire.from.node !== nodeId && wire.to.node !== nodeId)
+  }
+}
+
 /** Where a Node sits on the Canvas, after the user dragged it. */
 export function moveNode(flow: Flow, nodeId: string, position: Position): Flow {
   return {

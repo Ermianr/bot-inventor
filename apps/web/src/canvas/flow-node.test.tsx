@@ -34,7 +34,8 @@ function draw(runState: NodeRunState | undefined) {
     },
     definition,
     runState,
-    setField: () => {}
+    setField: () => {},
+    remove: () => {}
   }
 
   // React Flow hands a Node far more than it reads, and building the rest of
@@ -65,7 +66,8 @@ describe("drawing the Ports a Node's own fields declare", () => {
       },
       definition: trigger,
       runState: undefined,
-      setField: () => {}
+      setField: () => {},
+      remove: () => {}
     }
     const props = { data, id: "trigger", type: "flowNode" } as unknown as ComponentProps<
       typeof FlowNode

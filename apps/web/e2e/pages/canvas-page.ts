@@ -71,6 +71,16 @@ export class CanvasPage {
     return this.page.getByTestId("canvas-add-node")
   }
 
+  /** Right-clicks a Node, which is what opens the menu that removes it. */
+  async rightClickNode(nodeId: string) {
+    await this.node(nodeId).locator("header").click({ button: "right" })
+  }
+
+  /** The "Delete this node" entry of a Node's own context menu. */
+  removeNode(nodeId: string): Locator {
+    return this.page.getByTestId(`node-remove-${nodeId}`)
+  }
+
   /** The catalogue, as the searchable list the user picks a Node from. */
   nodeList(): Locator {
     return this.page.getByTestId("add-node-list")

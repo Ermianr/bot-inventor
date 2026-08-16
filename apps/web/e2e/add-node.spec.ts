@@ -83,9 +83,9 @@ test.describe("adding a Node", () => {
   })
 
   test("offers nothing when the right-click lands on a Node", async () => {
-    // The menu belongs to empty Canvas. What a Node offers on a right-click is
-    // a later ticket's answer, and until it has one the gesture does nothing.
-    await canvas.node("node-trigger").locator("header").click({ button: "right" })
+    // The menu belongs to empty Canvas. A right-click on a Node is that Node's
+    // own question, and it is answered by the Node's own menu.
+    await canvas.rightClickNode("node-trigger")
 
     await expect(canvas.addNode()).toHaveCount(0)
   })

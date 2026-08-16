@@ -95,23 +95,19 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
           node,
           definition,
           runState: watching?.nodes[node.id],
-          setField: (fieldId, value) => editor.setNodeField(node.id, fieldId, value)
+          setField: (fieldId, value) => editor.setNodeField(node.id, fieldId, value),
+          remove: () => editor.removeNode(node.id)
         }
         return [
           {
             id: node.id,
             type: "flowNode" as const,
             position: node.position,
-            // Nothing takes a Node off the Canvas yet. React Flow's own
-            // Backspace would take it off the screen and leave it in the
-            // Project, still compiled and still run, with its Wires pointing at
-            // something the user believes they deleted.
-            deletable: false,
             data
           }
         ]
       }),
-    [flow.nodes, editor.setNodeField, watching]
+    [flow.nodes, editor.setNodeField, editor.removeNode, watching]
   )
 
   const wires = useMemo<WireType[]>(
@@ -153,6 +149,12 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
     )
   }, [nodes, setDrawn])
 
+  /**
+   * A Node moved or removed on the Canvas is moved or removed in the Project,
+   * however it happened. React Flow's own Backspace takes a Node off the screen
+   * and would otherwise leave it in the Project, still compiled and still run;
+   * routing it through the same removal takes its Wires with it too.
+   */
   const onNodesChange = useCallback(
     (changes: NodeChange<FlowNodeType>[]) => {
       applyNodeChanges(changes)
@@ -160,9 +162,10 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
         if (change.type === "position" && change.position !== undefined) {
           editor.moveNode(change.id, change.position)
         }
+        if (change.type === "remove") editor.removeNode(change.id)
       }
     },
-    [applyNodeChanges, editor.moveNode]
+    [applyNodeChanges, editor.moveNode, editor.removeNode]
   )
 
   const isValidConnection = useCallback<IsValidConnection<WireType>>(
