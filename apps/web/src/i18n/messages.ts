@@ -48,6 +48,12 @@ const en = {
   "run.reloading": "You changed something. Restarting your bot…",
 
   "menu.project": "Project",
+  "menu.view": "View",
+
+  "theme.title": "Theme",
+  "theme.light": "Light",
+  "theme.dark": "Dark",
+  "theme.system": "System",
 
   "project.untitled": "Untitled bot",
   "project.flow.default": "Main",
@@ -197,6 +203,12 @@ const es: Record<MessageKey, string> = {
   "run.reloading": "Cambiaste algo. Reiniciando tu bot…",
 
   "menu.project": "Proyecto",
+  "menu.view": "Ver",
+
+  "theme.title": "Tema",
+  "theme.light": "Claro",
+  "theme.dark": "Oscuro",
+  "theme.system": "Sistema",
 
   "project.untitled": "Bot sin nombre",
   "project.flow.default": "Principal",

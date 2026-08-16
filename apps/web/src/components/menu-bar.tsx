@@ -13,6 +13,7 @@ import { useEffect } from "react"
 import { toast } from "sonner"
 
 import { InlineName } from "@/components/inline-name"
+import { ThemeMenu } from "@/components/theme-menu"
 import { translate } from "@/i18n/messages"
 import type { Exporting } from "@/project/use-export"
 import type { ProjectFileEditor } from "@/project/use-project-file"
@@ -27,8 +28,8 @@ import type { ProjectFileEditor } from "@/project/use-project-file"
  * did not; a toast arrives where the user is already looking and leaves on its
  * own.
  *
- * Only the Project menu lives here so far. View and Help come later, and the
- * row is shaped to take them.
+ * Project and View live here so far. Help comes later, and the row is shaped to
+ * take it.
  */
 export function MenuBar({
   name,
@@ -96,6 +97,18 @@ export function MenuBar({
                 </MenubarItem>
               </MenubarSubContent>
             </MenubarSub>
+          </MenubarContent>
+        </MenubarMenu>
+
+        {/*
+          The theme is the only setting the application has, so it is a menu
+          entry rather than a preferences dialog. When the second one arrives —
+          the language — both move into a dialog together.
+        */}
+        <MenubarMenu>
+          <MenubarTrigger data-testid="menu-view">{translate("menu.view")}</MenubarTrigger>
+          <MenubarContent>
+            <ThemeMenu />
           </MenubarContent>
         </MenubarMenu>
       </Menubar>
