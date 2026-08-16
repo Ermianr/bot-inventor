@@ -69,15 +69,17 @@ export const browserProjectStore: ProjectStore = {
     return projects
   },
 
-  create: async (project, credentials) => {
+  // One key holds all three, so this is the one implementation of the port
+  // where creating a Project really is a single write.
+  create: async (project, locals) => {
     if (read(project.id) !== undefined) {
       throw new Error(`there is already a Project called ${project.id}`)
     }
     save(project.id, {
       document: serializeProject(project),
       changedAt: Date.now(),
-      testServerId: credentials.testServerId,
-      hasSecret: credentials.secret.length > 0
+      testServerId: locals.testServerId,
+      hasSecret: locals.secret.length > 0
     })
   },
 

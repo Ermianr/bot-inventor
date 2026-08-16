@@ -118,7 +118,9 @@ describe("creating a Project", () => {
 
     expect(created).toBeUndefined()
     expect(store.contents.size).toBe(0)
-    expect(result.current.problem).toBe(translate("dashboard.create.tokenRequired"))
+    expect(result.current.creationProblem).toBe(translate("dashboard.create.tokenRequired"))
+    // The screen's own message is untouched: nothing is wrong with the list.
+    expect(result.current.problem).toBeUndefined()
   })
 
   it("names an unnamed Project rather than leaving a blank card", async () => {
@@ -159,7 +161,7 @@ describe("creating a Project", () => {
     })
 
     expect(created).toBeUndefined()
-    expect(result.current.problem).toContain("the disk is full")
+    expect(result.current.creationProblem).toContain("the disk is full")
     expect(result.current.projects).toEqual([])
   })
 })
@@ -195,8 +197,8 @@ describe("the example", () => {
     expect(result.current.projects).toHaveLength(2)
   })
 
-  // The example is there to be looked at, and nobody is asked for a credential
-  // to look at something.
+  // The example is there to be looked at, and nobody is asked for a Secret to
+  // look at something.
   it("arrives without a token", async () => {
     const { store, result } = await dashboard(fakeProjectStore([emptyProject()]))
 

@@ -13,18 +13,25 @@ import { type ProjectStore, type StoredProject, serializeProject } from "@/proje
 export const desktopProjectStore: ProjectStore = {
   list: () => invoke<StoredProject[]>("list_projects"),
 
-  create: async (project, credentials) => {
+  /**
+   * The Secret goes first, and the folder only once it is in.
+   *
+   * The keychain and the folder cannot be written as one, so the order decides
+   * what a half-done creation leaves behind. A folder written first and a
+   * keychain that then refused would put a Project on the Dashboard that cannot
+   * run — the one state the Dashboard is meant never to hold. This way round,
+   * a refusal leaves an entry under an id no Project ever took, which nothing
+   * looks for and nothing is broken by.
+   */
+  create: async (project, locals) => {
+    await invoke("store_secret", { projectId: project.id, secret: locals.secret })
     await invoke("create_project", {
       projectId: project.id,
       contents: serializeProject(project)
     })
-    // The token before the Test Server, because it is the one a Project cannot
-    // run without: a creation that failed halfway is better off missing the
-    // setting the user can change in a moment than missing the credential.
-    await invoke("store_secret", { projectId: project.id, secret: credentials.secret })
     await invoke("write_test_server", {
       projectId: project.id,
-      testServerId: credentials.testServerId
+      testServerId: locals.testServerId
     })
   },
 

@@ -79,7 +79,11 @@ export function MenuBar({
   )
 
   return (
-    <div className="flex items-center gap-2 border-b px-3 py-1" data-saved={saved}>
+    <div
+      className="flex items-center gap-2 border-b px-3 py-1"
+      data-testid="menu-bar"
+      data-saved={saved}
+    >
       {/*
         The row is the thinnest thing in the window on purpose: every pixel it
         takes is a pixel the Canvas does not have, and nothing in it is read

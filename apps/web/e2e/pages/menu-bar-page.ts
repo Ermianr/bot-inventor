@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test"
+import { expect, type Locator, type Page } from "@playwright/test"
 
 import { DashboardPage } from "./dashboard-page"
 
@@ -40,10 +40,12 @@ export class MenuBarPage {
    * this is what a spec waits on instead of a guess at how long is enough.
    */
   async waitUntilSaved() {
-    await this.page.locator("[data-saved]").first().waitFor()
-    await this.page.waitForFunction(
-      () => document.querySelector("[data-saved]")?.getAttribute("data-saved") === "true"
-    )
+    await expect(this.row()).toHaveAttribute("data-saved", "true")
+  }
+
+  /** The row itself, found by test id like everything else here. */
+  row(): Locator {
+    return this.page.getByTestId("menu-bar")
   }
 
   /** Opens the Project menu, and waits for what hangs under it to be there. */

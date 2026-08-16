@@ -30,10 +30,15 @@ export type StoredProject = {
 }
 
 /**
- * What a Project needs to be usable and cannot be written into it: the token
+ * What a Project needs to be usable and cannot be written into it: the Secret
  * goes to the keychain, the Test Server to the Project's own folder.
+ *
+ * They are named for where they live rather than for what they are. There is no
+ * word covering both — `CONTEXT.md` reserves Secret for one of them and forbids
+ * "credential" outright — and what they do have in common is exactly this: they
+ * belong to this machine, and they never travel inside the document.
  */
-export type ProjectCredentials = {
+export type ProjectLocals = {
   secret: string
   testServerId: string
 }
@@ -42,14 +47,16 @@ export type ProjectStore = {
   /** Every Project the application holds, in no particular order. */
   list(): Promise<readonly StoredProject[]>
   /**
-   * Puts a Project in storage with its token and its Test Server.
+   * Puts a Project in storage with its Secret and its Test Server.
    *
-   * The three arrive together because a Project without a token is one whose
+   * The three arrive together because a Project without a Secret is one whose
    * Run button is dead, and the moment between writing one and writing the next
-   * is the moment a failure would leave exactly that. What the store cannot do
-   * atomically it can at least be asked for atomically.
+   * is the moment a failure would leave exactly that. No store can make the
+   * three one write — a keychain and a folder do not share a transaction — so
+   * what an implementation owes instead is an order in which a failure leaves
+   * nothing on the Dashboard rather than something broken on it.
    */
-  create(project: Project, credentials: ProjectCredentials): Promise<void>
+  create(project: Project, locals: ProjectLocals): Promise<void>
   /** A Project's document as text, for this build to make sense of. */
   read(projectId: string): Promise<string>
   /** Writes a Project over the one in storage. This is what autosave calls. */
@@ -130,7 +137,13 @@ export async function readStoredProject(
   })
 }
 
-/** The name inside a document, or nothing when it does not read as a Project. */
+/**
+ * The name inside a document, or empty when it does not read as a Project.
+ *
+ * Empty rather than a stand-in sentence: what an unnamed card should say is
+ * words the user reads, and words the user reads are resolved where they are
+ * drawn, in the language they are drawn in. This layer does not speak one.
+ */
 function nameIn(document: string): string {
   try {
     const parsed: unknown = JSON.parse(document)
@@ -139,8 +152,8 @@ function nameIn(document: string): string {
       if (typeof name === "string" && name.trim().length > 0) return name
     }
   } catch {
-    // Falls through to the placeholder: a document nobody can read still
-    // belongs to somebody, and a card is how they get to the reason why.
+    // A document nobody can read still belongs to somebody, and its card is how
+    // they get to the reason why — so it is listed, nameless, rather than lost.
   }
   return ""
 }

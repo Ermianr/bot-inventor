@@ -26,8 +26,17 @@ export type ProjectDetails = {
 export type Projects = {
   /** The Projects, or nothing at all while the store is still being read. */
   projects: readonly ProjectSummary[] | undefined
-  /** Why the last thing the user asked for did not happen, when it did not. */
+  /**
+   * Why the Projects could not be listed, when they could not.
+   *
+   * It is kept apart from `creationProblem` because the two are read in two
+   * different places: this one belongs to the screen, that one to the dialog.
+   * One string for both would show a disk that would not answer as the reason
+   * the name the user just typed was refused.
+   */
   problem: string | undefined
+  /** Why the last attempt did not make a Project, when it did not. */
+  creationProblem: string | undefined
   /** The id of the Project that was made, or nothing when it was not. */
   create(details: ProjectDetails): Promise<string | undefined>
   /** Makes the demonstration Project, for a Dashboard with nothing on it. */
@@ -37,10 +46,12 @@ export type Projects = {
 export function useProjects(store: ProjectStore): Projects {
   const [projects, setProjects] = useState<readonly ProjectSummary[] | undefined>(undefined)
   const [problem, setProblem] = useState<string | undefined>(undefined)
+  const [creationProblem, setCreationProblem] = useState<string | undefined>(undefined)
 
   const refresh = useCallback(async () => {
     try {
       setProjects(await listProjects(store))
+      setProblem(undefined)
     } catch (error) {
       setProjects([])
       setProblem(translate("dashboard.problem.list", { message: describeError(error) }))
@@ -61,11 +72,14 @@ export function useProjects(store: ProjectStore): Projects {
    */
   const put = useCallback(
     async (project: Project, secret: string, testServerId: string) => {
-      setProblem(undefined)
+      // Dropped before the next attempt, so that a refusal repeating word for
+      // word is still an event the dialog can show rather than a message that
+      // never changed.
+      setCreationProblem(undefined)
       try {
         await store.create(project, { secret, testServerId })
       } catch (error) {
-        setProblem(translate("dashboard.problem.create", { message: describeError(error) }))
+        setCreationProblem(translate("dashboard.problem.create", { message: describeError(error) }))
         return undefined
       }
       await refresh()
@@ -77,6 +91,7 @@ export function useProjects(store: ProjectStore): Projects {
   return {
     projects,
     problem,
+    creationProblem,
 
     /**
      * A Project without a token is one whose Run button is dead the moment it
@@ -86,7 +101,7 @@ export function useProjects(store: ProjectStore): Projects {
     create: useCallback(
       async details => {
         if (details.secret.trim().length === 0) {
-          setProblem(translate("dashboard.create.tokenRequired"))
+          setCreationProblem(translate("dashboard.create.tokenRequired"))
           return undefined
         }
         return put(

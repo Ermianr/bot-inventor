@@ -10,10 +10,10 @@ import { type ProjectStore, type StoredProject, serializeProject } from "@/proje
  * no folder anywhere. It lives beside the code rather than inside one test file
  * because every one of those tests wants the same one.
  *
- * It keeps a token rather than pretending to, so that a test can assert a
- * Project was stored with the credentials it was created with — which is the
- * one thing about Secrets the application is responsible for. The real store
- * never hands one back, and neither does `hasSecret` here.
+ * It keeps a Secret rather than pretending to, so that a test can assert a
+ * Project was stored with the Secret and the Test Server it was created with —
+ * which is the one thing about Secrets the application is responsible for. The
+ * real store never hands one back, and neither does `hasSecret` here.
  */
 export type FakeProjectStore = ProjectStore & {
   /** What is in storage, so a test can look without going through the port. */
@@ -73,15 +73,15 @@ export function fakeProjectStore(initial: readonly Project[] = []): FakeProjectS
       return listed
     },
 
-    create: async (project, credentials) => {
+    create: async (project, locals) => {
       check("create")
       if (contents.has(project.id)) {
         throw new Error(`there is already a Project called ${project.id}`)
       }
       contents.set(project.id, {
         document: serializeProject(project),
-        testServerId: credentials.testServerId,
-        secret: credentials.secret
+        testServerId: locals.testServerId,
+        secret: locals.secret
       })
       touch(project.id)
     },

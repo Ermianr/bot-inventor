@@ -24,7 +24,7 @@ export function Dashboard({
   /** Where a card takes the user. The route knows; the Dashboard does not. */
   onOpen: (projectId: string) => void
 }) {
-  const { projects, problem, create, createExample } = useProjects(store)
+  const { projects, problem, creationProblem, create, createExample } = useProjects(store)
   const [creating, setCreating] = useState(false)
 
   const openExample = async () => {
@@ -76,7 +76,7 @@ export function Dashboard({
       <CreateProjectDialog
         open={creating}
         onOpenChange={setCreating}
-        problem={problem}
+        problem={creationProblem}
         onCreate={details => {
           void (async () => {
             const created = await create(details)
