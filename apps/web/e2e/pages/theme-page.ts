@@ -4,16 +4,29 @@ import type { Locator, Page } from "@playwright/test"
 type Paint = { surface: string; border: string; ink: string }
 
 /**
- * The theme the user chose, as a test changes it: the menu in the header and
- * the two themes it offers.
+ * The theme the user chose, as a test changes it: View ▸ Theme, and the themes
+ * it offers.
+ *
+ * Everything is found by test id rather than by its words, because the words
+ * are translated and the test would otherwise only pass in English.
  */
 export class ThemePage {
   constructor(private readonly page: Page) {}
 
   async choose(theme: "light" | "dark") {
-    await this.page.getByTestId("theme-toggle").click()
+    await this.page.getByTestId("menu-view").click()
+
+    // Hovered rather than clicked: a submenu opens on hover, and the closing
+    // menu of a previous choice is still animating out under the pointer, so a
+    // click can land on the copy that is on its way off the screen.
+    await this.page.getByTestId("menu-theme").hover()
     await this.page.getByTestId(`theme-${theme}`).click()
     await this.page.locator(`html.${theme}`).waitFor()
+
+    // The menu is animating out at this point, and it is still on the screen
+    // while it does. Waiting for it to be gone leaves the bar in a state the
+    // next choice can open from.
+    await this.page.getByTestId("menu-theme").waitFor({ state: "detached" })
   }
 
   /**

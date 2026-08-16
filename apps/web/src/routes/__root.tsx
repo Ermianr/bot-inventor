@@ -3,8 +3,7 @@ import { TooltipProvider } from "@bot-inventor/ui/components/tooltip"
 import { createRootRouteWithContext, HeadContent, Outlet } from "@tanstack/react-router"
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
 
-import Header from "@/components/header"
-import { ThemeProvider } from "@/components/theme-provider"
+import { THEME_STORAGE_KEY, ThemeProvider } from "@/components/theme-provider"
 
 import "../index.css"
 
@@ -39,7 +38,7 @@ function RootComponent() {
         attribute="class"
         defaultTheme="dark"
         disableTransitionOnChange
-        storageKey="vite-ui-theme"
+        storageKey={THEME_STORAGE_KEY}
       >
         {/*
           Every explanation a control gives on hover is this editor's own, never
@@ -48,8 +47,11 @@ function RootComponent() {
           at the root so that delay is the same wherever a tooltip is placed.
         */}
         <TooltipProvider>
-          <div className="grid h-svh grid-rows-[auto_1fr]">
-            <Header />
+          {/*
+            Nothing sits above the editor: this is a desktop application, and
+            the Menu Bar is what meets the window's title bar.
+          */}
+          <div className="h-svh">
             <Outlet />
           </div>
         </TooltipProvider>

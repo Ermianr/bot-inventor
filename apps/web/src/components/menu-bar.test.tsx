@@ -144,6 +144,22 @@ describe("the Project menu", () => {
 })
 
 /**
+ * The View menu holds the theme, and what it does with it is covered where the
+ * menu itself is. What only the Menu Bar can be held to is that View is on the
+ * row at all and that the theme hangs under it.
+ */
+describe("the View menu", () => {
+  it("is where the theme is chosen", async () => {
+    const { file, exporting } = fakeEditors()
+    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+    fireEvent.click(screen.getByRole("menuitem", { name: translate("menu.view") }))
+
+    expect(await screen.findByText(translate("theme.title"))).toBeDefined()
+  })
+})
+
+/**
  * What an action has to say back. It used to be a line inside the row, and the
  * row is now a Menu Bar with nowhere to put one — so a message that never
  * reaches the toaster is a failure the user is never told about.
