@@ -1,7 +1,13 @@
-import { type NodeCatalogue, pruneDanglingWires } from "@bot-inventor/nodes"
+import {
+  defaultFieldValue,
+  type NodeCatalogue,
+  type NodeDefinition,
+  pruneDanglingWires
+} from "@bot-inventor/nodes"
 import type {
   FieldValue,
   Flow,
+  Node,
   PortReference,
   Position,
   Project,
@@ -165,6 +171,39 @@ export function updateFlow(
     ...project,
     flows: project.flows.map(flow => (flow.id === flowId ? change(flow) : flow))
   }
+}
+
+/**
+ * Puts a Node of the catalogue on the Canvas, where the user asked for it.
+ *
+ * Its fields start at the definition's own defaults rather than empty, so a
+ * Node the user has not touched yet is one the Compiler can already emit — the
+ * Reply Node arrives with its "only they can see it" answered, not undecided.
+ *
+ * The definition is passed rather than looked up from a catalogue and an id: a
+ * Node type this build does not have is not something the user can pick, so
+ * there is no failure here for a caller to handle.
+ */
+export function addNode(flow: Flow, definition: NodeDefinition, position: Position): Flow {
+  const fields: Node["fields"] = {}
+  for (const field of definition.fields) fields[field.id] = defaultFieldValue(field)
+
+  const node: Node = { id: nextNodeId(flow), type: definition.id, position, fields }
+  return { ...flow, nodes: [...flow.nodes, node] }
+}
+
+/**
+ * The first free Node id. It counts rather than randomises for the same reason
+ * a Wire id does: a saved Project reads the way the user built it, and a test
+ * can name the Node it just added. The count starts at one and steps over what
+ * is taken, so a Flow whose Nodes were named by hand — or by a Project the user
+ * opened — never has its ids collide with the ones added on the Canvas.
+ */
+function nextNodeId(flow: Flow): string {
+  const taken = new Set(flow.nodes.map(node => node.id))
+  let index = 1
+  while (taken.has(`node-${index}`)) index += 1
+  return `node-${index}`
 }
 
 /** Where a Node sits on the Canvas, after the user dragged it. */

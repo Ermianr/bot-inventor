@@ -2,6 +2,7 @@ import { catalogue } from "@bot-inventor/nodes"
 import { echoParameterProject, helloProject } from "@bot-inventor/schema/fixtures"
 import { describe, expect, it } from "vitest"
 import {
+  addNode,
   canRemoveFlow,
   connectWire,
   createFlow,
@@ -18,6 +19,12 @@ function flowOf(project = helloProject()) {
   const flow = project.flows[0]
   if (flow === undefined) throw new Error("the fixture has no Flow")
   return flow
+}
+
+function requireDefinition(id: string) {
+  const definition = catalogue.get(id)
+  if (definition === undefined) throw new Error(`the catalogue has no Node "${id}"`)
+  return definition
 }
 
 describe("naming a Project", () => {
@@ -197,6 +204,63 @@ describe("removing a Flow", () => {
 
     if (!removal.removed) throw new Error("the removal was refused")
     expect(removal.open).toBe("flow-goodbye")
+  })
+})
+
+describe("putting a Node on the Canvas", () => {
+  const definition = requireDefinition("discord.interaction.reply")
+
+  it("places the Node where the user asked for it", () => {
+    const flow = flowOf()
+    const added = addNode(flow, definition, { x: 120, y: 240 })
+    const node = added.nodes.at(-1)
+
+    expect(node?.type).toBe("discord.interaction.reply")
+    expect(node?.position).toEqual({ x: 120, y: 240 })
+    // The Flow it was added to is left as it was: the editor renders from the
+    // Project, so an edit in place is an edit the screen does not show.
+    expect(flow.nodes).toHaveLength(2)
+  })
+
+  it("keeps the Nodes and the Wires the Flow already had", () => {
+    const flow = flowOf()
+    const added = addNode(flow, definition, { x: 0, y: 0 })
+
+    expect(added.nodes.slice(0, 2)).toEqual(flow.nodes)
+    expect(added.wires).toEqual(flow.wires)
+  })
+
+  it("starts the Node's fields at the defaults its definition declares", () => {
+    const added = addNode(flowOf(), definition, { x: 0, y: 0 })
+
+    expect(added.nodes.at(-1)?.fields).toEqual({ content: "", ephemeral: false })
+  })
+
+  it("hands out an id that is counted rather than random", () => {
+    const once = addNode(flowOf(), definition, { x: 0, y: 0 })
+    const twice = addNode(once, definition, { x: 0, y: 0 })
+
+    expect(once.nodes.at(-1)?.id).toBe("node-1")
+    expect(twice.nodes.at(-1)?.id).toBe("node-2")
+  })
+
+  it("steps over an id the Flow is already using", () => {
+    const flow = flowOf()
+    flow.nodes.push({ id: "node-1", type: definition.id, position: { x: 0, y: 0 }, fields: {} })
+
+    expect(addNode(flow, definition, { x: 0, y: 0 }).nodes.at(-1)?.id).toBe("node-2")
+  })
+
+  it("gives each Node its own copy of a field's default", () => {
+    const trigger = requireDefinition("discord.trigger.slashCommand")
+    const once = addNode(flowOf(), trigger, { x: 0, y: 0 })
+    const twice = addNode(once, trigger, { x: 0, y: 0 })
+
+    const first = once.nodes.at(-1)
+    if (!Array.isArray(first?.fields.parameters)) throw new Error("the Trigger has no parameters")
+    first.fields.parameters.push({ name: "who", description: "", type: "text", required: true })
+
+    expect(twice.nodes.at(-1)?.fields.parameters).toEqual([])
   })
 })
 
