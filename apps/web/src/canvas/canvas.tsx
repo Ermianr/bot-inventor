@@ -1,4 +1,5 @@
 import {
+  addableNodes,
   catalogue,
   checkConnection,
   findCoercion,
@@ -227,6 +228,13 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
    * start: the user is told it lands where they clicked, and a Canvas they have
    * panned or zoomed must keep that promise.
    */
+  /**
+   * What the catalogue offers this Flow. It is read off the Flow's Nodes, so a
+   * Trigger becomes unavailable the moment one is dropped on the Canvas and is
+   * offered again the moment it is gone.
+   */
+  const choices = useMemo(() => addableNodes(flow, catalogue), [flow])
+
   const placeNode = useCallback(
     (definition: NodeDefinition, at: ScreenPoint) => {
       editor.addNode(definition, screenToFlowPosition(at))
@@ -236,7 +244,7 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
 
   return (
     <section aria-label={translate("canvas.label")} className="relative h-full w-full">
-      <AddNodeMenu landsOnNode={landsOnNode} place={placeNode}>
+      <AddNodeMenu choices={choices} landsOnNode={landsOnNode} place={placeNode}>
         <ReactFlow
           edgeTypes={wireTypes}
           edges={wires}

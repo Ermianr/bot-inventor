@@ -1,4 +1,4 @@
-import { catalogue, type NodeDefinition } from "@bot-inventor/nodes"
+import type { NodeChoice, NodeDefinition } from "@bot-inventor/nodes"
 import {
   Command,
   CommandDialog,
@@ -27,6 +27,10 @@ import { translate, translateDefinitionKey } from "@/i18n/messages"
  * for the same reason: a catalogue small enough to read is one where a
  * category is a second decision before the first one.
  *
+ * A Node the Flow cannot be given — a second Trigger — is listed all the same,
+ * not selectable and with the reason written next to it. Which those are is
+ * decided before the list is rendered, by `addableNodes`.
+ *
  * Where the Node lands is where the right-click happened, in screen
  * coordinates. Turning those into Canvas coordinates is the Canvas's job — it
  * is the one holding React Flow's viewport — so this hands the point back
@@ -41,10 +45,17 @@ export type ScreenPoint = { x: number; y: number }
 
 export function AddNodeMenu({
   children,
+  choices,
   landsOnNode,
   place
 }: {
   children: ReactNode
+  /**
+   * The catalogue, each Node already answered for the Flow it would be added
+   * to. The list renders that answer and does not re-derive it: which Nodes a
+   * Flow can still be given is a rule about Flows, not about a dialog.
+   */
+  choices: readonly NodeChoice[]
   /**
    * Whether a pointer gesture landed on a Node rather than on empty Canvas.
    * It is asked rather than answered here, because what a Node looks like in
@@ -108,10 +119,14 @@ export function AddNodeMenu({
           <CommandInput placeholder={translate("canvas.addNode.search")} />
           <CommandList>
             <CommandEmpty>{translate("canvas.addNode.noMatch")}</CommandEmpty>
-            {[...catalogue.values()].map(definition => (
+            {choices.map(({ definition, addable, refusalKey }) => (
               <CommandItem
                 key={definition.id}
                 data-testid={`add-node-${definition.id}`}
+                // A Node this Flow cannot be given stays in the list, greyed and
+                // with the reason beside it: one that disappeared would leave
+                // the user hunting for it instead of learning the rule.
+                disabled={!addable}
                 onSelect={() => {
                   setPicking(false)
                   place(definition, at)
@@ -122,6 +137,11 @@ export function AddNodeMenu({
                 value={translateDefinitionKey(definition.labelKey)}
               >
                 {translateDefinitionKey(definition.labelKey)}
+                {refusalKey === undefined ? null : (
+                  <span className="ml-auto text-muted-foreground text-xs">
+                    {translateDefinitionKey(refusalKey)}
+                  </span>
+                )}
               </CommandItem>
             ))}
           </CommandList>

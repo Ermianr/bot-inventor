@@ -47,7 +47,7 @@ test.describe("adding a Node", () => {
     await canvas.rightClickPane(empty)
     await canvas.addNode().click()
 
-    await page.keyboard.type("Slash")
+    await page.keyboard.type("Repl")
     await page.keyboard.press("Enter")
 
     await expect(canvas.node("node-1")).toBeVisible()
@@ -88,6 +88,23 @@ test.describe("adding a Node", () => {
     await canvas.node("node-trigger").locator("header").click({ button: "right" })
 
     await expect(canvas.addNode()).toHaveCount(0)
+  })
+
+  test("lists a Trigger but does not let a Flow that has one take another", async () => {
+    // The demonstration Flow starts at a slash command, so its Trigger is taken.
+    await canvas.rightClickPane(empty)
+    await canvas.addNode().click()
+
+    const trigger = canvas.nodeChoice("discord.trigger.slashCommand")
+    await expect(trigger).toBeVisible()
+    await expect(trigger).toHaveAttribute("data-disabled", "true")
+    await expect(trigger).toContainText("This flow already has something that starts it.")
+
+    // Nothing that is not a Trigger is affected by the rule.
+    await expect(canvas.nodeChoice("discord.interaction.reply")).not.toHaveAttribute(
+      "data-disabled",
+      "true"
+    )
   })
 
   test("marks the Project as unsaved", async ({ page }) => {

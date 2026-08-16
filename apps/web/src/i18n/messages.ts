@@ -124,6 +124,8 @@ const en = {
     "This field already reads a value. Remove the wire that is already there first.",
   "connections.rejected.cycle": "That would send your bot round in a circle.",
 
+  "catalogue.rejected.triggerTaken": "This flow already has something that starts it.",
+
   "coercions.userToText.label": "as text",
   "coercions.numberToText.label": "as text",
   "coercions.booleanToText.label": "as text",
@@ -267,6 +269,8 @@ const es: Record<MessageKey, string> = {
   "connections.rejected.dataInputTaken":
     "Este campo ya lee un valor. Quita primero el cable que ya está ahí.",
   "connections.rejected.cycle": "Eso haría que tu bot diera vueltas en círculo.",
+
+  "catalogue.rejected.triggerTaken": "Este flujo ya tiene algo que lo inicia.",
 
   "coercions.userToText.label": "como texto",
   "coercions.numberToText.label": "como texto",
