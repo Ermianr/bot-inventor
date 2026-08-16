@@ -1,4 +1,5 @@
-import { catalogue } from "@bot-inventor/nodes"
+import { addableNodes, catalogue } from "@bot-inventor/nodes"
+import { helloProject, requireFirst } from "@bot-inventor/schema/fixtures"
 import { describe, expect, it } from "vitest"
 import { LOCALES, translateDefinitionKey } from "@/i18n/messages"
 
@@ -19,6 +20,25 @@ describe("the words a Node is named by", () => {
           // what `translateDefinitionKey` shows when it has nothing to show.
           expect(translateDefinitionKey(key, locale)).not.toBe(key)
         }
+      }
+    })
+  }
+})
+
+/**
+ * The words a refused Node is listed with. A reason nobody translated reads as
+ * a catalogue key next to a greyed Node, which tells the user nothing about why
+ * they cannot pick it.
+ */
+describe("the reason a Node cannot be added", () => {
+  for (const locale of LOCALES) {
+    it(`explains every refusal in ${locale}`, () => {
+      const flow = requireFirst(helloProject().flows, "Flow")
+      const refused = addableNodes(flow, catalogue).filter(choice => !choice.addable)
+
+      expect(refused.length).toBeGreaterThan(0)
+      for (const choice of refused) {
+        expect(translateDefinitionKey(choice.refusalKey ?? "", locale)).not.toBe(choice.refusalKey)
       }
     })
   }

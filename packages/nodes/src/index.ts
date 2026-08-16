@@ -43,4 +43,4 @@ export {
 } from "./definition.js"
 export { reply } from "./discord/reply.js"
 export { slashCommandTrigger } from "./discord/slash-command-trigger.js"
-export { hasTrigger } from "./triggers.js"
+export { addableNodes, hasTrigger, type NodeChoice } from "./triggers.js"
