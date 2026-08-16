@@ -95,6 +95,15 @@ export class CanvasPage {
     return this.page.getByTestId("add-node-list")
   }
 
+  /**
+   * One group of that list, which is what tells a Trigger from the rest. It is
+   * found by a name of ours rather than by its heading: the heading is words the
+   * user reads, and they are different words in every language we ship.
+   */
+  nodeGroup(group: "triggers" | "rest"): Locator {
+    return this.page.getByTestId(`add-node-group-${group}`)
+  }
+
   /** One Node of that list, found by the catalogue id the user never sees. */
   nodeChoice(definitionId: string): Locator {
     return this.page.getByTestId(`add-node-${definitionId}`)
