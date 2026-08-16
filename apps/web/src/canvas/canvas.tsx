@@ -224,17 +224,17 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
   }, [])
 
   /**
-   * A Node is added where the pointer was, not where the viewport happens to
-   * start: the user is told it lands where they clicked, and a Canvas they have
-   * panned or zoomed must keep that promise.
-   */
-  /**
    * What the catalogue offers this Flow. It is read off the Flow's Nodes, so a
    * Trigger becomes unavailable the moment one is dropped on the Canvas and is
    * offered again the moment it is gone.
    */
   const choices = useMemo(() => addableNodes(flow, catalogue), [flow])
 
+  /**
+   * A Node is added where the pointer was, not where the viewport happens to
+   * start: the user is told it lands where they clicked, and a Canvas they have
+   * panned or zoomed must keep that promise.
+   */
   const placeNode = useCallback(
     (definition: NodeDefinition, at: ScreenPoint) => {
       editor.addNode(definition, screenToFlowPosition(at))

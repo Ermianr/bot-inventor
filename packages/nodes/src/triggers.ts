@@ -44,7 +44,7 @@ export function addableNodes(flow: Flow, catalogue: NodeCatalogue): NodeChoice[]
   const taken = hasTrigger(flow, catalogue)
 
   return [...catalogue.values()].map(definition =>
-    taken && definition.isTrigger === true
+    taken && definition.isTrigger
       ? { definition, addable: false, refusalKey: "catalogue.rejected.triggerTaken" }
       : { definition, addable: true }
   )
