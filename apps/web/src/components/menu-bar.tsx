@@ -10,7 +10,7 @@ import {
   MenubarTrigger
 } from "@bot-inventor/ui/components/menubar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@bot-inventor/ui/components/tooltip"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { AboutDialog } from "@/components/about-dialog"
@@ -55,7 +55,19 @@ export function MenuBar({
 
   useAnnounce(file.problem, toast.error)
   useAnnounce(exporting.problem, toast.error)
-  useAnnounce(exporting.written, toast.success)
+
+  // Where the Export went is the one message that has something to do about it,
+  // and the moment to do it is while the toast is still up: this is what the
+  // user wanted the Export for.
+  const showWritten = exporting.showWritten
+  useAnnounce(exporting.written, message =>
+    toast.success(
+      message,
+      showWritten === undefined
+        ? undefined
+        : { action: { label: translate("export.show"), onClick: () => void showWritten() } }
+    )
+  )
 
   return (
     <div className="flex items-center gap-2 border-b px-3 py-2">
@@ -204,10 +216,17 @@ export function MenuBar({
  * The hooks underneath hold what they have to say until the next thing the user
  * asks for, so the message going from absent to present is the event, and that
  * is what a toast is raised on.
+ *
+ * The message alone is that event. How it is shown is read when it happens and
+ * never watched, so that a caller may build one on the spot — a toast that
+ * carries something to press has to — without every render raising it again.
  */
 function useAnnounce(message: string | undefined, show: (message: string) => void) {
+  const latest = useRef(show)
+  latest.current = show
+
   useEffect(() => {
     if (message === undefined) return
-    show(message)
-  }, [message, show])
+    latest.current(message)
+  }, [message])
 }

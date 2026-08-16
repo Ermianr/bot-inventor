@@ -1,6 +1,6 @@
 import type { ExportFormat } from "@bot-inventor/compiler"
 import type { Project } from "@bot-inventor/schema"
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import { translate } from "@/i18n/messages"
 import type { ExportGateway } from "@/project/export-gateway"
@@ -20,17 +20,30 @@ export type Exporting = {
   problem: string | undefined
   /** Whether one is going on. Bundling takes seconds, and silence looks broken. */
   busy: boolean
+  /**
+   * Shows the user the last Export where they can pick it up, or nothing when
+   * there is none to show or no shell able to show it.
+   *
+   * Being told a path and left to find it by hand is the gap between having
+   * exported and having the bot, so this is what the user is offered the moment
+   * the Export lands.
+   */
+  showWritten: (() => Promise<void>) | undefined
   exportAs(format: ExportFormat): Promise<void>
 }
 
 export function useExport(project: Project, exports: ExportGateway): Exporting {
   const [written, setWritten] = useState<string | undefined>(undefined)
+  // Where it went, beside the sentence saying so: the sentence is for reading
+  // and this is for opening, and neither can be made out of the other.
+  const [writtenPath, setWrittenPath] = useState<string | undefined>(undefined)
   const [problem, setProblem] = useState<string | undefined>(undefined)
   const [busy, setBusy] = useState(false)
 
   const exportAs = useCallback(
     async (format: ExportFormat) => {
       setWritten(undefined)
+      setWrittenPath(undefined)
       setProblem(undefined)
 
       let outputDirectory: string | undefined
@@ -59,6 +72,7 @@ export function useExport(project: Project, exports: ExportGateway): Exporting {
 
         if (result.kind === "exported") {
           setWritten(translate(whereItWent(format), { path: result.path }))
+          setWrittenPath(result.path)
         } else {
           setProblem(translate("export.problem.failed", { message: result.message }))
         }
@@ -71,7 +85,13 @@ export function useExport(project: Project, exports: ExportGateway): Exporting {
     [exports, project]
   )
 
-  return { written, problem, busy, exportAs }
+  const show = exports.show
+  const showWritten = useMemo(() => {
+    if (show === undefined || writtenPath === undefined) return undefined
+    return () => show(writtenPath)
+  }, [show, writtenPath])
+
+  return { written, problem, busy, showWritten, exportAs }
 }
 
 /** How the two formats describe what they left behind: a file, or a folder. */

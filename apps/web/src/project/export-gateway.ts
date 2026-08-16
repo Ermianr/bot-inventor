@@ -22,4 +22,14 @@ export type ExportGateway = {
   confirmOverwrite(path: string): Promise<boolean>
   /** Performs the Export and says what happened. It does not throw for a refusal. */
   run(request: ExportRequest): Promise<ExportResult>
+  /**
+   * Shows the user an Export that was written, in whatever the machine has for
+   * looking at files.
+   *
+   * Optional, because it is the one thing here that only a desktop shell can
+   * do: a plain browser cannot open a file manager, and the editor runs in one
+   * during development and under the end-to-end tests. Absent means the offer
+   * is never made, rather than made and doing nothing.
+   */
+  show?(path: string): Promise<void>
 }

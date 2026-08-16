@@ -18,11 +18,14 @@ type Answers = {
   overwrite?: boolean
   /** What the exporter says, in the order it is asked. */
   results?: readonly ExportResult[]
+  /** Whether the shell can show the user where an Export went. */
+  canShow?: boolean
 }
 
 function fakeGateway(answers: Answers = {}) {
   const asked: ExportRequest[] = []
   const warned: string[] = []
+  const shown: string[] = []
   let next = 0
 
   const gateway: ExportGateway = {
@@ -43,7 +46,13 @@ function fakeGateway(answers: Answers = {}) {
     }
   }
 
-  return { gateway, asked, warned }
+  if (answers.canShow ?? true) {
+    gateway.show = async path => {
+      shown.push(path)
+    }
+  }
+
+  return { gateway, asked, warned, shown }
 }
 
 const EXISTS: ExportResult = {
@@ -128,6 +137,39 @@ describe("exporting", () => {
 
     expect(exporting.result.current.problem).toContain("the disk is full")
     expect(exporting.result.current.written).toBeUndefined()
+  })
+
+  it("can show the user the Export it just wrote", async () => {
+    const shell = fakeGateway({ destination: "C:/bots" })
+    const exporting = renderHook(() => useExport(helloProject(), shell.gateway))
+
+    await act(() => exporting.result.current.exportAs("single-file"))
+    await act(async () => exporting.result.current.showWritten?.())
+
+    expect(shell.shown).toEqual(["C:/bots/bot.mjs"])
+  })
+
+  it("has nothing to show until something was written", async () => {
+    const shell = fakeGateway({ destination: "C:/bots", results: [EXISTS] })
+    const exporting = renderHook(() => useExport(helloProject(), shell.gateway))
+
+    expect(exporting.result.current.showWritten).toBeUndefined()
+
+    await act(() => exporting.result.current.exportAs("single-file"))
+
+    expect(exporting.result.current.showWritten).toBeUndefined()
+  })
+
+  // A plain browser has no file manager to open, and the offer to open one is
+  // worse than its absence: the user presses it and nothing happens.
+  it("offers nothing when the shell cannot show a path", async () => {
+    const shell = fakeGateway({ destination: "C:/bots", canShow: false })
+    const exporting = renderHook(() => useExport(helloProject(), shell.gateway))
+
+    await act(() => exporting.result.current.exportAs("single-file"))
+
+    expect(exporting.result.current.written).toBeDefined()
+    expect(exporting.result.current.showWritten).toBeUndefined()
   })
 
   it("says it is working, because bundling is not instant", async () => {

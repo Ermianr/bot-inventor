@@ -11,11 +11,19 @@ import type { ProjectFileEditor } from "@/project/use-project-file"
 
 // The toaster itself belongs to the root route, so what the Menu Bar can be
 // held to is which toast it raised and what it said.
-const raised: { kind: string; message: string }[] = []
+type Raised = {
+  kind: string
+  message: string
+  /** What the toast offers to do about it, when it offers anything. */
+  action?: { label: string; onClick: () => void }
+}
+const raised: Raised[] = []
+type Options = { action?: { label: string; onClick: () => void } }
 vi.mock("sonner", () => ({
   toast: {
     error: (message: string) => raised.push({ kind: "error", message }),
-    success: (message: string) => raised.push({ kind: "success", message })
+    success: (message: string, options?: Options) =>
+      raised.push({ kind: "success", message, action: options?.action })
   }
 }))
 
@@ -57,6 +65,7 @@ function fakeEditors(
     written: undefined,
     problem: undefined,
     busy: false,
+    showWritten: undefined,
     exportAs: async format => {
       asked.exports.push(format)
     },
@@ -358,6 +367,34 @@ describe("what the Menu Bar says back", () => {
     render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
 
     expect(raised).toEqual([{ kind: "success", message: "Written to C:/bots/bot.mjs" }])
+  })
+
+  it("offers to open the folder the export went to", () => {
+    let opened = 0
+    const { file, exporting } = fakeEditors({
+      written: "Written to C:/bots/bot.mjs",
+      showWritten: async () => {
+        opened += 1
+      }
+    })
+    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+    const [announced] = raised
+    expect(announced?.message).toBe("Written to C:/bots/bot.mjs")
+    expect(announced?.action?.label).toBe(translate("export.show"))
+
+    announced?.action?.onClick()
+    expect(opened).toBe(1)
+  })
+
+  // In a plain browser there is no folder to open, and the message still has to
+  // arrive: where the Export went is the whole of what the user is owed.
+  it("still says where the export went when nothing can open it", () => {
+    const { file, exporting } = fakeEditors({ written: "Written to C:/bots/bot.mjs" })
+    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+
+    expect(raised[0]?.message).toBe("Written to C:/bots/bot.mjs")
+    expect(raised[0]?.action).toBeUndefined()
   })
 
   it("says the same problem again when it happens again", () => {
