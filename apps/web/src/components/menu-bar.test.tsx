@@ -289,19 +289,24 @@ async function settle() {
 }
 
 /**
- * The View menu holds the theme, and what it does with it is covered where the
- * menu itself is. What only the Menu Bar can be held to is that View is on the
- * row at all and that the theme hangs under it.
+ * The View menu holds what the editor shows and what it looks like, and what
+ * each entry does is covered where that entry is. What only the Menu Bar can be
+ * held to is that View is on the row at all and that both hang under it.
  */
 describe("the View menu", () => {
-  it("is where the theme is chosen", async () => {
-    const { file, exporting } = fakeEditors()
-    render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
+  for (const [what, key] of [
+    ["the theme is chosen", "theme.title"],
+    ["the Minimap is turned on and off", "minimap.title"]
+  ] as const) {
+    it(`is where ${what}`, async () => {
+      const { file, exporting } = fakeEditors()
+      render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
 
-    fireEvent.click(screen.getByRole("menuitem", { name: translate("menu.view") }))
+      fireEvent.click(screen.getByRole("menuitem", { name: translate("menu.view") }))
 
-    expect(await screen.findByText(translate("theme.title"))).toBeDefined()
-  })
+      expect(await screen.findByText(translate(key))).toBeDefined()
+    })
+  }
 })
 
 /**

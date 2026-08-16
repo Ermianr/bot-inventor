@@ -67,6 +67,20 @@ export class CanvasPage {
     return this.page.locator(".react-flow__controls-button")
   }
 
+  /**
+   * The Minimap, which React Flow draws itself: `react-flow__minimap` is the
+   * class it puts on it, and this file is where its words are allowed to be
+   * spoken.
+   */
+  minimap(): Locator {
+    return this.page.locator(".react-flow__minimap")
+  }
+
+  /** Every Node as the Minimap draws it, in the order the Flow holds them. */
+  minimapNodes(): Locator {
+    return this.page.locator(".react-flow__minimap-node")
+  }
+
   /** Right-clicks empty Canvas at a point measured from the Canvas's top left. */
   async rightClickPane(at: { x: number; y: number }) {
     const box = await this.pane().boundingBox()

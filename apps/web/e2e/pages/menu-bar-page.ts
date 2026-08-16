@@ -34,4 +34,29 @@ export class MenuBarPage {
   unsavedMark(): Locator {
     return this.page.getByTestId("project-unsaved")
   }
+
+  /** View ▸ Minimap, as the entry itself, with the View menu opened for it. */
+  async minimapEntry(): Promise<Locator> {
+    await this.page.getByTestId("menu-view").click()
+    const entry = this.page.getByTestId("menu-minimap")
+    await entry.waitFor()
+    return entry
+  }
+
+  /** Ticks or unticks View ▸ Minimap, and waits for the menu to be gone. */
+  async toggleMinimap() {
+    const entry = await this.minimapEntry()
+    await entry.click()
+
+    // The menu is animating out at this point, and it is still on the screen
+    // while it does. Waiting for it to be gone leaves the bar in a state the
+    // next thing the test does can open from.
+    await entry.waitFor({ state: "detached" })
+  }
+
+  /** Closes whatever menu is open, without choosing anything from it. */
+  async closeMenu() {
+    await this.page.keyboard.press("Escape")
+    await this.page.getByTestId("menu-minimap").waitFor({ state: "detached" })
+  }
 }

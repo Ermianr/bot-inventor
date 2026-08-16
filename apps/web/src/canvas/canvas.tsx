@@ -23,8 +23,10 @@ import {
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AddNodeMenu, type ScreenPoint } from "@/canvas/add-node"
 import { FlowNode, type FlowNodeData, type FlowNodeType } from "@/canvas/flow-node"
+import { FlowMinimap } from "@/canvas/minimap"
 import { Wire, type WireData, type WireType } from "@/canvas/wire"
 import { translate, translateDefinitionKey } from "@/i18n/messages"
+import { useMinimap } from "@/preferences/minimap"
 import type { ProjectEditor } from "@/project/use-project"
 import type { RunTrace } from "@/session/trace"
 
@@ -85,6 +87,12 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
   const { flow } = editor
   const { screenToFlowPosition } = useReactFlow()
   const [refusal, setRefusal] = useState<string | undefined>(undefined)
+
+  // Whether the whole Flow is drawn in the corner as well. The Canvas reads the
+  // preference itself rather than being handed it: the menu that changes it is
+  // on the other side of the editor, and neither has anything else to say to
+  // the other.
+  const minimap = useMinimap()
 
   /**
    * What the run being watched did in this Flow. A run of another Flow lights
@@ -279,6 +287,7 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
         >
           <Background />
           <Controls showInteractive={false} style={controlTokens} />
+          {minimap.shown && <FlowMinimap />}
         </ReactFlow>
       </AddNodeMenu>
 
