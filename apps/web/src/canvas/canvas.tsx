@@ -20,10 +20,11 @@ import {
   useNodesState,
   useReactFlow
 } from "@xyflow/react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AddNodeMenu, type ScreenPoint } from "@/canvas/add-node"
 import { FlowNode, type FlowNodeData, type FlowNodeType } from "@/canvas/flow-node"
 import { Wire, type WireData, type WireType } from "@/canvas/wire"
+import { useTheme } from "@/components/theme-provider"
 import { translate, translateDefinitionKey } from "@/i18n/messages"
 import type { ProjectEditor } from "@/project/use-project"
 import type { RunTrace } from "@/session/trace"
@@ -49,6 +50,21 @@ import "@xyflow/react/dist/style.css"
 const nodeTypes = { flowNode: FlowNode }
 const wireTypes = { wire: Wire }
 
+/**
+ * The zoom and fit-view controls, dressed in the application's tokens. React
+ * Flow paints them from its `--xy-controls-*` variables, which its own
+ * stylesheet fills with greys belonging to a design system that is not ours;
+ * pointing each variable at a token hands them back to the theme, and they then
+ * change with it as everything else does.
+ */
+const controlTokens = {
+  "--xy-controls-button-background-color": "var(--card)",
+  "--xy-controls-button-background-color-hover": "var(--accent)",
+  "--xy-controls-button-color": "var(--card-foreground)",
+  "--xy-controls-button-color-hover": "var(--accent-foreground)",
+  "--xy-controls-button-border-color": "var(--border)"
+} as CSSProperties
+
 type CanvasProps = { editor: ProjectEditor; trace?: RunTrace }
 
 /**
@@ -70,6 +86,16 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
   const { flow } = editor
   const { screenToFlowPosition } = useReactFlow()
   const [refusal, setRefusal] = useState<string | undefined>(undefined)
+
+  /**
+   * Which theme React Flow is drawing under. It has no idea on its own, and
+   * left untold it draws everything light. `resolvedTheme` is what the user is
+   * actually looking at, so a theme that follows the system follows it here
+   * too; it is unknown for the first render, and the application's own default
+   * is dark.
+   */
+  const { resolvedTheme } = useTheme()
+  const colorMode = resolvedTheme === "light" ? "light" : "dark"
 
   /**
    * What the run being watched did in this Flow. A run of another Flow lights
@@ -249,6 +275,7 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
     <section aria-label={translate("canvas.label")} className="relative h-full w-full">
       <AddNodeMenu choices={choices} landsOnNode={landsOnNode} place={placeNode}>
         <ReactFlow
+          colorMode={colorMode}
           edgeTypes={wireTypes}
           edges={wires}
           fitView
@@ -263,7 +290,7 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
           proOptions={{ hideAttribution: true }}
         >
           <Background />
-          <Controls showInteractive={false} />
+          <Controls showInteractive={false} style={controlTokens} />
         </ReactFlow>
       </AddNodeMenu>
 

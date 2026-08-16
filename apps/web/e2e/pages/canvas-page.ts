@@ -58,6 +58,15 @@ export class CanvasPage {
     return this.page.locator(".react-flow__pane")
   }
 
+  /**
+   * The zoom and fit-view controls, which are React Flow's own element: it
+   * draws them itself, and `react-flow__controls-button` is the class it puts
+   * on each one.
+   */
+  controlButtons(): Locator {
+    return this.page.locator(".react-flow__controls-button")
+  }
+
   /** Right-clicks empty Canvas at a point measured from the Canvas's top left. */
   async rightClickPane(at: { x: number; y: number }) {
     const box = await this.pane().boundingBox()
