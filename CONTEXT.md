@@ -40,6 +40,16 @@ _Avoid_: cast, implicit conversion
 The extra Execution Port carried by Nodes that can fail, where execution continues when the action could not be completed. Leaving it unconnected stops the Flow and records the error.
 _Avoid_: catch, error handler, error output
 
+### The application
+
+**Menu Bar**:
+The row along the top of the application, holding every menu the user opens: what they do with the Project as a whole, what the editor shows them, and what the application is. It is the only place an action lives that belongs to no single Flow.
+_Avoid_: toolbar, ribbon, main menu
+
+**Minimap**:
+The small picture of the whole Flow, shown in the corner of the Canvas, where a Trigger is told apart from everything else at a glance. Whether it is shown is the user's preference and never travels in a Project File.
+_Avoid_: overview, navigator, thumbnail
+
 ### Building
 
 **Project**:
