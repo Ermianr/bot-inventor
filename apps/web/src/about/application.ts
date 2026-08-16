@@ -21,6 +21,24 @@ export const LICENCE = "MIT"
 /** Where the source is, for anyone who is told to go and look. */
 export const REPOSITORY = "https://github.com/Ermianr/bot-inventor"
 
+/**
+ * Opens the repository in the browser the user has, and says whether it took
+ * charge of doing so.
+ *
+ * A link inside the desktop shell goes nowhere — there is no browser around
+ * that window, and navigating it away from the editor has no way back — so the
+ * shell is asked to hand the address to the operating system. In a plain
+ * browser there is nothing to ask and the link is left to do what a link does.
+ */
+export function openRepository(): boolean {
+  if (!inDesktopShell()) return false
+
+  // Nothing waits for this and nothing changes if it fails: the address is on
+  // the screen either way, which is the one thing About has to get right.
+  void invoke("open_repository").catch(() => {})
+  return true
+}
+
 /** What only the copy running on this machine can say about itself. */
 export type Application = {
   /** The version of Bot Inventor, or nothing outside the desktop shell. */
@@ -58,11 +76,11 @@ export async function describeApplication(): Promise<Application> {
  * reading it runs the Sidecar, and nothing about the application depends on the
  * result until somebody opens About.
  */
-export function useApplication(wanted: boolean): Application {
+export function useApplication(asking: boolean): Application {
   const [application, setApplication] = useState(UNKNOWN)
 
   useEffect(() => {
-    if (!wanted) return
+    if (!asking) return
 
     let listening = true
     void describeApplication().then(described => {
@@ -72,7 +90,7 @@ export function useApplication(wanted: boolean): Application {
     return () => {
       listening = false
     }
-  }, [wanted])
+  }, [asking])
 
   return application
 }

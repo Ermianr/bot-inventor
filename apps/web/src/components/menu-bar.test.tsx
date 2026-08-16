@@ -315,14 +315,14 @@ describe("the Help menu", () => {
   })
 
   it("tells About where this Project is saved", async () => {
-    const { file, exporting } = fakeEditors({}, { path: "C:/bots/helper.botproj" })
+    const { file, exporting } = fakeEditors({}, { path: "C:/bots/helper.botinv" })
     render(<MenuBar name="Bot" onRename={() => {}} file={file} exporting={exporting} />)
 
     fireEvent.click(screen.getByRole("menuitem", { name: translate("menu.help") }))
     await pick(translate("about.menu"))
 
     const where = await screen.findByTestId("about-project")
-    expect(where.textContent).toBe("C:/bots/helper.botproj")
+    expect(where.textContent).toBe("C:/bots/helper.botinv")
   })
 })
 

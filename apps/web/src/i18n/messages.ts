@@ -52,8 +52,11 @@ const en = {
   "menu.help": "Help",
 
   "about.menu": "About",
-  "about.title": "About Bot Inventor",
-  "about.description": "What this application is, and which one of it you are running.",
+  // The product's name is filled in rather than written into the sentence, so
+  // that renaming it is one edit and not one per language.
+  "about.title": "About {name}",
+  "about.description": "What this application is, and which version of it you are running.",
+  "about.name": "Application",
   "about.version": "Version",
   "about.licence": "Licence",
   "about.node": "The Node.js it runs your bot on",
@@ -228,8 +231,9 @@ const es: Record<MessageKey, string> = {
   "menu.help": "Ayuda",
 
   "about.menu": "Acerca de",
-  "about.title": "Acerca de Bot Inventor",
-  "about.description": "Qué es esta aplicación y cuál de ella tienes.",
+  "about.title": "Acerca de {name}",
+  "about.description": "Qué es esta aplicación y qué versión tienes.",
+  "about.name": "Aplicación",
   "about.version": "Versión",
   "about.licence": "Licencia",
   "about.node": "El Node.js con el que ejecuta tu bot",

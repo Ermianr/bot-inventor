@@ -19,13 +19,18 @@ import { translate } from "@/i18n/messages"
 /** What the desktop shell answered this run, which the tests set per case. */
 let described: Application = { version: undefined, nodeVersion: undefined }
 
+/** Whether the shell took charge of the repository link, as it does on the desktop. */
+let opensRepository = false
+
 vi.mock("@/about/application", async importOriginal => ({
   ...(await importOriginal<typeof import("@/about/application")>()),
-  useApplication: () => described
+  useApplication: () => described,
+  openRepository: () => opensRepository
 }))
 
 afterEach(() => {
   described = { version: undefined, nodeVersion: undefined }
+  opensRepository = false
   cleanup()
 })
 
@@ -35,11 +40,17 @@ function open(projectPath?: string) {
 }
 
 describe("About", () => {
+  it("says what the application is called", () => {
+    open()
+
+    expect(screen.getByTestId("about-name").textContent).toBe("Bot Inventor")
+  })
+
   it("says which version of the application this is", () => {
     described = { version: "0.1.0", nodeVersion: "22.20.0" }
     open()
 
-    expect(screen.getByTestId("about-version").textContent).toContain("0.1.0")
+    expect(screen.getByTestId("about-version").textContent).toBe("0.1.0")
   })
 
   it("says the licence the application is under", () => {
@@ -56,9 +67,9 @@ describe("About", () => {
   })
 
   it("says where the Project is saved", () => {
-    open("C:/bots/helper.botproj")
+    open("C:/bots/helper.botinv")
 
-    expect(screen.getByTestId("about-project").textContent).toBe("C:/bots/helper.botproj")
+    expect(screen.getByTestId("about-project").textContent).toBe("C:/bots/helper.botinv")
   })
 
   it("says a Project that was never saved has nowhere, rather than nothing", () => {
@@ -73,6 +84,33 @@ describe("About", () => {
     const link = screen.getByTestId("about-repository").querySelector("a")
     expect(link?.getAttribute("href")).toBe("https://github.com/Ermianr/bot-inventor")
     expect(link?.getAttribute("target")).toBe("_blank")
+  })
+
+  /**
+   * A webview has no browser around it, so following the link in place would
+   * take the editor off the screen with no way back. The desktop shell hands
+   * the address to the operating system instead, and the click has to stop
+   * here for that to be the only thing that happens.
+   */
+  it("leaves the repository to the shell when there is one to open it", () => {
+    opensRepository = true
+    open()
+
+    const link = screen.getByTestId("about-repository").querySelector("a")
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true })
+    link?.dispatchEvent(click)
+
+    expect(click.defaultPrevented).toBe(true)
+  })
+
+  it("lets the link be a link when nothing else will open it", () => {
+    open()
+
+    const link = screen.getByTestId("about-repository").querySelector("a")
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true })
+    link?.dispatchEvent(click)
+
+    expect(click.defaultPrevented).toBe(false)
   })
 
   /**

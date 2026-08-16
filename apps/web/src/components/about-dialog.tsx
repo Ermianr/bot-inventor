@@ -8,7 +8,13 @@ import {
   DialogTitle
 } from "@bot-inventor/ui/components/dialog"
 
-import { APPLICATION_NAME, LICENCE, REPOSITORY, useApplication } from "@/about/application"
+import {
+  APPLICATION_NAME,
+  LICENCE,
+  openRepository,
+  REPOSITORY,
+  useApplication
+} from "@/about/application"
 import { translate } from "@/i18n/messages"
 
 /**
@@ -37,13 +43,22 @@ export function AboutDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-testid="about-dialog">
         <DialogHeader>
-          <DialogTitle>{translate("about.title")}</DialogTitle>
+          <DialogTitle>{translate("about.title", { name: APPLICATION_NAME })}</DialogTitle>
           <DialogDescription>{translate("about.description")}</DialogDescription>
         </DialogHeader>
 
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+          {/*
+            The name is a line of its own rather than a word in front of the
+            version, so that it is still there to read out when the version is
+            the thing that could not be found out.
+          */}
+          <Fact label={translate("about.name")} testId="about-name">
+            {APPLICATION_NAME}
+          </Fact>
+
           <Fact label={translate("about.version")} testId="about-version">
-            {version === undefined ? translate("about.unknown") : `${APPLICATION_NAME} ${version}`}
+            {version ?? translate("about.unknown")}
           </Fact>
 
           <Fact label={translate("about.licence")} testId="about-licence">
@@ -60,15 +75,19 @@ export function AboutDialog({
 
           <Fact label={translate("about.repository")} testId="about-repository">
             {/*
-              Opened where the user's own browser can be pointed at it. The
-              webview this runs in has nowhere to go back from, so a link that
-              navigated in place would take the editor off the screen.
+              It stays a link — it is an address, and it reads and copies like
+              one — but inside the desktop shell the click is handed to the
+              operating system instead of followed: a webview has no browser
+              around it to open a tab in.
             */}
             <a
               href={REPOSITORY}
               target="_blank"
               rel="noreferrer"
               className="underline underline-offset-3"
+              onClick={event => {
+                if (openRepository()) event.preventDefault()
+              }}
             >
               {REPOSITORY}
             </a>
