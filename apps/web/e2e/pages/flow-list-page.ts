@@ -86,6 +86,23 @@ export class FlowListPage {
     return this.page.locator('[data-testid^="flow-"][data-testid$="-field"]')
   }
 
+  /** A whole row, which is what the controls on it are coloured against. */
+  row(flowId: string): Locator {
+    return this.page.locator(`li:has([data-testid="flow-${flowId}"])`)
+  }
+
+  /**
+   * Whatever explanation the editor is currently showing under the pointer.
+   *
+   * Found by the slot the tooltip component names itself with rather than by a
+   * role: the popup is a plain element, since what it says is already the
+   * accessible name of the control it belongs to. Only the open one counts —
+   * the one the pointer just left is still on the page while it fades.
+   */
+  tooltip(): Locator {
+    return this.page.locator('[data-slot="tooltip-content"][data-open]')
+  }
+
   /** Whatever the editor is saying about a refused rename. */
   toast(): Locator {
     return this.page.locator("[data-sonner-toast]")

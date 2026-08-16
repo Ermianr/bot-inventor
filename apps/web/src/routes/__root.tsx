@@ -1,4 +1,5 @@
 import { Toaster } from "@bot-inventor/ui/components/sonner"
+import { TooltipProvider } from "@bot-inventor/ui/components/tooltip"
 import { createRootRouteWithContext, HeadContent, Outlet } from "@tanstack/react-router"
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
 
@@ -40,10 +41,18 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <div className="grid h-svh grid-rows-[auto_1fr]">
-          <Header />
-          <Outlet />
-        </div>
+        {/*
+          Every explanation a control gives on hover is this editor's own, never
+          the operating system's `title`: one appearance, one delay, and one set
+          of words that the i18n layer has already translated. The provider sits
+          at the root so that delay is the same wherever a tooltip is placed.
+        */}
+        <TooltipProvider>
+          <div className="grid h-svh grid-rows-[auto_1fr]">
+            <Header />
+            <Outlet />
+          </div>
+        </TooltipProvider>
         <Toaster richColors />
       </ThemeProvider>
       <TanStackRouterDevtools position="bottom-left" />

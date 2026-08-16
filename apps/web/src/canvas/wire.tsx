@@ -1,4 +1,5 @@
 import type { WireKind } from "@bot-inventor/schema"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@bot-inventor/ui/components/tooltip"
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -72,20 +73,26 @@ export function Wire({
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
         >
           {data?.carried !== undefined && (
-            <span
-              aria-label={translate("canvas.wire.carried", { value: data.carried })}
-              className="max-w-40 truncate rounded-full border border-amber-500/60 bg-background px-2 py-0.5 font-mono text-[10px]"
-              data-testid={`wire-carried-${id}`}
-              // The badge is cut short to fit the Wire, so what it says out
-              // loud, and what a pointer resting on it shows, is the whole
-              // value: the value is the thing the user came to read.
-              role="note"
-              title={data.carried}
-            >
-              {data.carried.length > CARRIED_LIMIT
-                ? `${data.carried.slice(0, CARRIED_LIMIT)}…`
-                : data.carried}
-            </span>
+            <Tooltip>
+              <TooltipTrigger
+                render={<span />}
+                aria-label={translate("canvas.wire.carried", { value: data.carried })}
+                className="max-w-40 truncate rounded-full border border-amber-500/60 bg-background px-2 py-0.5 font-mono text-[10px]"
+                data-testid={`wire-carried-${id}`}
+                // The badge is cut short to fit the Wire, so what it says out
+                // loud, and what a pointer resting on it shows, is the whole
+                // value: the value is the thing the user came to read. The
+                // editor shows it, not the operating system.
+                role="note"
+              >
+                {data.carried.length > CARRIED_LIMIT
+                  ? `${data.carried.slice(0, CARRIED_LIMIT)}…`
+                  : data.carried}
+              </TooltipTrigger>
+              <TooltipContent className="max-w-sm break-all font-mono">
+                {data.carried}
+              </TooltipContent>
+            </Tooltip>
           )}
           {data?.coercionLabelKey !== undefined && (
             <span

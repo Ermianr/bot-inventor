@@ -1,4 +1,5 @@
 import { Button } from "@bot-inventor/ui/components/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@bot-inventor/ui/components/tooltip"
 
 import { ExportButton } from "@/components/export-button"
 import { InlineName } from "@/components/inline-name"
@@ -51,13 +52,19 @@ export function ProjectToolbar({
           onRename={onRename}
         />
         {file.saved ? null : (
-          <span
-            className="text-muted-foreground text-xs"
-            data-testid="project-unsaved"
-            title={translate("project.file.unsaved")}
-          >
-            {translate("project.file.unsavedMark")}
-          </span>
+          // The mark is a character wide, so what it means is said by the
+          // editor's own tooltip rather than the operating system's `title`:
+          // that one arrives late and in a typeface from nowhere in this app.
+          <Tooltip>
+            <TooltipTrigger
+              render={<span />}
+              className="text-muted-foreground text-xs"
+              data-testid="project-unsaved"
+            >
+              {translate("project.file.unsavedMark")}
+            </TooltipTrigger>
+            <TooltipContent>{translate("project.file.unsaved")}</TooltipContent>
+          </Tooltip>
         )}
 
         <span className="ml-auto truncate text-muted-foreground text-xs">
