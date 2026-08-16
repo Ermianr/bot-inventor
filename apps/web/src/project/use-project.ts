@@ -18,6 +18,7 @@ import {
   type FlowRename,
   moveNode,
   removeFlow,
+  removeNode,
   renameFlow,
   renameProject,
   setNodeField,
@@ -58,6 +59,12 @@ export type ProjectEditor = {
   removeFlow(flowId: string): FlowRemoval
   /** Puts a Node of the catalogue on the open Flow, at a Canvas position. */
   addNode(definition: NodeDefinition, position: Position): void
+  /**
+   * Takes a Node off the open Flow, and its Wires with it. Every route that
+   * removes a Node comes through here, so no Wire is ever left pointing at
+   * something that is gone.
+   */
+  removeNode(nodeId: string): void
   moveNode(nodeId: string, position: Position): void
   setNodeField(nodeId: string, fieldId: string, value: FieldValue): void
   connectWire(wire: { kind: WireKind; from: PortReference; to: PortReference }): void
@@ -179,6 +186,7 @@ export function useProject(createInitial: () => Project): ProjectEditor {
       (definition, position) => edit(current => addNode(current, definition, position)),
       [edit]
     ),
+    removeNode: useCallback(nodeId => edit(current => removeNode(current, nodeId)), [edit]),
     moveNode: useCallback(
       (nodeId, position) => edit(current => moveNode(current, nodeId, position)),
       [edit]

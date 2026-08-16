@@ -27,6 +27,10 @@ import { translate, translateDefinitionKey } from "@/i18n/messages"
  * for the same reason: a catalogue small enough to read is one where a
  * category is a second decision before the first one.
  *
+ * The menu belongs to empty Canvas. A right-click on a Node offers that Node's
+ * own menu instead, drawn by `FlowNode`, which stops the gesture before this
+ * one is asked.
+ *
  * A Node the Flow cannot be given — a second Trigger — is listed all the same,
  * not selectable and with the reason written next to it. Which those are is
  * decided before the list is rendered, by `addableNodes`.
@@ -84,23 +88,16 @@ export function AddNodeMenu({
       <ContextMenu>
         <ContextMenuTrigger className="h-full w-full" data-testid="canvas-context-menu-area">
           {/*
-            The menu belongs to empty Canvas, so a right-click that landed on a
-            Node never reaches the trigger. This is a capture-phase handler on
-            an element inside the trigger, which is what lets it stop the event
-            before the trigger's own listener sees it.
+            The point is only remembered for a right-click on empty Canvas: a
+            gesture that landed on a Node is that Node's own question, and its
+            menu stops the event before the trigger under it ever sees it. This
+            is a capture-phase handler because it has to read the gesture on its
+            way down, while it can still tell what it landed on.
           */}
           <div
             className="h-full w-full"
             onContextMenuCapture={event => {
-              if (landsOnNode(event.target)) {
-                // The browser's own menu is turned down as well as ours: a
-                // right-click that offers the editor's menu in one place and
-                // Chrome's in another reads as the application breaking. What a
-                // Node offers on a right-click is a later ticket's answer.
-                event.preventDefault()
-                event.stopPropagation()
-                return
-              }
+              if (landsOnNode(event.target)) return
               setAt({ x: event.clientX, y: event.clientY })
             }}
           >

@@ -1,5 +1,9 @@
 import { catalogue } from "@bot-inventor/nodes"
-import { echoParameterProject, helloProject } from "@bot-inventor/schema/fixtures"
+import {
+  echoParameterProject,
+  helloProject,
+  unreachableNodeProject
+} from "@bot-inventor/schema/fixtures"
 import { describe, expect, it } from "vitest"
 import {
   addNode,
@@ -9,6 +13,7 @@ import {
   disconnectWire,
   moveNode,
   removeFlow,
+  removeNode,
   renameFlow,
   renameProject,
   setNodeField,
@@ -261,6 +266,55 @@ describe("putting a Node on the Canvas", () => {
     first.fields.parameters.push({ name: "who", description: "", type: "text", required: true })
 
     expect(twice.nodes.at(-1)?.fields.parameters).toEqual([])
+  })
+})
+
+describe("taking a Node off the Canvas", () => {
+  it("removes the Node the user asked for", () => {
+    const flow = flowOf()
+    const removed = removeNode(flow, "node-reply")
+
+    expect(removed.nodes.map(node => node.id)).toEqual(["node-trigger"])
+    // The Flow it was removed from is left as it was: the editor renders from
+    // the Project, so an edit in place is an edit the screen does not show.
+    expect(flow.nodes).toHaveLength(2)
+  })
+
+  it("takes every Wire with an end on it", () => {
+    const removed = removeNode(flowOf(echoParameterProject()), "node-reply")
+
+    // Both Wires arrive at the Reply Node, and a Wire pointing at a Node that
+    // is gone is a Project the Compiler refuses.
+    expect(removed.wires).toEqual([])
+  })
+
+  it("takes the Wires that leave it as well as the ones that arrive", () => {
+    const removed = removeNode(flowOf(echoParameterProject()), "node-trigger")
+
+    expect(removed.wires).toEqual([])
+  })
+
+  it("leaves every other Node and Wire alone", () => {
+    const flow = flowOf(unreachableNodeProject())
+    const removed = removeNode(flow, "node-orphan")
+
+    expect(removed.nodes.map(node => node.id)).toEqual(["node-trigger", "node-reply"])
+    expect(removed.wires).toEqual(flow.wires)
+  })
+
+  it("removes a Trigger like any other Node", () => {
+    // Refusing would trap the user with the Trigger they picked first.
+    const removed = removeNode(flowOf(), "node-trigger")
+
+    expect(removed.nodes.map(node => node.id)).toEqual(["node-reply"])
+  })
+
+  it("changes nothing when the Node is not there", () => {
+    const flow = flowOf()
+    const removed = removeNode(flow, "node-missing")
+
+    expect(removed.nodes).toEqual(flow.nodes)
+    expect(removed.wires).toEqual(flow.wires)
   })
 })
 

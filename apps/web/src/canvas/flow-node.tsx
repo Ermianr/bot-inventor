@@ -6,6 +6,12 @@ import {
 } from "@bot-inventor/nodes"
 import type { FieldValue, Node } from "@bot-inventor/schema"
 import { Checkbox } from "@bot-inventor/ui/components/checkbox"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger
+} from "@bot-inventor/ui/components/context-menu"
 import { Input } from "@bot-inventor/ui/components/input"
 import { Label } from "@bot-inventor/ui/components/label"
 import {
@@ -14,7 +20,7 @@ import {
   type NodeProps,
   type Node as ReactFlowNode
 } from "@xyflow/react"
-import { translateDefinitionKey } from "@/i18n/messages"
+import { translate, translateDefinitionKey } from "@/i18n/messages"
 import type { NodeRunState } from "@/session/trace"
 
 /**
@@ -33,6 +39,8 @@ export type FlowNodeData = {
   /** How far the run being watched got in this Node, if it reached it at all. */
   runState: NodeRunState | undefined
   setField: (fieldId: string, value: FieldValue) => void
+  /** Takes this Node off the Canvas, and its Wires with it. */
+  remove: () => void
 }
 
 /**
@@ -57,47 +65,62 @@ export type FlowNodeType = ReactFlowNode<FlowNodeData, "flowNode">
 const DRAWN_CONTROLS = new Set<FieldDefinition["control"]>(["text", "number", "switch"])
 
 export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
-  const { node, definition, runState, setField } = data
+  const { node, definition, runState, setField, remove } = data
   const ports = portsOf(definition, node.fields)
   const inputs = ports.filter(port => port.direction === "input")
   const outputs = ports.filter(port => port.direction === "output")
   const highlight = runState === undefined ? "" : ` ${RUN_STATE_RING[runState]}`
 
   return (
-    <div
-      className={`w-64 rounded-lg border bg-card text-card-foreground shadow-sm${highlight}`}
-      data-run-state={runState}
-      data-testid={`node-${id}`}
-    >
-      <header className="border-b px-3 py-2">
-        <p className="font-medium text-sm">{translateDefinitionKey(definition.labelKey)}</p>
-        <p className="text-muted-foreground text-xs">
-          {translateDefinitionKey(definition.descriptionKey)}
-        </p>
-      </header>
+    /*
+      A right-click on a Node is the Node's question, not the Canvas's. The
+      Canvas is the outer context menu, and this stops the event once this one
+      has answered it, so the user is never offered both menus at once.
+    */
+    // biome-ignore lint/a11y/noStaticElementInteractions: the menu the handler guards is the interactive element.
+    <div onContextMenu={event => event.stopPropagation()}>
+      <ContextMenu>
+        <ContextMenuTrigger
+          className={`w-64 rounded-lg border bg-card text-card-foreground shadow-sm${highlight}`}
+          data-run-state={runState}
+          data-testid={`node-${id}`}
+        >
+          <header className="border-b px-3 py-2">
+            <p className="font-medium text-sm">{translateDefinitionKey(definition.labelKey)}</p>
+            <p className="text-muted-foreground text-xs">
+              {translateDefinitionKey(definition.descriptionKey)}
+            </p>
+          </header>
 
-      <div className="grid gap-1 py-2">
-        {inputs.map(port => (
-          <PortRow key={`in-${port.id}`} nodeId={id} port={port} />
-        ))}
-        {outputs.map(port => (
-          <PortRow key={`out-${port.id}`} nodeId={id} port={port} />
-        ))}
-      </div>
+          <div className="grid gap-1 py-2">
+            {inputs.map(port => (
+              <PortRow key={`in-${port.id}`} nodeId={id} port={port} />
+            ))}
+            {outputs.map(port => (
+              <PortRow key={`out-${port.id}`} nodeId={id} port={port} />
+            ))}
+          </div>
 
-      <div className="grid gap-2 border-t px-3 py-2">
-        {definition.fields
-          .filter(field => DRAWN_CONTROLS.has(field.control))
-          .map(field => (
-            <FieldRow
-              key={field.id}
-              field={field}
-              nodeId={id}
-              setField={setField}
-              value={node.fields[field.id] ?? field.defaultValue}
-            />
-          ))}
-      </div>
+          <div className="grid gap-2 border-t px-3 py-2">
+            {definition.fields
+              .filter(field => DRAWN_CONTROLS.has(field.control))
+              .map(field => (
+                <FieldRow
+                  key={field.id}
+                  field={field}
+                  nodeId={id}
+                  setField={setField}
+                  value={node.fields[field.id] ?? field.defaultValue}
+                />
+              ))}
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem data-testid={`node-remove-${id}`} onClick={remove} variant="destructive">
+            {translate("canvas.node.remove")}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     </div>
   )
 }

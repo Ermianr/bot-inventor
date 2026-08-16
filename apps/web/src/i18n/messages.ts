@@ -109,6 +109,7 @@ const en = {
   "canvas.addNode.help": "Search for a node and press Enter to put it where you clicked.",
   "canvas.addNode.search": "Search for a node",
   "canvas.addNode.noMatch": "No node matches that.",
+  "canvas.node.remove": "Delete this node",
   "canvas.wire.remove": "Remove this wire",
   "canvas.wire.carried": "Last run carried: {value}",
 
@@ -255,6 +256,7 @@ const es: Record<MessageKey, string> = {
   "canvas.addNode.help": "Busca un nodo y pulsa Enter para ponerlo donde hiciste clic.",
   "canvas.addNode.search": "Busca un nodo",
   "canvas.addNode.noMatch": "Ningún nodo coincide.",
+  "canvas.node.remove": "Eliminar este nodo",
   "canvas.wire.remove": "Quitar este cable",
   "canvas.wire.carried": "La última ejecución llevó: {value}",
 
