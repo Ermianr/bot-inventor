@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { CanvasPage } from "./pages/canvas-page"
-import { ToolbarPage } from "./pages/toolbar-page"
+import { MenuBarPage } from "./pages/menu-bar-page"
 
 /**
  * Taking a Node off the Canvas: the gesture that undoes adding one.
@@ -64,13 +64,13 @@ test.describe("removing a Node", () => {
   })
 
   test("marks the Project as unsaved", async ({ page }) => {
-    const toolbar = new ToolbarPage(page)
-    await expect(toolbar.unsavedMark()).toHaveCount(0)
+    const menuBar = new MenuBarPage(page)
+    await expect(menuBar.unsavedMark()).toHaveCount(0)
 
     await canvas.rightClickNode("node-reply")
     await canvas.removeNode("node-reply").click()
 
-    await expect(toolbar.unsavedMark()).toBeVisible()
+    await expect(menuBar.unsavedMark()).toBeVisible()
   })
 
   test("puts a Node back on a Flow it was removed from", async () => {

@@ -161,6 +161,38 @@ describe("saving a Project", () => {
     expect(result.current.file.problem).toContain("the disk is full")
     expect(result.current.file.path).toBeUndefined()
   })
+
+  it("drops the last problem before trying again, even when it fails the same way", async () => {
+    const { gateway } = fakeGateway({}, { savePath: "C:/bots/hello.botinv" })
+    gateway.write = async () => {
+      throw new Error("the disk is full")
+    }
+    const { result } = editorWith(gateway)
+
+    await act(() => result.current.file.save())
+
+    // The dialog is held open, which is where the user is while the second go
+    // is under way. Whoever shows the problem is watching it appear, so it has
+    // to be gone by then: without that, a failure that repeats word for word is
+    // one the user is only ever told about once.
+    let chosen: (path: string) => void = () => {}
+    gateway.chooseSavePath = () =>
+      new Promise<string | undefined>(resolve => {
+        chosen = resolve
+      })
+
+    let saving: Promise<void> = Promise.resolve()
+    await act(async () => {
+      saving = result.current.file.save()
+    })
+    expect(result.current.file.problem).toBeUndefined()
+
+    await act(async () => {
+      chosen("C:/bots/hello.botinv")
+      await saving
+    })
+    expect(result.current.file.problem).toContain("the disk is full")
+  })
 })
 
 describe("opening a Project", () => {

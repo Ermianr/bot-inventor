@@ -47,6 +47,8 @@ const en = {
     "Your change could not be built, so your bot is still running the last version that worked. {message}",
   "run.reloading": "You changed something. Restarting your bot…",
 
+  "menu.project": "Project",
+
   "project.untitled": "Untitled bot",
   "project.flow.default": "Main",
   "project.name.edit": "Rename this bot",
@@ -193,6 +195,8 @@ const es: Record<MessageKey, string> = {
   "run.failure.build":
     "Tu cambio no se pudo construir, así que tu bot sigue con la última versión que funcionó. {message}",
   "run.reloading": "Cambiaste algo. Reiniciando tu bot…",
+
+  "menu.project": "Proyecto",
 
   "project.untitled": "Bot sin nombre",
   "project.flow.default": "Principal",

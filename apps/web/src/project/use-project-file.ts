@@ -51,6 +51,14 @@ export function useProjectFile(
   const saved = serializeProject(editor.project) === savedDocument
 
   /**
+   * Drops what the last thing the user asked for had to say, before the next
+   * one is answered. Whoever shows the problem is watching it appear, so a
+   * failure that happens twice running has to be absent in between — otherwise
+   * the second one is a message that never changed, and is never shown.
+   */
+  const forget = useCallback(() => setProblem(undefined), [])
+
+  /**
    * Whether unsaved work may go. A dialog that cannot even be shown answers no:
    * the one thing worse than a button that does nothing is one that throws the
    * user's Flow away because asking them failed.
@@ -68,6 +76,7 @@ export function useProjectFile(
   /** Writes the open Project to `destination` and takes it as the saved one. */
   const writeTo = useCallback(
     async (destination: string) => {
+      forget()
       try {
         await writeProjectFile(destination, editor.project, files)
       } catch (error) {
@@ -82,6 +91,7 @@ export function useProjectFile(
   )
 
   const saveAs = useCallback(async () => {
+    forget()
     let destination: string | undefined
     try {
       destination = await files.chooseSavePath(suggestedFileName(editor.project))
@@ -91,7 +101,7 @@ export function useProjectFile(
     }
     if (destination === undefined) return
     await writeTo(destination)
-  }, [editor.project, files, writeTo])
+  }, [editor.project, files, writeTo, forget])
 
   return {
     path,
@@ -99,15 +109,17 @@ export function useProjectFile(
     problem,
 
     create: useCallback(async () => {
+      forget()
       if (!(await confirmDiscard())) return
       const created = newProject()
       editor.replace(created)
       setPath(undefined)
       setSavedDocument(serializeProject(created))
       setProblem(undefined)
-    }, [confirmDiscard, editor.replace]),
+    }, [confirmDiscard, editor.replace, forget]),
 
     open: useCallback(async () => {
+      forget()
       if (!(await confirmDiscard())) return
 
       let source: string | undefined
@@ -143,7 +155,7 @@ export function useProjectFile(
           setProblem(translate("project.problem.write", { message: describeError(error) }))
         }
       }
-    }, [confirmDiscard, editor.replace, files]),
+    }, [confirmDiscard, editor.replace, files, forget]),
 
     save: useCallback(async () => {
       if (path === undefined) {

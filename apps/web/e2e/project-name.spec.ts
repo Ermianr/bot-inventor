@@ -1,52 +1,52 @@
 import { expect, test } from "@playwright/test"
-import { ToolbarPage } from "./pages/toolbar-page"
+import { MenuBarPage } from "./pages/menu-bar-page"
 
 /**
- * Naming the Project from the toolbar, as the user does it: pencil, type,
+ * Naming the Project from the Menu Bar, as the user does it: pencil, type,
  * Enter — and the ways back out of it.
  */
 test.describe("the Project name", () => {
-  let toolbar: ToolbarPage
+  let menuBar: MenuBarPage
 
   test.beforeEach(async ({ page }) => {
-    toolbar = new ToolbarPage(page)
-    await toolbar.open()
+    menuBar = new MenuBarPage(page)
+    await menuBar.open()
   })
 
-  test("takes the name the user types and shows it in the toolbar", async () => {
-    await toolbar.editName().click()
-    await toolbar.nameField().fill("Moderation bot")
-    await toolbar.nameField().press("Enter")
+  test("takes the name the user types and shows it in the Menu Bar", async () => {
+    await menuBar.editName().click()
+    await menuBar.nameField().fill("Moderation bot")
+    await menuBar.nameField().press("Enter")
 
-    await expect(toolbar.name()).toHaveText("Moderation bot")
-    await expect(toolbar.unsavedMark()).toBeVisible()
+    await expect(menuBar.name()).toHaveText("Moderation bot")
+    await expect(menuBar.unsavedMark()).toBeVisible()
   })
 
   test("leaves the previous name when the rename is cancelled", async () => {
-    const before = await toolbar.name().textContent()
+    const before = await menuBar.name().textContent()
 
-    await toolbar.editName().click()
-    await toolbar.nameField().fill("Moderation bot")
-    await toolbar.nameField().press("Escape")
+    await menuBar.editName().click()
+    await menuBar.nameField().fill("Moderation bot")
+    await menuBar.nameField().press("Escape")
 
-    await expect(toolbar.name()).toHaveText(before ?? "")
+    await expect(menuBar.name()).toHaveText(before ?? "")
   })
 
   test("keeps the name when the user clicks away instead of pressing Enter", async ({ page }) => {
-    await toolbar.editName().click()
-    await toolbar.nameField().fill("Moderation bot")
+    await menuBar.editName().click()
+    await menuBar.nameField().fill("Moderation bot")
     // Anywhere that is not the field: a Node on the Canvas, found by test id so
     // the click does not depend on the language the editor is in.
     await page.getByTestId("node-node-trigger").click()
 
-    await expect(toolbar.name()).toHaveText("Moderation bot")
+    await expect(menuBar.name()).toHaveText("Moderation bot")
   })
 
   test("refuses a blank name and keeps the user in the field", async () => {
-    await toolbar.editName().click()
-    await toolbar.nameField().fill("   ")
-    await toolbar.nameField().press("Enter")
+    await menuBar.editName().click()
+    await menuBar.nameField().fill("   ")
+    await menuBar.nameField().press("Enter")
 
-    await expect(toolbar.nameField()).toBeVisible()
+    await expect(menuBar.nameField()).toBeVisible()
   })
 })
