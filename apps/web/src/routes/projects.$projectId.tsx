@@ -73,7 +73,6 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
     <div className="grid h-full grid-rows-[auto_1fr] overflow-hidden">
       <MenuBar
         name={editor.project.name}
-        onRename={editor.renameProject}
         onDashboard={() => void navigate({ to: "/" })}
         saved={autosave.saved}
         problem={autosave.problem}

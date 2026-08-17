@@ -16,19 +16,9 @@ export class MenuBarPage {
     await this.name().waitFor()
   }
 
-  /** The Project name as it is read, when it is not being edited. */
+  /** The Project name, which the editor shows and never edits. */
   name(): Locator {
     return this.page.getByTestId("project-name")
-  }
-
-  /** The pencil that turns the name into a field. */
-  editName(): Locator {
-    return this.page.getByTestId("project-name-edit")
-  }
-
-  /** The name as a field, once the pencil has been pressed. */
-  nameField(): Locator {
-    return this.page.getByTestId("project-name-field")
   }
 
   /**

@@ -101,8 +101,6 @@ const en = {
 
   "project.untitled": "Untitled bot",
   "project.flow.default": "Main",
-  "project.name.edit": "Rename this bot",
-  "project.name.field": "The name of this bot",
   "project.problem.futureVersion":
     "This Project was made with a newer version of Bot Inventor, so this one cannot open it. Nothing in the file was changed. Update the app and try again.",
   "project.problem.malformed":
@@ -281,8 +279,6 @@ const es: Record<MessageKey, string> = {
 
   "project.untitled": "Bot sin nombre",
   "project.flow.default": "Principal",
-  "project.name.edit": "Cambiar el nombre de este bot",
-  "project.name.field": "El nombre de este bot",
   "project.problem.futureVersion":
     "Este Proyecto se hizo con una versión más nueva de Bot Inventor, así que esta no puede abrirlo. No se cambió nada del archivo. Actualiza la aplicación e inténtalo de nuevo.",
   "project.problem.malformed":

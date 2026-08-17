@@ -12,7 +12,6 @@ import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { AboutDialog } from "@/components/about-dialog"
-import { InlineName } from "@/components/inline-name"
 import { MinimapMenuItem } from "@/components/minimap-menu"
 import { ThemeMenu } from "@/components/theme-menu"
 import { translate } from "@/i18n/messages"
@@ -33,17 +32,19 @@ import type { Exporting } from "@/project/use-export"
  * There is no Save, and no New or Open either. The application owns where
  * Projects live (ADR 0009): work saves itself, and another Project is reached
  * by going back to the Dashboard rather than through a file dialog.
+ *
+ * The Project's name is read here and not written: a Project is named where it
+ * is created and renamed on its Dashboard card, beside every other one, rather
+ * than from inside the one that happens to be open.
  */
 export function MenuBar({
   name,
-  onRename,
   onDashboard,
   saved,
   problem,
   exporting
 }: {
   name: string
-  onRename: (name: string) => void
   /** Takes the user back to the Dashboard. The route knows where that is. */
   onDashboard: () => void
   /**
@@ -173,14 +174,9 @@ export function MenuBar({
       */}
       <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
 
-      <InlineName
-        name={name}
-        className="font-medium text-sm"
-        editLabel={translate("project.name.edit")}
-        fieldLabel={translate("project.name.field")}
-        testId="project-name"
-        onRename={onRename}
-      />
+      <span className="font-medium text-sm" data-testid="project-name">
+        {name}
+      </span>
     </div>
   )
 }

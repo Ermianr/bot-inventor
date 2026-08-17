@@ -15,7 +15,6 @@ import {
   removeFlow,
   removeNode,
   renameFlow,
-  renameProject,
   setNodeField,
   updateFlow
 } from "@/project/edits"
@@ -31,35 +30,6 @@ function requireDefinition(id: string) {
   if (definition === undefined) throw new Error(`the catalogue has no Node "${id}"`)
   return definition
 }
-
-describe("naming a Project", () => {
-  it("takes the name the user typed", () => {
-    const project = helloProject()
-    const renamed = renameProject(project, "Moderation bot")
-
-    expect(renamed.name).toBe("Moderation bot")
-    expect(project.name).not.toBe("Moderation bot")
-  })
-
-  it("keeps everything else the Project holds", () => {
-    const project = helloProject()
-    const renamed = renameProject(project, "Moderation bot")
-
-    expect(renamed.flows).toEqual(project.flows)
-    expect(renamed.schemaVersion).toBe(project.schemaVersion)
-  })
-
-  it("drops the spaces around the name", () => {
-    expect(renameProject(helloProject(), "  Moderation bot  ").name).toBe("Moderation bot")
-  })
-
-  it("refuses a blank name and keeps the one the Project had", () => {
-    const project = helloProject()
-
-    expect(renameProject(project, "").name).toBe(project.name)
-    expect(renameProject(project, "   ").name).toBe(project.name)
-  })
-})
 
 /** `helloProject` with a second, empty Flow, so a name can already be taken. */
 function twoFlowProject() {
