@@ -40,6 +40,7 @@ import type { Exporting } from "@/project/use-export"
 export function MenuBar({
   name,
   onDashboard,
+  onOptions,
   saved,
   problem,
   exporting
@@ -47,6 +48,12 @@ export function MenuBar({
   name: string
   /** Takes the user back to the Dashboard. The route knows where that is. */
   onDashboard: () => void
+  /**
+   * Opens Project Options. The dialog is owned by the editor rather than by
+   * this row, because what it changes — the token and the Test Server — is what
+   * the editor already holds for the Run Panel.
+   */
+  onOptions: () => void
   /**
    * Whether everything on the Canvas has reached storage.
    *
@@ -101,6 +108,14 @@ export function MenuBar({
             */}
             <MenubarItem data-testid="menu-dashboard" onClick={onDashboard}>
               {translate("menu.project.dashboard")}
+            </MenubarItem>
+
+            {/*
+              How the bot connects to Discord, which is changed rarely and is
+              in the way for the whole of the time it is not being changed.
+            */}
+            <MenubarItem data-testid="menu-project-options" onClick={onOptions}>
+              {translate("project.options.menu")}
             </MenubarItem>
 
             {/*

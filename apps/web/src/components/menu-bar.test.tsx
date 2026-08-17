@@ -58,12 +58,13 @@ function fakeExporting(overrides: Partial<Exporting> = {}) {
 /** The row as the editor renders it, with only what a test is about changed. */
 function renderMenuBar(
   exporting: Exporting,
-  overrides: { onDashboard?: () => void; problem?: string } = {}
+  overrides: { onDashboard?: () => void; onOptions?: () => void; problem?: string } = {}
 ) {
   return render(
     <MenuBar
       name="Bot"
       onDashboard={overrides.onDashboard ?? (() => {})}
+      onOptions={overrides.onOptions ?? (() => {})}
       saved
       problem={overrides.problem}
       exporting={exporting}
@@ -111,6 +112,25 @@ describe("the Project menu", () => {
 
     openProjectMenu()
     await pick(translate("menu.project.dashboard"))
+
+    expect(asked).toBe(1)
+  })
+
+  /**
+   * The only way to Project Options: a token regenerated in the Discord portal
+   * has nowhere else to be typed once the Project exists.
+   */
+  it("opens Project Options", async () => {
+    let asked = 0
+    const { exporting } = fakeExporting()
+    renderMenuBar(exporting, {
+      onOptions: () => {
+        asked += 1
+      }
+    })
+
+    openProjectMenu()
+    await pick(translate("project.options.menu"))
 
     expect(asked).toBe(1)
   })
@@ -270,12 +290,20 @@ describe("what the Menu Bar says back", () => {
     // when that one fails the same way. A user losing work twice is told twice.
     const view = renderMenuBar(exporting, { problem })
     view.rerender(
-      <MenuBar name="Bot" onDashboard={() => {}} saved problem={undefined} exporting={exporting} />
+      <MenuBar
+        name="Bot"
+        onDashboard={() => {}}
+        onOptions={() => {}}
+        saved
+        problem={undefined}
+        exporting={exporting}
+      />
     )
     view.rerender(
       <MenuBar
         name="Bot"
         onDashboard={() => {}}
+        onOptions={() => {}}
         saved={false}
         problem={problem}
         exporting={exporting}

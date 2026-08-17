@@ -116,6 +116,7 @@ export function RunPanel({
 
         <TestServerPicker
           projectId={project.id}
+          testId="run-test-server"
           value={testServer.testServerId}
           onChange={testServer.choose}
         />
