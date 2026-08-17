@@ -81,7 +81,7 @@ Writing a Project to a `.botinv` somewhere outside the application's own storage
 _Avoid_: export, publish, save as
 
 **Import**:
-Taking a Project File from anywhere on disk into the application's own storage, as a Project of this user's own: a new id, and the Secret and Test Server asked for on the way in. It copies rather than opens — the file stays where it is and is no longer needed, and the same file taken in twice is two Projects.
+Taking a Project File from anywhere on disk into the application's own storage, as a Project of this user's own: a new id, and the Secret and Test Server asked for on the way in. It is done from the Dashboard, where a Project that is not open yet belongs — unlike Share, which hands over the one that is. It copies rather than opens — the file stays where it is and is no longer needed, and the same file taken in twice is two Projects.
 _Avoid_: open, load, restore
 
 **Compiler**:

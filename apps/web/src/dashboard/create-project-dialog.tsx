@@ -20,7 +20,7 @@ import type { ProjectDetails } from "@/project/use-projects"
 export type ProjectKind = "blank" | "example" | "import"
 
 /** What the dialog says at the top, which is the only thing the kind changes. */
-const WORDS = {
+const HEADINGS = {
   blank: { title: "dashboard.create.title", description: "dashboard.create.description" },
   example: { title: "dashboard.example.title", description: "dashboard.example.description" },
   import: { title: "import.title", description: "import.description" }
@@ -95,8 +95,8 @@ export function CreateProjectDialog({
           }}
         >
           <DialogHeader>
-            <DialogTitle>{translate(WORDS[kind].title)}</DialogTitle>
-            <DialogDescription>{translate(WORDS[kind].description)}</DialogDescription>
+            <DialogTitle>{translate(HEADINGS[kind].title)}</DialogTitle>
+            <DialogDescription>{translate(HEADINGS[kind].description)}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-1.5">

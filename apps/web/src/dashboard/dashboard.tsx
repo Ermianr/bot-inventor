@@ -2,7 +2,7 @@ import type { Project } from "@bot-inventor/schema"
 import { Button } from "@bot-inventor/ui/components/button"
 import { useState } from "react"
 
-import { CreateProjectDialog, type ProjectKind } from "@/dashboard/create-project-dialog"
+import { CreateProjectDialog } from "@/dashboard/create-project-dialog"
 import { DeleteProjectDialog } from "@/dashboard/delete-project-dialog"
 import { ProjectCard } from "@/dashboard/project-card"
 import { RenameProjectDialog } from "@/dashboard/rename-project-dialog"
@@ -11,6 +11,19 @@ import type { ImportGateway } from "@/project/import-gateway"
 import type { ProjectStore, ProjectSummary } from "@/project/project-store"
 import { useImport } from "@/project/use-import"
 import { useProjects } from "@/project/use-projects"
+
+/**
+ * What the creation dialog is being opened about.
+ *
+ * The kind is what decides it, and an import is the one that brings something
+ * with it — which is why this is a union rather than a kind and an optional
+ * Project beside it: there is no such thing as an import without a Project, and
+ * nothing else has one.
+ */
+type CreatingKind = { kind: "blank" | "example" } | { kind: "import"; incoming: Project }
+
+/** That, plus whether the dialog is up and which opening this is. */
+type Creating = CreatingKind & { open: boolean; asked: number }
 
 /**
  * The Dashboard: the first thing the user sees, every time.
@@ -52,29 +65,26 @@ export function Dashboard({
     forgetProblem: forgetImportProblem
   } = useImport(imports)
   /**
-   * Which Project the creation dialog is about to make. One dialog serves both:
-   * the example is a Project like any other, so it is asked for with the same
-   * three questions.
+   * Which Project the creation dialog is about to make. One dialog serves all
+   * three: the example and a Project somebody sent are Projects like any other,
+   * so they are asked for with the same three questions.
    *
-   * The kind outlives the closing, which is what `open` is for. A dialog that
-   * stopped existing the moment it was dismissed would never be seen leaving,
-   * and would drop the keyboard on the floor rather than handing it back to the
-   * button it was opened from.
+   * What is being made outlives the closing, which is what `open` is for. A
+   * dialog that stopped existing the moment it was dismissed would never be
+   * seen leaving, and would drop the keyboard on the floor rather than handing
+   * it back to the button it was opened from.
+   *
+   * `asked` counts the openings. It is what the dialog is keyed by, so every
+   * opening is a dialog that has never been filled in: what the user typed last
+   * time is a bot token, and the one thing that must never be prefilled is the
+   * token of another bot.
    */
-  const [creating, setCreating] = useState<{
-    kind: ProjectKind
-    open: boolean
-    /** The Project an import is about, which the other two kinds do not have. */
-    incoming?: Project
-  }>({
-    kind: "blank",
-    open: false
-  })
+  const [creating, setCreating] = useState<Creating>({ kind: "blank", open: false, asked: 0 })
 
   /** Opens the creation dialog on one of them, with nothing said yet. */
-  const askFor = (kind: ProjectKind, incoming?: Project) => {
+  const askFor = (about: CreatingKind) => {
     forgetCreationProblem()
-    setCreating({ kind, open: true, incoming })
+    setCreating(was => ({ ...about, open: true, asked: was.asked + 1 }))
   }
 
   /**
@@ -91,7 +101,7 @@ export function Dashboard({
       // The user closed the dialog, or the file was not one this build reads —
       // and in that case the reason is already on the screen.
       if (incoming === undefined) return
-      askFor("import", incoming)
+      askFor({ kind: "import", incoming })
     })()
   }
   /**
@@ -132,7 +142,7 @@ export function Dashboard({
             >
               {translate("dashboard.import")}
             </Button>
-            <Button data-testid="dashboard-create" onClick={() => askFor("blank")}>
+            <Button data-testid="dashboard-create" onClick={() => askFor({ kind: "blank" })}>
               {translate("dashboard.create")}
             </Button>
           </div>
@@ -161,9 +171,10 @@ export function Dashboard({
         */}
         {projects === undefined ? null : projects.length === 0 ? (
           <Empty
-            onCreate={() => askFor("blank")}
-            onExample={() => askFor("example")}
+            onCreate={() => askFor({ kind: "blank" })}
+            onExample={() => askFor({ kind: "example" })}
             onImport={startImport}
+            importing={reading}
           />
         ) : (
           <ul
@@ -194,18 +205,18 @@ export function Dashboard({
       </div>
 
       {/*
-        Keyed by which one was asked for, so that the fields start again from
-        what that one begins with rather than from what the last one was left
-        holding. The key is what the dialog's prefill depends on to follow the
-        kind at all, and it never changes while the dialog is open. An import is
-        keyed by the Project in the file instead, because two imports are both
-        of kind `import` and arrive under two different names.
+        Keyed by the opening rather than by what is being made, so that every
+        one of them starts from what that kind begins with rather than from what
+        the last one was left holding. Two imports are both of kind `import` and
+        two blank Projects are both blank, and what the fields would carry over
+        between them is the token of a bot that is already made. The key never
+        changes while the dialog is open.
       */}
       <CreateProjectDialog
-        key={creating.incoming?.id ?? creating.kind}
+        key={creating.asked}
         open={creating.open}
         kind={creating.kind}
-        suggestedName={creating.incoming?.name}
+        suggestedName={creating.kind === "import" ? creating.incoming.name : undefined}
         onOpenChange={open => {
           if (open) return
           forgetCreationProblem()
@@ -215,7 +226,7 @@ export function Dashboard({
         onCreate={details => {
           void (async () => {
             const created =
-              creating.incoming !== undefined
+              creating.kind === "import"
                 ? await importProject(creating.incoming, details)
                 : creating.kind === "example"
                   ? await createExample(details)
@@ -268,11 +279,14 @@ export function Dashboard({
 function Empty({
   onCreate,
   onExample,
-  onImport
+  onImport,
+  importing
 }: {
   onCreate: () => void
   onExample: () => void
   onImport: () => void
+  /** Whether a file is already being picked, which is when this cannot be. */
+  importing: boolean
 }) {
   return (
     <div
@@ -288,7 +302,12 @@ function Empty({
         <Button variant="outline" data-testid="dashboard-example" onClick={onExample}>
           {translate("dashboard.example")}
         </Button>
-        <Button variant="outline" data-testid="dashboard-empty-import" onClick={onImport}>
+        <Button
+          variant="outline"
+          data-testid="dashboard-empty-import"
+          disabled={importing}
+          onClick={onImport}
+        >
           {translate("dashboard.import")}
         </Button>
       </div>

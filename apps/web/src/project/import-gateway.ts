@@ -1,5 +1,6 @@
 import type { OpenProjectResult } from "@bot-inventor/schema"
-import { openProject } from "@bot-inventor/schema"
+
+import { openDocument } from "@/project/open-document"
 
 /**
  * Importing, as the editor sees it: a Project File somewhere outside the
@@ -38,16 +39,5 @@ export type ImportGateway = {
  * disk, where they put it.
  */
 export async function readProjectFile(contents: string): Promise<OpenProjectResult> {
-  let document: unknown
-  try {
-    document = JSON.parse(contents)
-  } catch (error) {
-    return {
-      status: "malformed",
-      message: `This is not a Project: it is not readable as JSON. ${error instanceof Error ? error.message : String(error)}`,
-      issues: []
-    }
-  }
-
-  return openProject(document, { writeBackup: () => {} })
+  return openDocument(contents, { writeBackup: () => {} })
 }

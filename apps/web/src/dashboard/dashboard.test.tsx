@@ -399,3 +399,44 @@ describe("taking in a Project somebody sent", () => {
     expect(documents.filter(document => document.includes('"name": "Their bot"'))).toHaveLength(1)
   })
 })
+
+/**
+ * A dialog reopened is a dialog nobody has filled in. What the last one was
+ * left holding is a bot token, and prefilling the next Project with it is the
+ * accident that gives two Projects one Discord account.
+ */
+describe("the creation dialog, reopened", () => {
+  const sentAgain = () =>
+    fakeImportGateway({
+      path: "C:/sent/their-bot.botinv",
+      contents: serializeProject(helloProject())
+    })
+
+  /** What the token field is holding. */
+  async function tokenField() {
+    return ((await screen.findByTestId("create-project-token")) as HTMLInputElement).value
+  }
+
+  it("does not carry a token from one import into the next", async () => {
+    show(fakeProjectStore(), sentAgain())
+
+    fireEvent.click(await screen.findByTestId("dashboard-import"))
+    await fillIn({ name: "Their bot", token: "a-token" })
+
+    fireEvent.click(await screen.findByTestId("dashboard-import"))
+
+    expect(await tokenField()).toBe("")
+  })
+
+  it("does not carry a token from one new bot into the next", async () => {
+    show()
+
+    fireEvent.click(await screen.findByTestId("dashboard-create"))
+    await fillIn({ name: "Moderation bot", token: "a-token" })
+
+    fireEvent.click(await screen.findByTestId("dashboard-create"))
+
+    expect(await tokenField()).toBe("")
+    expect(await nameField()).toBe("")
+  })
+})

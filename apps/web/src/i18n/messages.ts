@@ -58,7 +58,7 @@ const en = {
   "dashboard.title": "Your bots",
   "dashboard.subtitle": "Everything you have built. Pick one to carry on with it.",
   "dashboard.create": "New bot",
-  "dashboard.import": "Open a bot you were sent",
+  "dashboard.import": "Import a bot",
   "dashboard.example": "Open an example",
   "dashboard.example.title": "Open the example",
   "dashboard.example.description":
@@ -285,7 +285,7 @@ const es: Record<MessageKey, string> = {
   "dashboard.title": "Tus bots",
   "dashboard.subtitle": "Todo lo que has construido. Elige uno para seguir con él.",
   "dashboard.create": "Nuevo bot",
-  "dashboard.import": "Abrir un bot que te enviaron",
+  "dashboard.import": "Importar un bot",
   "dashboard.example": "Abrir un ejemplo",
   "dashboard.example.title": "Abrir el ejemplo",
   "dashboard.example.description":
