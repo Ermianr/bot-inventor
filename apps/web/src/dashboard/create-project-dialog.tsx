@@ -44,7 +44,14 @@ export function CreateProjectDialog({
   problem
 }: {
   open: boolean
-  /** Which Canvas the Project starts on, and which words to say about it. */
+  /**
+   * Which Canvas the Project starts on, and which words to say about it.
+   *
+   * The name it puts in the field is what that field starts as, so a caller
+   * offering both must key this component by the kind. Changing it on a live
+   * instance changes the words at the top and leaves the other one's name
+   * underneath them.
+   */
   kind?: "blank" | "example"
   onOpenChange: (open: boolean) => void
   onCreate: (details: ProjectDetails) => void

@@ -48,6 +48,15 @@ export type Projects = {
   /** Why the last attempt did not make a Project, when it did not. */
   creationProblem: string | undefined
   /**
+   * Forgets that refusal, for when the dialog holding it is put away.
+   *
+   * A reason outlives the attempt it was about unless somebody says otherwise,
+   * and the next thing the user opens is a dialog with empty fields: a red line
+   * under them about a Project they are no longer making is the application
+   * refusing something nobody has asked for yet.
+   */
+  forgetCreationProblem(): void
+  /**
    * Why the last thing asked of one Project did not happen, and which Project
    * it was asked of.
    *
@@ -194,6 +203,7 @@ export function useProjects(store: ProjectStore): Projects {
     problem,
     creationProblem,
     manageProblem,
+    forgetCreationProblem: useCallback(() => setCreationProblem(undefined), []),
 
     create: useCallback(details => make(newProject(), details), [make]),
 

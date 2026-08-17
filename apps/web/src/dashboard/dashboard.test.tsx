@@ -278,6 +278,25 @@ describe("creating a Project from the Dashboard", () => {
     expect(opened).toEqual([])
   })
 
+  /**
+   * A reason belongs to the attempt it was about. Opening the dialog again is
+   * not that attempt, and the user has not yet asked for anything to refuse.
+   */
+  it("does not carry a refusal into the next dialog the user opens", async () => {
+    const { store } = show()
+    store.breaks.create = "the disk is full"
+
+    fireEvent.click(await screen.findByTestId("dashboard-create"))
+    await fillIn({ name: "Moderation bot", token: "a-token" })
+    expect(await screen.findByTestId("create-project-problem")).toBeDefined()
+
+    fireEvent.click(screen.getByTestId("create-project-cancel"))
+    fireEvent.click(screen.getByTestId("dashboard-example"))
+
+    await screen.findByTestId("create-project-name")
+    expect(screen.queryByTestId("create-project-problem")).toBeNull()
+  })
+
   /** Two buttons, one dialog: the fields must not carry over between them. */
   it("does not leave the example's name in the dialog the other button opens", async () => {
     show()
