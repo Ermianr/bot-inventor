@@ -43,7 +43,7 @@ _Avoid_: catch, error handler, error output
 ### The application
 
 **Dashboard**:
-The screen listing the user's Projects, and the first thing the application shows. It is where a Project is created, renamed, duplicated, shared and deleted; opening one from here leads to the editor.
+The screen listing the user's Projects, and the first thing the application shows. It is where a Project is created, renamed, duplicated and deleted; opening one from here leads to the editor. A Project is shared from the editor's Menu Bar, where the Project that is open is the one being handed over.
 _Avoid_: home, start screen, launcher, library
 
 **Console**:
@@ -55,7 +55,7 @@ One line the Console shows: something the bot printed, a note from the applicati
 _Avoid_: log line, console line
 
 **Project Options**:
-The dialog, opened from the editor, holding how one Project connects to Discord: the Secret it signs in with and its Test Server. Nothing else lives here — a Project is named, duplicated, shared and deleted from the Dashboard.
+The dialog, opened from the editor, holding how one Project connects to Discord: the Secret it signs in with and its Test Server. Nothing else lives here — a Project is named, duplicated and deleted from the Dashboard, and shared from the Menu Bar.
 _Avoid_: settings, preferences, properties, configuration
 
 **Menu Bar**:

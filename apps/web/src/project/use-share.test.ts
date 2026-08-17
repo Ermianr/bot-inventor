@@ -5,7 +5,7 @@ import { helloProject } from "@bot-inventor/schema/fixtures"
 import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import type { ShareGateway } from "@/project/share-gateway"
-import { suggestedFileName } from "@/project/share-gateway"
+import { suggestedFileName, withProjectFileExtension } from "@/project/share-gateway"
 import { useShare } from "@/project/use-share"
 
 /**
@@ -103,6 +103,38 @@ describe("sharing a Project", () => {
     expect(sharing.result.current.problem).toContain("the disk is full")
     expect(sharing.result.current.written).toBeUndefined()
   })
+
+  // Asking twice while the dialog is still open is two dialogs and two writes
+  // racing for whatever path each comes back with.
+  it("says it is working until the file is on disk", async () => {
+    let finish: () => void = () => {}
+    const shell = fakeGateway({ destination: "C:/shared/hello.botinv" })
+    shell.gateway.write = () => new Promise(resolve => (finish = () => resolve()))
+
+    const sharing = renderHook(() => useShare(helloProject(), shell.gateway))
+    expect(sharing.result.current.busy).toBe(false)
+
+    let sharingNow: Promise<void> | undefined
+    await act(async () => {
+      sharingNow = sharing.result.current.share()
+    })
+    expect(sharing.result.current.busy).toBe(true)
+
+    await act(async () => {
+      finish()
+      await sharingNow
+    })
+    expect(sharing.result.current.busy).toBe(false)
+  })
+
+  it("is done being busy when the user closes the dialog", async () => {
+    const shell = fakeGateway({ destination: undefined })
+    const sharing = renderHook(() => useShare(helloProject(), shell.gateway))
+
+    await act(() => sharing.result.current.share())
+
+    expect(sharing.result.current.busy).toBe(false)
+  })
 })
 
 describe("the file name a Project is offered under", () => {
@@ -116,5 +148,19 @@ describe("the file name a Project is offered under", () => {
 
   it("falls back rather than offering an empty name", () => {
     expect(suggestedFileName(" ... ")).toBe("project.botinv")
+  })
+
+  /**
+   * What the user typed into the dialog is a name, not necessarily a Project
+   * File: one without its extension is one the receiving machine does not know
+   * how to open.
+   */
+  it("puts the extension back when the user left it off", () => {
+    expect(withProjectFileExtension("C:/shared/bot")).toBe("C:/shared/bot.botinv")
+  })
+
+  it("leaves a name that already ends in it alone, however it is spelled", () => {
+    expect(withProjectFileExtension("C:/shared/bot.botinv")).toBe("C:/shared/bot.botinv")
+    expect(withProjectFileExtension("C:/shared/bot.BOTINV")).toBe("C:/shared/bot.BOTINV")
   })
 })

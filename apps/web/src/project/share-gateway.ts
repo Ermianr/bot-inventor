@@ -47,5 +47,20 @@ export function suggestedFileName(projectName: string): string {
     .replace(/[. ]+$/, "")
 
   const stem = cleaned.length > 0 ? cleaned : "project"
-  return `${stem}.${PROJECT_FILE_EXTENSION}`
+  return withProjectFileExtension(stem)
+}
+
+/**
+ * A path or name ending in the Project File extension, adding it when it is not
+ * there already.
+ *
+ * A save dialog is free to hand back the name the user typed as they typed it,
+ * extension or no extension. A Project File without its extension is one the
+ * receiving machine does not know how to open, so the extension is put back
+ * here rather than hoped for.
+ */
+export function withProjectFileExtension(path: string): string {
+  return path.toLowerCase().endsWith(`.${PROJECT_FILE_EXTENSION}`)
+    ? path
+    : `${path}.${PROJECT_FILE_EXTENSION}`
 }

@@ -146,7 +146,11 @@ export function MenuBar({
               what the user gets rather than for the file it writes, so that the
               two are told apart by reading the row.
             */}
-            <MenubarItem data-testid="menu-share" onClick={() => void sharing.share()}>
+            <MenubarItem
+              data-testid="menu-share"
+              disabled={sharing.busy}
+              onClick={() => void sharing.share()}
+            >
               {translate("share.title")}
             </MenubarItem>
 

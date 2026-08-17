@@ -48,6 +48,7 @@ function fakeSharing(overrides: Partial<Sharing> = {}) {
   const sharing: Sharing = {
     written: undefined,
     problem: undefined,
+    busy: false,
     share: async () => {
       shared.count += 1
     },
@@ -203,6 +204,18 @@ describe("the Project menu", () => {
     expect(shared.count).toBe(1)
     // And nothing was Exported: the two entries are not the same offer.
     expect(asked.exports).toEqual([])
+  })
+
+  // Two Shares at once are two save dialogs and two writes racing each other.
+  it("cannot be asked to share again while it is sharing", async () => {
+    const { exporting } = fakeExporting()
+    const { shared, sharing } = fakeSharing({ busy: true })
+    renderMenuBar(exporting, { sharing })
+
+    openProjectMenu()
+    await pick(translate("share.title"))
+
+    expect(shared.count).toBe(0)
   })
 
   it("says it is working and cannot be asked again while it is", async () => {

@@ -2,7 +2,11 @@ import { invoke } from "@tauri-apps/api/core"
 import { save } from "@tauri-apps/plugin-dialog"
 
 import { translate } from "@/i18n/messages"
-import { PROJECT_FILE_EXTENSION, type ShareGateway } from "@/project/share-gateway"
+import {
+  PROJECT_FILE_EXTENSION,
+  type ShareGateway,
+  withProjectFileExtension
+} from "@/project/share-gateway"
 
 /**
  * Sharing through the desktop shell: the operating system's own save dialog for
@@ -23,7 +27,10 @@ export const desktopShare: ShareGateway = {
       defaultPath: suggestedName,
       filters: [{ name: translate("share.fileKind"), extensions: [PROJECT_FILE_EXTENSION] }]
     })
-    return chosen ?? undefined
+    // The dialog offers the extension and Windows appends it when the user
+    // leaves it off, but what comes back is a string and the promise here is
+    // that a Project File is one: a user who typed `bot` gets `bot.botinv`.
+    return chosen === null ? undefined : withProjectFileExtension(chosen)
   },
 
   write: (path, document) => invoke("share_project", { path, contents: document })
