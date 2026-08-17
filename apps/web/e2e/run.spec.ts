@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test"
 
+import { ConsolePage } from "./pages/console-page"
 import { MenuBarPage } from "./pages/menu-bar-page"
 import { RunPage } from "./pages/run-page"
 
@@ -16,17 +17,19 @@ import { RunPage } from "./pages/run-page"
 test.describe("running the bot", () => {
   let run: RunPage
   let menuBar: MenuBarPage
+  let consolePanel: ConsolePage
 
   test.beforeEach(async ({ page }) => {
     run = new RunPage(page)
     menuBar = new MenuBarPage(page)
+    consolePanel = new ConsolePage(page)
     await run.open()
   })
 
   test("puts Play and Stop on the Menu Bar, with the light beside them", async () => {
-    await expect(menuBar.row().getByTestId("run-start")).toBeVisible()
-    await expect(menuBar.row().getByTestId("run-stop")).toBeVisible()
-    await expect(menuBar.row().getByTestId("run-status")).toBeVisible()
+    for (const control of [run.start(), run.stop(), run.status()]) {
+      await expect(menuBar.row().filter({ has: control })).toBeVisible()
+    }
   })
 
   /**
@@ -48,7 +51,7 @@ test.describe("running the bot", () => {
     await run.start().click()
 
     await expect(run.status()).toHaveAttribute("data-status", "failed")
-    await expect(run.problem()).toBeVisible()
+    await expect(consolePanel.problem()).toBeVisible()
   })
 
   /**
@@ -60,7 +63,7 @@ test.describe("running the bot", () => {
     await run.pressStart()
 
     await expect(run.status()).toHaveAttribute("data-status", "failed")
-    await expect(run.problem()).toBeVisible()
+    await expect(consolePanel.problem()).toBeVisible()
     await expect(menuBar.name()).toBeVisible()
   })
 
@@ -69,6 +72,6 @@ test.describe("running the bot", () => {
     await run.pressStop()
 
     await expect(run.status()).toHaveAttribute("data-status", "stopped")
-    await expect(run.problem()).toBeHidden()
+    await expect(consolePanel.problem()).toBeHidden()
   })
 })

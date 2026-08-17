@@ -32,12 +32,7 @@ export class RunPage {
     return this.page.getByTestId("run-status")
   }
 
-  /** What the Console says when a Session could not start. */
-  problem(): Locator {
-    return this.page.getByTestId("session-problem")
-  }
-
-  /** F5, the way a user asks for a Run without reaching for the mouse. */
+  /** F5, the way a user starts a Session without reaching for the mouse. */
   async pressStart() {
     await this.page.keyboard.press("F5")
   }

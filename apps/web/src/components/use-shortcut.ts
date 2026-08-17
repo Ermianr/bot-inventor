@@ -14,15 +14,22 @@ import { useEffect, useRef } from "react"
  * a button that is on the screen.
  */
 
-/** A shortcut as it is written down: `F5`, `Shift+F5`. */
-export type Shortcut = `${"" | "Shift+"}${string}`
+/**
+ * A shortcut as it is written down — `F5`, `Shift+F5` — which is both what is
+ * listened for and what the tooltip beside the control shows. The key is the
+ * one the keyboard reports, and `Shift+` in front of it is the one modifier the
+ * editor claims for itself.
+ */
+export type Shortcut = string
 
 /**
- * Runs `act` while the shortcut is pressed, unless `enabled` is false.
+ * Runs `act` when the shortcut is pressed, unless `enabled` is false.
  *
  * `enabled` is the same condition that disables the button, rather than a
  * separate one: a shortcut that fires while its control is dead is a control
- * that lied about what pressing it would do.
+ * that lied about what pressing it would do. It stops the shortcut acting and
+ * not the editor claiming the key — the browser's own answer to it is never
+ * what the user wanted either.
  */
 export function useShortcut(shortcut: Shortcut, act: () => void, enabled = true) {
   // What to do is read when the key is pressed and never watched, so a caller
@@ -32,8 +39,6 @@ export function useShortcut(shortcut: Shortcut, act: () => void, enabled = true)
   latest.current = act
 
   useEffect(() => {
-    if (!enabled) return
-
     const shift = shortcut.startsWith("Shift+")
     const key = shift ? shortcut.slice("Shift+".length) : shortcut
 
@@ -43,10 +48,18 @@ export function useShortcut(shortcut: Shortcut, act: () => void, enabled = true)
       // The other modifiers are not ours: a browser or an operating system
       // shortcut that happens to share the key stays theirs.
       if (event.ctrlKey || event.altKey || event.metaKey) return
-      // Held down, a key repeats. One press is one Run.
+
+      // Swallowed whether or not it does anything, and however long it is held.
+      // A shortcut the editor has claimed stays claimed while it is dead: F5
+      // falling through to the browser reloads the window and the Session goes
+      // with it, which is what would happen while a bot is running — the one
+      // moment it costs the user everything.
+      event.preventDefault()
+
+      if (!enabled) return
+      // Held down, a key repeats. One press is one Session.
       if (event.repeat) return
 
-      event.preventDefault()
       latest.current()
     }
 

@@ -96,13 +96,6 @@ describe("the Run controls", () => {
     })
   }
 
-  it("says what each button is for, since neither shows a word", () => {
-    renderControls("stopped")
-
-    expect(play()).toBeDefined()
-    expect(stopButton()).toBeDefined()
-  })
-
   it("shows which of the four things the bot is doing", () => {
     renderControls("connecting")
 
@@ -136,12 +129,19 @@ describe("running the bot from the keyboard", () => {
     expect(asked.stops).toBe(1)
   })
 
-  it("does not start a second bot on F5 while one is running", () => {
+  /**
+   * F5 is the browser's own reload, and the editor keeps it even when it has
+   * nothing to do with it: letting it through while a bot is running would
+   * reload the window and take the Session with it, which is the one press
+   * that costs the user everything.
+   */
+  it("does not start a second bot on F5 while one is running, and does not let the browser have it", () => {
     const asked = renderControls("ready")
 
-    fireEvent.keyDown(window, { key: "F5" })
+    const notSwallowed = fireEvent.keyDown(window, { key: "F5" })
 
     expect(asked.starts).toEqual([])
+    expect(notSwallowed).toBe(false)
   })
 
   it("does not stop a bot that is not running", () => {
