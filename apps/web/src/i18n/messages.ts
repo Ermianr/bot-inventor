@@ -160,6 +160,12 @@ const en = {
   "export.overwrite.cancel": "Go back",
   "export.problem.failed": "Your bot could not be exported: {message}",
 
+  "share.title": "Share a copy",
+  "share.destination": "Where should the copy go?",
+  "share.fileKind": "Bot Inventor project",
+  "share.written": "Shared to {path}. It holds no token, so it is safe to send.",
+  "share.problem.failed": "Your bot could not be shared: {message}",
+
   "flows.title": "Your flows",
   "flows.create": "Add a flow",
   "flows.name.edit": "Rename this flow",
@@ -368,6 +374,12 @@ const es: Record<MessageKey, string> = {
   "export.overwrite.confirm": "Reemplazarla",
   "export.overwrite.cancel": "Volver",
   "export.problem.failed": "Tu bot no se pudo exportar: {message}",
+
+  "share.title": "Compartir una copia",
+  "share.destination": "¿Dónde quieres la copia?",
+  "share.fileKind": "Proyecto de Bot Inventor",
+  "share.written": "Compartido en {path}. No lleva ningún token, así que puedes enviarlo.",
+  "share.problem.failed": "Tu bot no se pudo compartir: {message}",
 
   "flows.title": "Tus flujos",
   "flows.create": "Añadir un flujo",

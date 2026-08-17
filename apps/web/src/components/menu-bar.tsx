@@ -16,6 +16,7 @@ import { MinimapMenuItem } from "@/components/minimap-menu"
 import { ThemeMenu } from "@/components/theme-menu"
 import { translate } from "@/i18n/messages"
 import type { Exporting } from "@/project/use-export"
+import type { Sharing } from "@/project/use-share"
 
 /**
  * The Menu Bar: the one row that holds what the user does with the Project as a
@@ -44,6 +45,7 @@ export function MenuBar({
   saved,
   problem,
   exporting,
+  sharing,
   run
 }: {
   name: string
@@ -69,6 +71,13 @@ export function MenuBar({
   problem: string | undefined
   exporting: Exporting
   /**
+   * Handing this Project to somebody else as a Project File.
+   *
+   * It sits beside Exporting on this row and is not the same thing: Share hands
+   * over a bot's design, an Export hands over a bot that runs (`CONTEXT.md`).
+   */
+  sharing: Sharing
+  /**
    * Starting and stopping the bot, which sits on this row beside the menus.
    *
    * It is passed in rather than built here: what a Session is and how one is
@@ -81,6 +90,10 @@ export function MenuBar({
 
   useAnnounce(problem, toast.error)
   useAnnounce(exporting.problem, toast.error)
+  // Where the Project File went, said where the user asked for it — as is the
+  // reason, when there was not one.
+  useAnnounce(sharing.problem, toast.error)
+  useAnnounce(sharing.written, toast.success)
 
   // Where the Export went is the one message that has something to do about it,
   // and the moment to do it is while the toast is still up: this is what the
@@ -125,6 +138,20 @@ export function MenuBar({
             */}
             <MenubarItem data-testid="menu-project-options" onClick={onOptions}>
               {translate("project.options.title")}
+            </MenubarItem>
+
+            {/*
+              Handing the Project to somebody else, which is a different thing
+              from handing over a bot that runs: it sits above Export, named for
+              what the user gets rather than for the file it writes, so that the
+              two are told apart by reading the row.
+            */}
+            <MenubarItem
+              data-testid="menu-share"
+              disabled={sharing.busy}
+              onClick={() => void sharing.share()}
+            >
+              {translate("share.title")}
             </MenubarItem>
 
             {/*
