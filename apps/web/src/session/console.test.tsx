@@ -105,10 +105,4 @@ describe("the Console", () => {
     expect(tabs[0]?.getAttribute("aria-selected")).toBe("true")
     expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe(tabs[0]?.id)
   })
-
-  it("puts what the editor gives it in its header, beside the tabs", () => {
-    render(<Console entries={[]} controls={<button type="button">Run</button>} />)
-
-    expect(screen.getByRole("button", { name: "Run" })).toBeTruthy()
-  })
 })

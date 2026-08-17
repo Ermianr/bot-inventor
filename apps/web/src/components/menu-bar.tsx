@@ -8,7 +8,7 @@ import {
   MenubarSubTrigger,
   MenubarTrigger
 } from "@bot-inventor/ui/components/menubar"
-import { useEffect, useRef, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { AboutDialog } from "@/components/about-dialog"
@@ -43,7 +43,8 @@ export function MenuBar({
   onOptions,
   saved,
   problem,
-  exporting
+  exporting,
+  run
 }: {
   name: string
   /** Takes the user back to the Dashboard. The route knows where that is. */
@@ -67,6 +68,14 @@ export function MenuBar({
   /** Why the last write did not happen, when it did not. */
   problem: string | undefined
   exporting: Exporting
+  /**
+   * Starting and stopping the bot, which sits on this row beside the menus.
+   *
+   * It is passed in rather than built here: what a Session is and how one is
+   * started belongs to the editor, which already holds it because the Canvas
+   * reads the same run. The row only knows where it goes.
+   */
+  run?: ReactNode
 }) {
   const [aboutOpen, setAboutOpen] = useState(false)
 
@@ -188,6 +197,13 @@ export function MenuBar({
         with it.
       */}
       <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
+
+      {/*
+        Running the bot sits beside the menus rather than at the far end of the
+        row: it is the one thing on here that is pressed over and over, and the
+        distance the pointer travels to it is the distance travelled all day.
+      */}
+      {run}
 
       <span className="font-medium text-sm" data-testid="project-name">
         {name}

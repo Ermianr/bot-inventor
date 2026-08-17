@@ -25,6 +25,8 @@ const en = {
   "run.testServer.manual": "Or paste a server id",
   "run.start": "Run",
   "run.stop": "Stop",
+  // The keys are not translated: they are what is printed on the keyboard.
+  "run.shortcut": "{action} ({shortcut})",
   "run.status.stopped": "Stopped",
   "run.status.connecting": "Connecting…",
   "run.status.ready": "Ready",
@@ -237,6 +239,7 @@ const es: Record<MessageKey, string> = {
   "run.testServer.manual": "O pega el id de un servidor",
   "run.start": "Ejecutar",
   "run.stop": "Detener",
+  "run.shortcut": "{action} ({shortcut})",
   "run.status.stopped": "Detenido",
   "run.status.connecting": "Conectando…",
   "run.status.ready": "Listo",
