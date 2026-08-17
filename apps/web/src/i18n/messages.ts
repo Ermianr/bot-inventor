@@ -65,10 +65,6 @@ const en = {
   "dashboard.create.description":
     "Bot Inventor keeps it for you. You will not be asked where to put it.",
   "dashboard.create.name": "What is it called?",
-  "dashboard.create.token": "Bot token",
-  "dashboard.create.token.help":
-    "Your bot signs in to Discord with this. Make an application on the Discord Developer Portal, add a bot to it, and copy the token it gives you.",
-  "dashboard.create.testServer": "Server to test it on",
   "dashboard.create.confirm": "Make it",
   "dashboard.create.cancel": "Cancel",
   "dashboard.create.tokenRequired": "Paste a bot token. Without one your bot cannot run.",
@@ -101,6 +97,14 @@ const en = {
 
   "project.untitled": "Untitled bot",
   "project.flow.default": "Main",
+  "project.token.help":
+    "Your bot signs in to Discord with this. Make an application on the Discord Developer Portal, add a bot to it, and copy the token it gives you.",
+  "project.token.present": "A token is stored for this bot. Paste a new one to replace it.",
+  "project.token.absent": "No token is stored for this bot yet.",
+  "project.options.title": "Bot settings",
+  "project.options.description":
+    "How this bot signs in to Discord, and where you try it out. Nothing here is written into the bot you share.",
+  "project.options.done": "Done",
   "project.problem.futureVersion":
     "This Project was made with a newer version of Bot Inventor, so this one cannot open it. Nothing in the file was changed. Update the app and try again.",
   "project.problem.malformed":
@@ -248,10 +252,6 @@ const es: Record<MessageKey, string> = {
   "dashboard.create.title": "Crear un bot",
   "dashboard.create.description": "Bot Inventor lo guarda por ti. No te preguntará dónde ponerlo.",
   "dashboard.create.name": "¿Cómo se llama?",
-  "dashboard.create.token": "Token del bot",
-  "dashboard.create.token.help":
-    "Tu bot inicia sesión en Discord con esto. Crea una aplicación en el portal de desarrolladores de Discord, añádele un bot y copia el token que te dé.",
-  "dashboard.create.testServer": "Servidor donde probarlo",
   "dashboard.create.confirm": "Crearlo",
   "dashboard.create.cancel": "Cancelar",
   "dashboard.create.tokenRequired": "Pega un token de bot. Sin uno, tu bot no puede ejecutarse.",
@@ -279,6 +279,14 @@ const es: Record<MessageKey, string> = {
 
   "project.untitled": "Bot sin nombre",
   "project.flow.default": "Principal",
+  "project.token.help":
+    "Tu bot inicia sesión en Discord con esto. Crea una aplicación en el portal de desarrolladores de Discord, añádele un bot y copia el token que te dé.",
+  "project.token.present": "Este bot ya tiene un token guardado. Pega uno nuevo para reemplazarlo.",
+  "project.token.absent": "Este bot todavía no tiene un token guardado.",
+  "project.options.title": "Ajustes del bot",
+  "project.options.description":
+    "Cómo inicia sesión este bot en Discord y dónde lo pruebas. Nada de esto se escribe en el bot que compartes.",
+  "project.options.done": "Listo",
   "project.problem.futureVersion":
     "Este Proyecto se hizo con una versión más nueva de Bot Inventor, así que esta no puede abrirlo. No se cambió nada del archivo. Actualiza la aplicación e inténtalo de nuevo.",
   "project.problem.malformed":

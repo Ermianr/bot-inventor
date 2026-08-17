@@ -22,6 +22,11 @@ import { describeRefusal } from "@/session/refusal"
  * token. A bot in a great many servers is why this is a Combobox rather than a
  * plain dropdown, and why an id can still be pasted by hand: the list is
  * capped, and the one server the user wants might be past the cap.
+ *
+ * A Project that does not exist yet has nothing to ask Discord with — its token
+ * is still being typed in the form beside this — so it is given no id, and what
+ * is left is the pasted id alone. That is the same field either way rather than
+ * a second one that happens to look like it.
  */
 
 /** One server, as the Tauri side reports it. */
@@ -31,18 +36,28 @@ type TestServer = { id: string; name: string }
 const LIMIT = 1000
 
 export type TestServerPickerProps = {
-  projectId: string
+  /** The Project whose servers are listed, or nothing when there is no Project. */
+  projectId?: string
+  /**
+   * What this picker is called on the page: it names the fields for their
+   * labels and for a test, whose words are translated and cannot be searched
+   * for. Two pickers can be on the page at once — Project Options opens over
+   * the Run Panel — and a label pointing at the other one's field is a label
+   * that focuses the wrong thing.
+   */
+  testId: string
   /** The id currently chosen, which is what a Session registers to. */
   value: string
   onChange(testServerId: string): void
 }
 
-export function TestServerPicker({ projectId, value, onChange }: TestServerPickerProps) {
+export function TestServerPicker({ projectId, testId, value, onChange }: TestServerPickerProps) {
   const [servers, setServers] = useState<readonly TestServer[]>([])
   const [loading, setLoading] = useState(false)
   const [problem, setProblem] = useState<string | undefined>(undefined)
 
   const look = useCallback(async () => {
+    if (projectId === undefined) return
     setLoading(true)
     setProblem(undefined)
     try {
@@ -63,64 +78,73 @@ export function TestServerPicker({ projectId, value, onChange }: TestServerPicke
 
   const chosen = servers.find(server => server.id === value) ?? null
   const capped = servers.length >= LIMIT
+  const listing = projectId !== undefined
 
   return (
     <div className="grid gap-1.5">
-      <div className="flex items-center justify-between">
-        <Label htmlFor="test-server">{translate("run.testServer.label")}</Label>
-        <Button variant="ghost" size="xs" onClick={look} disabled={loading}>
-          {translate("run.testServer.reload")}
-        </Button>
-      </div>
+      {!listing ? null : (
+        <>
+          <div className="flex items-center justify-between">
+            <Label htmlFor={`${testId}-search`}>{translate("run.testServer.label")}</Label>
+            <Button variant="ghost" size="xs" onClick={look} disabled={loading}>
+              {translate("run.testServer.reload")}
+            </Button>
+          </div>
 
-      <Combobox
-        items={servers as TestServer[]}
-        value={chosen}
-        onValueChange={(server: TestServer | null) => onChange(server?.id ?? "")}
-        itemToStringLabel={(server: TestServer) => server.name}
-        // Searching by id as well as by name, because the id is what someone
-        // arrives with when they copied it out of Discord.
-        filter={(server: TestServer, query: string) =>
-          server.name.toLowerCase().includes(query.trim().toLowerCase()) ||
-          server.id.includes(query.trim())
-        }
-        disabled={loading || servers.length === 0}
-      >
-        <ComboboxInput
-          id="test-server"
-          placeholder={translate(loading ? "run.testServer.loading" : "run.testServer.search")}
-        />
-        <ComboboxContent>
-          <ComboboxEmpty>{translate("run.testServer.noMatch")}</ComboboxEmpty>
-          <ComboboxList>
-            <ComboboxCollection>
-              {(server: TestServer) => (
-                <ComboboxItem key={server.id} value={server}>
-                  {server.name}
-                </ComboboxItem>
-              )}
-            </ComboboxCollection>
-          </ComboboxList>
-        </ComboboxContent>
-      </Combobox>
+          <Combobox
+            items={servers as TestServer[]}
+            value={chosen}
+            onValueChange={(server: TestServer | null) => onChange(server?.id ?? "")}
+            itemToStringLabel={(server: TestServer) => server.name}
+            // Searching by id as well as by name, because the id is what someone
+            // arrives with when they copied it out of Discord.
+            filter={(server: TestServer, query: string) =>
+              server.name.toLowerCase().includes(query.trim().toLowerCase()) ||
+              server.id.includes(query.trim())
+            }
+            disabled={loading || servers.length === 0}
+          >
+            <ComboboxInput
+              id={`${testId}-search`}
+              placeholder={translate(loading ? "run.testServer.loading" : "run.testServer.search")}
+            />
+            <ComboboxContent>
+              <ComboboxEmpty>{translate("run.testServer.noMatch")}</ComboboxEmpty>
+              <ComboboxList>
+                <ComboboxCollection>
+                  {(server: TestServer) => (
+                    <ComboboxItem key={server.id} value={server}>
+                      {server.name}
+                    </ComboboxItem>
+                  )}
+                </ComboboxCollection>
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </>
+      )}
 
       {/*
         The way out of everything the list cannot do: a bot in no server yet, a
-        token Discord would not answer for, or a server past the cap.
+        token Discord would not answer for, a server past the cap, or a Project
+        that does not exist to ask about.
       */}
-      {loading || (servers.length > 0 && !capped) ? null : (
+      {listing && (loading || (servers.length > 0 && !capped)) ? null : (
         <>
-          <p className="text-muted-foreground text-xs">
-            {problem ??
-              translate(capped ? "run.testServer.capped" : "run.testServer.none", {
-                count: String(LIMIT)
-              })}
-          </p>
-          <Label htmlFor="test-server-id" className="text-muted-foreground">
-            {translate("run.testServer.manual")}
+          {!listing ? null : (
+            <p className="text-muted-foreground text-xs">
+              {problem ??
+                translate(capped ? "run.testServer.capped" : "run.testServer.none", {
+                  count: String(LIMIT)
+                })}
+            </p>
+          )}
+          <Label htmlFor={testId} className={listing ? "text-muted-foreground" : undefined}>
+            {translate(listing ? "run.testServer.manual" : "run.testServer.label")}
           </Label>
           <Input
-            id="test-server-id"
+            id={testId}
+            data-testid={testId}
             inputMode="numeric"
             value={value}
             onChange={event => onChange(event.target.value)}

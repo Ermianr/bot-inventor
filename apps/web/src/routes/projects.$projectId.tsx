@@ -1,11 +1,13 @@
 import type { Project } from "@bot-inventor/schema"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { useState } from "react"
 
 import { Canvas } from "@/canvas/canvas"
 import { FlowList } from "@/canvas/flow-list"
 import { MenuBar } from "@/components/menu-bar"
 import { RunPanel } from "@/components/run-panel"
 import { desktopExports } from "@/project/desktop-exports"
+import { ProjectOptionsDialog } from "@/project/project-options-dialog"
 import { projectStore } from "@/project/store"
 import { useExport } from "@/project/use-export"
 import { useProject } from "@/project/use-project"
@@ -60,6 +62,7 @@ function ProjectRoute() {
  */
 function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
   const navigate = useNavigate()
+  const [optionsOpen, setOptionsOpen] = useState(false)
   const editor = useProject(() => loaded)
   const autosave = useAutosave(projectStore, editor.project, { migrated })
   const testServer = useTestServer(projectStore, editor.project.id)
@@ -74,9 +77,18 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
       <MenuBar
         name={editor.project.name}
         onDashboard={() => void navigate({ to: "/" })}
+        onOptions={() => setOptionsOpen(true)}
         saved={autosave.saved}
         problem={autosave.problem}
         exporting={exporting}
+      />
+
+      <ProjectOptionsDialog
+        open={optionsOpen}
+        onOpenChange={setOptionsOpen}
+        store={projectStore}
+        projectId={editor.project.id}
+        testServer={testServer}
       />
 
       <div className="grid grid-cols-[14rem_1fr_24rem] overflow-hidden">

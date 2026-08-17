@@ -54,6 +54,10 @@ _Avoid_: log, terminal, output panel
 One line the Console shows: something the bot printed, a note from the application, or a problem.
 _Avoid_: log line, console line
 
+**Project Options**:
+The dialog, opened from the editor, holding how one Project connects to Discord: the Secret it signs in with and its Test Server. Nothing else lives here — a Project is named, duplicated, shared and deleted from the Dashboard.
+_Avoid_: settings, preferences, properties, configuration
+
 **Menu Bar**:
 The row along the top of the application, holding every menu the user opens: what they do with the Project as a whole, what the editor shows them, and what the application is. It is the only place an action lives that belongs to no single Flow.
 _Avoid_: toolbar, ribbon, main menu

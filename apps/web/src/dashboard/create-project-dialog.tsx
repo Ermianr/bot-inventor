@@ -11,6 +11,8 @@ import { Input } from "@bot-inventor/ui/components/input"
 import { Label } from "@bot-inventor/ui/components/label"
 import { useState } from "react"
 
+import { SecretField } from "@/components/secret-field"
+import { TestServerPicker } from "@/components/test-server-picker"
 import { translate } from "@/i18n/messages"
 import type { ProjectDetails } from "@/project/use-projects"
 
@@ -77,39 +79,19 @@ export function CreateProjectDialog({
             />
           </div>
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="project-token">{translate("dashboard.create.token")}</Label>
-            <Input
-              id="project-token"
-              data-testid="create-project-token"
-              type="password"
-              autoComplete="off"
-              placeholder={translate("run.token.placeholder")}
-              value={secret}
-              onChange={event => setSecret(event.target.value)}
-            />
-            <p className="text-muted-foreground text-xs">
-              {translate("dashboard.create.token.help")}
-            </p>
-          </div>
+          <SecretField testId="create-project-token" value={secret} onChange={setSecret} />
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="project-test-server">{translate("dashboard.create.testServer")}</Label>
-            {/*
-              An id typed by hand rather than a list chosen from: asking Discord
-              for the servers a bot is in takes the token, and the token is
-              still being typed. The list is offered in the editor, once there
-              is a Project for it to belong to.
-            */}
-            <Input
-              id="project-test-server"
-              data-testid="create-project-test-server"
-              inputMode="numeric"
-              value={testServerId}
-              onChange={event => setTestServerId(event.target.value)}
-            />
-            <p className="text-muted-foreground text-xs">{translate("run.testServer.help")}</p>
-          </div>
+          {/*
+            The same field Project Options offers, given no Project: asking
+            Discord for the servers a bot is in takes the token, and the token
+            is still being typed. What is left is the id pasted by hand, and the
+            list arrives in the editor once there is a Project to ask about.
+          */}
+          <TestServerPicker
+            testId="create-project-test-server"
+            value={testServerId}
+            onChange={setTestServerId}
+          />
 
           {problem === undefined ? null : (
             <p className="text-destructive text-sm" data-testid="create-project-problem">
