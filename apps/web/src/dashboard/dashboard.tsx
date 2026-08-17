@@ -2,9 +2,11 @@ import { Button } from "@bot-inventor/ui/components/button"
 import { useState } from "react"
 
 import { CreateProjectDialog } from "@/dashboard/create-project-dialog"
+import { DeleteProjectDialog } from "@/dashboard/delete-project-dialog"
 import { ProjectCard } from "@/dashboard/project-card"
+import { RenameProjectDialog } from "@/dashboard/rename-project-dialog"
 import { translate } from "@/i18n/messages"
-import type { ProjectStore } from "@/project/project-store"
+import type { ProjectStore, ProjectSummary } from "@/project/project-store"
 import { useProjects } from "@/project/use-projects"
 
 /**
@@ -24,8 +26,32 @@ export function Dashboard({
   /** Where a card takes the user. The route knows; the Dashboard does not. */
   onOpen: (projectId: string) => void
 }) {
-  const { projects, problem, creationProblem, create, createExample } = useProjects(store)
+  const {
+    projects,
+    problem,
+    creationProblem,
+    manageProblem,
+    create,
+    createExample,
+    rename,
+    duplicate,
+    remove
+  } = useProjects(store)
   const [creating, setCreating] = useState(false)
+  /**
+   * The Project a dialog is about, held as an id rather than as a summary: the
+   * list is read again after every one of these, and a dialog left holding the
+   * old copy of a Project would show the name it had before it was renamed.
+   */
+  const [renaming, setRenaming] = useState<string | undefined>(undefined)
+  const [deleting, setDeleting] = useState<string | undefined>(undefined)
+
+  const find = (projectId: string | undefined): ProjectSummary | undefined =>
+    projectId === undefined ? undefined : projects?.find(project => project.id === projectId)
+
+  /** The reason for this Project, when it is this Project the reason is about. */
+  const problemOf = (projectId: string) =>
+    manageProblem?.projectId === projectId ? manageProblem.message : undefined
 
   const openExample = async () => {
     const created = await createExample()
@@ -66,7 +92,21 @@ export function Dashboard({
           >
             {projects.map(project => (
               <li key={project.id}>
-                <ProjectCard project={project} onOpen={() => onOpen(project.id)} />
+                <ProjectCard
+                  project={project}
+                  // A rename and a delete are answered in their own dialogs,
+                  // so the only failure the card itself has to say out loud is
+                  // the one with nowhere else to go.
+                  problem={
+                    renaming === project.id || deleting === project.id
+                      ? undefined
+                      : problemOf(project.id)
+                  }
+                  onOpen={() => onOpen(project.id)}
+                  onRename={() => setRenaming(project.id)}
+                  onDuplicate={() => void duplicate(project.id)}
+                  onDelete={() => setDeleting(project.id)}
+                />
               </li>
             ))}
           </ul>
@@ -83,6 +123,30 @@ export function Dashboard({
             if (created === undefined) return
             setCreating(false)
             onOpen(created)
+          })()
+        }}
+      />
+
+      <RenameProjectDialog
+        project={find(renaming)}
+        problem={renaming === undefined ? undefined : problemOf(renaming)}
+        onOpenChange={open => open || setRenaming(undefined)}
+        onRename={name => {
+          void (async () => {
+            if (renaming === undefined) return
+            if (await rename(renaming, name)) setRenaming(undefined)
+          })()
+        }}
+      />
+
+      <DeleteProjectDialog
+        project={find(deleting)}
+        problem={deleting === undefined ? undefined : problemOf(deleting)}
+        onOpenChange={open => open || setDeleting(undefined)}
+        onDelete={() => {
+          void (async () => {
+            if (deleting === undefined) return
+            if (await remove(deleting)) setDeleting(undefined)
           })()
         }}
       />

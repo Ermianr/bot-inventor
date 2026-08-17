@@ -166,6 +166,162 @@ describe("creating a Project", () => {
   })
 })
 
+describe("renaming a Project", () => {
+  it("changes the name the Dashboard shows and the name the document carries", async () => {
+    const { store, result } = await dashboard(fakeProjectStore([helloProject()]))
+
+    await act(async () => {
+      await result.current.rename(helloProject().id, "Welcome bot")
+    })
+
+    expect(result.current.projects?.[0]?.name).toBe("Welcome bot")
+    expect(store.contents.get(helloProject().id)?.document).toContain("Welcome bot")
+  })
+
+  /** A card the user cannot tell from the one beside it is not a card. */
+  it("refuses a blank name and leaves the Project as it was", async () => {
+    const { store, result } = await dashboard(fakeProjectStore([helloProject()]))
+
+    let renamed = true
+    await act(async () => {
+      renamed = await result.current.rename(helloProject().id, "   ")
+    })
+
+    expect(renamed).toBe(false)
+    expect(result.current.manageProblem?.projectId).toBe(helloProject().id)
+    expect(store.contents.get(helloProject().id)?.document).toContain(helloProject().name)
+  })
+
+  it("says so when the store would not take the new name", async () => {
+    const { store, result } = await dashboard(fakeProjectStore([helloProject()]))
+    store.breaks.write = "the disk is full"
+
+    await act(async () => {
+      await result.current.rename(helloProject().id, "Welcome bot")
+    })
+
+    expect(result.current.manageProblem?.message).toContain("the disk is full")
+    expect(result.current.projects?.[0]?.name).toBe(helloProject().name)
+  })
+
+  /**
+   * A Project this build cannot read cannot be renamed either, and the user is
+   * owed the reason rather than a rename that quietly did nothing.
+   */
+  it("explains a Project it could not read, rather than renaming nothing", async () => {
+    const store = fakeProjectStore()
+    store.contents.set("project-damaged", { document: "half a fi", testServerId: "", secret: "" })
+    const { result } = await dashboard(store)
+
+    let renamed = true
+    await act(async () => {
+      renamed = await result.current.rename("project-damaged", "Welcome bot")
+    })
+
+    expect(renamed).toBe(false)
+    expect(result.current.manageProblem?.message).toContain(translate("project.problem.malformed"))
+  })
+})
+
+describe("duplicating a Project", () => {
+  it("makes a Project of its own, which the original does not follow", async () => {
+    const { store, result } = await dashboard(fakeProjectStore([helloProject()]))
+
+    let copy: string | undefined
+    await act(async () => {
+      copy = await result.current.duplicate(helloProject().id)
+    })
+
+    expect(copy).toBeDefined()
+    expect(copy).not.toBe(helloProject().id)
+    expect(result.current.projects).toHaveLength(2)
+
+    // What the copy is edited into never reaches the Project it came from.
+    await act(async () => {
+      await result.current.rename(copy ?? "", "Something else")
+    })
+    expect(store.contents.get(helloProject().id)?.document).toContain(helloProject().name)
+  })
+
+  /** Two Projects with one token is two bots signing in as one account. */
+  it("arrives with no token of its own", async () => {
+    const store = fakeProjectStore([helloProject()])
+    await store.storeSecret(helloProject().id, "a-token")
+    const { result } = await dashboard(store)
+
+    let copy: string | undefined
+    await act(async () => {
+      copy = await result.current.duplicate(helloProject().id)
+    })
+
+    await expect(store.hasSecret(copy ?? "")).resolves.toBe(false)
+    // And the original keeps the one it had.
+    await expect(store.hasSecret(helloProject().id)).resolves.toBe(true)
+  })
+
+  it("keeps the Test Server, which belongs to this machine rather than the bot", async () => {
+    const store = fakeProjectStore([helloProject()])
+    await store.writeTestServer(helloProject().id, "123")
+    const { result } = await dashboard(store)
+
+    let copy: string | undefined
+    await act(async () => {
+      copy = await result.current.duplicate(helloProject().id)
+    })
+
+    await expect(store.readTestServer(copy ?? "")).resolves.toBe("123")
+  })
+
+  it("says so on the Project it was asked of when the store would not take the copy", async () => {
+    const store = fakeProjectStore([helloProject()])
+    store.breaks.create = "the disk is full"
+    const { result } = await dashboard(store)
+
+    let copy: string | undefined
+    await act(async () => {
+      copy = await result.current.duplicate(helloProject().id)
+    })
+
+    expect(copy).toBeUndefined()
+    expect(result.current.manageProblem?.projectId).toBe(helloProject().id)
+    expect(result.current.manageProblem?.message).toContain("the disk is full")
+    expect(result.current.projects).toHaveLength(1)
+  })
+})
+
+describe("deleting a Project", () => {
+  it("takes the Project and its token out of storage, and off the Dashboard", async () => {
+    const store = fakeProjectStore([helloProject(), greetingProject()])
+    await store.storeSecret(helloProject().id, "a-token")
+    const { result } = await dashboard(store)
+
+    let deleted = false
+    await act(async () => {
+      deleted = await result.current.remove(helloProject().id)
+    })
+
+    expect(deleted).toBe(true)
+    expect(store.contents.has(helloProject().id)).toBe(false)
+    expect(result.current.projects?.map(project => project.id)).toEqual([greetingProject().id])
+  })
+
+  it("says so and leaves the Project where it was when the store refused", async () => {
+    const store = fakeProjectStore([helloProject()])
+    store.breaks.remove = "the folder is in use"
+    const { result } = await dashboard(store)
+
+    let deleted = true
+    await act(async () => {
+      deleted = await result.current.remove(helloProject().id)
+    })
+
+    expect(deleted).toBe(false)
+    expect(result.current.manageProblem?.projectId).toBe(helloProject().id)
+    expect(result.current.manageProblem?.message).toContain("the folder is in use")
+    expect(result.current.projects).toHaveLength(1)
+  })
+})
+
 describe("the example", () => {
   it("makes a Project of the user's own, with something already on the Canvas", async () => {
     const { store, result } = await dashboard()

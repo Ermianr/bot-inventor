@@ -62,6 +62,18 @@ pub fn store_secret(project_id: String, secret: String) -> Result<(), String> {
         .map_err(|error| format!("the token could not be stored: {error}"))
 }
 
+/// Forgets a Project's bot token, because the Project it belonged to is going.
+///
+/// A Project with no entry is not a failure: what the caller asked for is that
+/// no token for this Project survive, and none does.
+#[tauri::command]
+pub fn delete_secret(project_id: String) -> Result<(), String> {
+    match entry(&project_id)?.delete_credential() {
+        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        Err(error) => Err(format!("the token could not be deleted: {error}")),
+    }
+}
+
 /// Whether a Project has a token, without handing it out.
 #[tauri::command]
 pub fn secret_exists(project_id: String) -> Result<bool, String> {

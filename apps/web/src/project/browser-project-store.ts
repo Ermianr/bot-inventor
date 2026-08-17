@@ -108,5 +108,13 @@ export const browserProjectStore: ProjectStore = {
 
   storeSecret: async (projectId, secret) => {
     save(projectId, { ...entryOf(projectId), hasSecret: secret.length > 0 })
+  },
+
+  // One key holds the document, the settings and the fact of a token, so there
+  // is nothing here that can half-happen. The backup goes too: it is a copy of
+  // a Project the user has just said they do not want.
+  remove: async projectId => {
+    localStorage.removeItem(`${PREFIX}${projectId}`)
+    localStorage.removeItem(`${BACKUP_PREFIX}${projectId}`)
   }
 }

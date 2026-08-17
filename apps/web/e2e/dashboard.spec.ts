@@ -65,6 +65,70 @@ test.describe("the Dashboard", () => {
   })
 })
 
+/**
+ * The three things a user does to a Project without opening it. Deleting is the
+ * one that has to be true all the way down — a Project that is gone is gone
+ * from storage, not merely from the screen — so it is the one driven end to end.
+ */
+test.describe("managing a Project from its card", () => {
+  let dashboard: DashboardPage
+
+  test.beforeEach(async ({ page }) => {
+    dashboard = new DashboardPage(page)
+    await dashboard.open()
+    await dashboard.createProject("Moderation bot")
+    await new MenuBarPage(page).goToDashboard()
+  })
+
+  test("deletes a Project, and leaves the Dashboard empty again", async () => {
+    const projectId = await dashboard.onlyProjectId()
+
+    await dashboard.manage(projectId).click()
+    await dashboard.delete(projectId).click()
+    await expect(dashboard.deleteDialog()).toBeVisible()
+
+    await dashboard.confirmDelete().click()
+
+    await expect(dashboard.cards()).toHaveCount(0)
+    await expect(dashboard.empty()).toBeVisible()
+  })
+
+  /** Gone from storage, not merely from the screen. */
+  test("does not bring a deleted Project back on a reload", async ({ page }) => {
+    const projectId = await dashboard.onlyProjectId()
+
+    await dashboard.manage(projectId).click()
+    await dashboard.delete(projectId).click()
+    await dashboard.confirmDelete().click()
+    await expect(dashboard.cards()).toHaveCount(0)
+
+    await page.reload()
+
+    await expect(dashboard.empty()).toBeVisible()
+  })
+
+  test("renames a Project where the user reads its name", async () => {
+    const projectId = await dashboard.onlyProjectId()
+
+    await dashboard.manage(projectId).click()
+    await dashboard.rename(projectId).click()
+    await dashboard.renameField().fill("Welcome bot")
+    await dashboard.confirmRename().click()
+
+    await expect(dashboard.cardNames()).toHaveText(["Welcome bot"])
+  })
+
+  test("copies a Project, leaving the original beside it", async () => {
+    const projectId = await dashboard.onlyProjectId()
+
+    await dashboard.manage(projectId).click()
+    await dashboard.duplicate(projectId).click()
+
+    await expect(dashboard.cards()).toHaveCount(2)
+    await expect(dashboard.cardNames().filter({ hasText: "Moderation bot" })).toHaveCount(2)
+  })
+})
+
 test.describe("a Project that saves itself", () => {
   test("keeps a change on the Canvas through a reload, with no save", async ({ page }) => {
     const canvas = new CanvasPage(page)

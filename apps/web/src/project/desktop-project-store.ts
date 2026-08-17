@@ -24,7 +24,13 @@ export const desktopProjectStore: ProjectStore = {
    * looks for and nothing is broken by.
    */
   create: async (project, locals) => {
-    await invoke("store_secret", { projectId: project.id, secret: locals.secret })
+    // A Project made without one — the example, or a copy of another Project —
+    // gets no keychain entry at all. Storing an empty string would make one,
+    // and an entry that exists is what `secret_exists` calls having a token: it
+    // would leave the Run button live for a Project that cannot sign in.
+    if (locals.secret.length > 0) {
+      await invoke("store_secret", { projectId: project.id, secret: locals.secret })
+    }
     await invoke("create_project", {
       projectId: project.id,
       contents: serializeProject(project)
@@ -58,5 +64,19 @@ export const desktopProjectStore: ProjectStore = {
 
   storeSecret: async (projectId, secret) => {
     await invoke("store_secret", { projectId, secret })
+  },
+
+  /**
+   * The Secret goes first, and the folder only once it is gone — the mirror of
+   * the order creation takes, and for the same reason.
+   *
+   * A folder deleted first and a keychain that then refused would leave a bot
+   * token for a Project nothing points at any more, which is the one thing
+   * deleting must never leave. This way round, a refusal leaves a Project the
+   * user can see and delete again, with nothing but its token already gone.
+   */
+  remove: async projectId => {
+    await invoke("delete_secret", { projectId })
+    await invoke("delete_project", { projectId })
   }
 }

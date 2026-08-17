@@ -59,7 +59,7 @@ export function useStoredProject(store: ProjectStore, projectId: string): Loaded
       if (!current) return
 
       if (result.status !== "opened") {
-        setLoaded({ status: "problem", message: explain(result) })
+        setLoaded({ status: "problem", message: explainOpenProblem(result) })
         return
       }
 
@@ -148,8 +148,16 @@ export function useAutosave(
   return { saved: document === savedDocument, problem }
 }
 
-/** What the user is told about a Project this build would not open. */
-function explain(result: Exclude<OpenProjectResult, { status: "opened" }>): string {
+/**
+ * What the user is told about a Project this build would not open.
+ *
+ * It is exported because opening is not the only thing that has to read a
+ * Project out of storage: renaming and duplicating do too, and a Project this
+ * build cannot read is refused there in the same words it is refused here.
+ */
+export function explainOpenProblem(
+  result: Exclude<OpenProjectResult, { status: "opened" }>
+): string {
   switch (result.status) {
     case "future-version":
       return translate("project.problem.futureVersion")
