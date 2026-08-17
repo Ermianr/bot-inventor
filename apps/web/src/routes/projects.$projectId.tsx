@@ -5,7 +5,6 @@ import { useState } from "react"
 import { Canvas } from "@/canvas/canvas"
 import { FlowList } from "@/canvas/flow-list"
 import { MenuBar } from "@/components/menu-bar"
-import { RunPanel } from "@/components/run-panel"
 import { desktopExports } from "@/project/desktop-exports"
 import { ProjectOptionsDialog } from "@/project/project-options-dialog"
 import { projectStore } from "@/project/store"
@@ -13,7 +12,9 @@ import { useExport } from "@/project/use-export"
 import { useProject } from "@/project/use-project"
 import { useAutosave, useStoredProject } from "@/project/use-stored-project"
 import { useTestServer } from "@/project/use-test-server"
+import { Console } from "@/session/console"
 import { sessionGateway } from "@/session/desktop-session"
+import { RunControls } from "@/session/run-controls"
 import { useSession } from "@/session/use-session"
 
 /** Which shell this build runs a bot through. It does not change while it runs. */
@@ -55,7 +56,7 @@ function ProjectRoute() {
 
 /**
  * The editor: the Menu Bar on top, the Flows on the left, the one being edited
- * in the middle, and running it on the right.
+ * beside them, and the Console along the bottom.
  *
  * Nothing here is saved by anybody. What is on the Canvas is what is in
  * storage, a moment behind, and the user is never asked about it.
@@ -73,7 +74,10 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
   const exporting = useExport(editor.project, desktopExports)
 
   return (
-    <div className="grid h-full grid-rows-[auto_1fr] overflow-hidden">
+    // The Console is a row of its own rather than something floating over the
+    // Canvas: what it takes is only what it is showing, and collapsing it hands
+    // every pixel of it back.
+    <div className="grid h-full grid-rows-[auto_1fr_auto] overflow-hidden">
       <MenuBar
         name={editor.project.name}
         onDashboard={() => void navigate({ to: "/" })}
@@ -91,7 +95,7 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
         testServer={testServer}
       />
 
-      <div className="grid grid-cols-[14rem_1fr_24rem] overflow-hidden">
+      <div className="grid grid-cols-[14rem_1fr] overflow-hidden">
         <aside className="overflow-y-auto border-r">
           <FlowList editor={editor} />
         </aside>
@@ -99,16 +103,13 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
         <main className="h-full">
           <Canvas editor={editor} trace={session.trace} />
         </main>
-
-        <aside className="overflow-y-auto border-l p-4">
-          <RunPanel
-            project={editor.project}
-            session={session}
-            store={projectStore}
-            testServer={testServer}
-          />
-        </aside>
       </div>
+
+      <Console
+        entries={session.entries}
+        problem={session.problem}
+        controls={<RunControls session={session} testServerId={testServer.testServerId} />}
+      />
     </div>
   )
 }
