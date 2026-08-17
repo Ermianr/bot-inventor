@@ -18,10 +18,17 @@ export class DashboardPage {
     await this.create().waitFor()
   }
 
-  /** Opens the demonstration Project, and waits for its Canvas to be drawn. */
+  /**
+   * Opens the demonstration Project, and waits for its Canvas to be drawn.
+   *
+   * The example is a Project like any other, so it is asked for like any other:
+   * the same dialog, and the same token without which nothing is made.
+   */
   async openExample() {
     await this.open()
     await this.example().click()
+    await this.token().fill("a-token")
+    await this.confirm().click()
     await this.page.getByTestId("node-node-trigger").waitFor()
   }
 

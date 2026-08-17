@@ -323,12 +323,15 @@ describe("deleting a Project", () => {
 })
 
 describe("the example", () => {
+  /** What the creation dialog would have handed over for the example. */
+  const asked = { name: "Example bot", secret: "a-token", testServerId: "" }
+
   it("makes a Project of the user's own, with something already on the Canvas", async () => {
     const { store, result } = await dashboard()
 
     let created: string | undefined
     await act(async () => {
-      created = await result.current.createExample()
+      created = await result.current.createExample(asked)
     })
 
     const stored = store.contents.get(created ?? "")
@@ -345,7 +348,7 @@ describe("the example", () => {
     const made: (string | undefined)[] = []
     for (let attempt = 0; attempt < 2; attempt += 1) {
       await act(async () => {
-        made.push(await result.current.createExample())
+        made.push(await result.current.createExample(asked))
       })
     }
 
@@ -353,16 +356,29 @@ describe("the example", () => {
     expect(result.current.projects).toHaveLength(2)
   })
 
-  // The example is there to be looked at, and nobody is asked for a Secret to
-  // look at something.
-  it("arrives without a token", async () => {
+  // A Project of the user's own in every respect, including the one that
+  // decides whether it can run.
+  it("keeps the token the user gave it", async () => {
     const { store, result } = await dashboard(fakeProjectStore([emptyProject()]))
 
     let created: string | undefined
     await act(async () => {
-      created = await result.current.createExample()
+      created = await result.current.createExample(asked)
     })
 
-    await expect(store.hasSecret(created ?? "")).resolves.toBe(false)
+    await expect(store.hasSecret(created ?? "")).resolves.toBe(true)
+  })
+
+  it("is refused without a token, like any other Project", async () => {
+    const { result } = await dashboard()
+
+    let created: string | undefined = "made"
+    await act(async () => {
+      created = await result.current.createExample({ ...asked, secret: "  " })
+    })
+
+    expect(created).toBeUndefined()
+    expect(result.current.creationProblem).toBe(translate("dashboard.create.tokenRequired"))
+    expect(result.current.projects).toEqual([])
   })
 })

@@ -30,20 +30,35 @@ import type { ProjectDetails } from "@/project/use-projects"
  * What a bot token is and where it comes from is written under the field. It is
  * the one thing here that somebody who has never made a Discord bot cannot
  * guess, and a dialog that assumes they can is where they stop.
+ *
+ * The example is asked for here too, rather than appearing behind the user's
+ * back. What it makes is a Project like any other, so it is asked for like any
+ * other; only the words at the top and the name already in the field say which
+ * of the two the user pressed.
  */
 export function CreateProjectDialog({
   open,
+  kind = "blank",
   onOpenChange,
   onCreate,
   problem
 }: {
   open: boolean
+  /**
+   * Which Canvas the Project starts on, and which words to say about it.
+   *
+   * The name it puts in the field is what that field starts as, so a caller
+   * offering both must key this component by the kind. Changing it on a live
+   * instance changes the words at the top and leaves the other one's name
+   * underneath them.
+   */
+  kind?: "blank" | "example"
   onOpenChange: (open: boolean) => void
   onCreate: (details: ProjectDetails) => void
   /** Why the last attempt did not make a Project, when it did not. */
   problem: string | undefined
 }) {
-  const [name, setName] = useState("")
+  const [name, setName] = useState(kind === "example" ? translate("dashboard.example.name") : "")
   const [secret, setSecret] = useState("")
   const [testServerId, setTestServerId] = useState("")
 
@@ -61,8 +76,16 @@ export function CreateProjectDialog({
           }}
         >
           <DialogHeader>
-            <DialogTitle>{translate("dashboard.create.title")}</DialogTitle>
-            <DialogDescription>{translate("dashboard.create.description")}</DialogDescription>
+            <DialogTitle>
+              {translate(kind === "example" ? "dashboard.example.title" : "dashboard.create.title")}
+            </DialogTitle>
+            <DialogDescription>
+              {translate(
+                kind === "example"
+                  ? "dashboard.example.description"
+                  : "dashboard.create.description"
+              )}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-1.5">
@@ -100,7 +123,12 @@ export function CreateProjectDialog({
           )}
 
           <DialogFooter>
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+            <Button
+              variant="outline"
+              type="button"
+              data-testid="create-project-cancel"
+              onClick={() => onOpenChange(false)}
+            >
               {translate("dashboard.create.cancel")}
             </Button>
             <Button type="submit" data-testid="create-project-confirm" disabled={!ready}>

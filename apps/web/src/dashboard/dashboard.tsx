@@ -30,6 +30,7 @@ export function Dashboard({
     projects,
     problem,
     creationProblem,
+    forgetCreationProblem,
     manageProblem,
     create,
     createExample,
@@ -37,7 +38,26 @@ export function Dashboard({
     duplicate,
     remove
   } = useProjects(store)
-  const [creating, setCreating] = useState(false)
+  /**
+   * Which Project the creation dialog is about to make. One dialog serves both:
+   * the example is a Project like any other, so it is asked for with the same
+   * three questions.
+   *
+   * The kind outlives the closing, which is what `open` is for. A dialog that
+   * stopped existing the moment it was dismissed would never be seen leaving,
+   * and would drop the keyboard on the floor rather than handing it back to the
+   * button it was opened from.
+   */
+  const [creating, setCreating] = useState<{ kind: "blank" | "example"; open: boolean }>({
+    kind: "blank",
+    open: false
+  })
+
+  /** Opens the creation dialog on one of the two, with nothing said yet. */
+  const askFor = (kind: "blank" | "example") => {
+    forgetCreationProblem()
+    setCreating({ kind, open: true })
+  }
   /**
    * The Project a dialog is about, held as an id rather than as a summary: the
    * list is read again after every one of these, and a dialog left holding the
@@ -53,11 +73,6 @@ export function Dashboard({
   const problemOf = (projectId: string) =>
     manageProblem?.projectId === projectId ? manageProblem.message : undefined
 
-  const openExample = async () => {
-    const created = await createExample()
-    if (created !== undefined) onOpen(created)
-  }
-
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto grid max-w-5xl gap-8 px-8 py-12">
@@ -67,7 +82,7 @@ export function Dashboard({
             <p className="text-muted-foreground text-sm">{translate("dashboard.subtitle")}</p>
           </div>
 
-          <Button data-testid="dashboard-create" onClick={() => setCreating(true)}>
+          <Button data-testid="dashboard-create" onClick={() => askFor("blank")}>
             {translate("dashboard.create")}
           </Button>
         </header>
@@ -84,7 +99,7 @@ export function Dashboard({
           they have none, which is the one thing this screen must never say.
         */}
         {projects === undefined ? null : projects.length === 0 ? (
-          <Empty onCreate={() => setCreating(true)} onExample={() => void openExample()} />
+          <Empty onCreate={() => askFor("blank")} onExample={() => askFor("example")} />
         ) : (
           <ul
             className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4"
@@ -113,15 +128,28 @@ export function Dashboard({
         )}
       </div>
 
+      {/*
+        Keyed by which of the two was asked for, so that the fields start again
+        from what that one begins with rather than from what the last one was
+        left holding. The key is what the dialog's prefill depends on to follow
+        the kind at all, and it never changes while the dialog is open.
+      */}
       <CreateProjectDialog
-        open={creating}
-        onOpenChange={setCreating}
+        key={creating.kind}
+        open={creating.open}
+        kind={creating.kind}
+        onOpenChange={open => {
+          if (open) return
+          forgetCreationProblem()
+          setCreating(was => ({ ...was, open: false }))
+        }}
         problem={creationProblem}
         onCreate={details => {
           void (async () => {
-            const created = await create(details)
+            const created =
+              creating.kind === "example" ? await createExample(details) : await create(details)
             if (created === undefined) return
-            setCreating(false)
+            setCreating(was => ({ ...was, open: false }))
             onOpen(created)
           })()
         }}

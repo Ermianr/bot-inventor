@@ -48,6 +48,15 @@ export type Projects = {
   /** Why the last attempt did not make a Project, when it did not. */
   creationProblem: string | undefined
   /**
+   * Forgets that refusal, for when the dialog holding it is put away.
+   *
+   * A reason outlives the attempt it was about unless somebody says otherwise,
+   * and the next thing the user opens is a dialog with empty fields: a red line
+   * under them about a Project they are no longer making is the application
+   * refusing something nobody has asked for yet.
+   */
+  forgetCreationProblem(): void
+  /**
    * Why the last thing asked of one Project did not happen, and which Project
    * it was asked of.
    *
@@ -59,7 +68,7 @@ export type Projects = {
   /** The id of the Project that was made, or nothing when it was not. */
   create(details: ProjectDetails): Promise<string | undefined>
   /** Makes the demonstration Project, for a Dashboard with nothing on it. */
-  createExample(): Promise<string | undefined>
+  createExample(details: ProjectDetails): Promise<string | undefined>
   /** Changes what a Project is called, in the list and in the document. */
   rename(projectId: string, name: string): Promise<boolean>
   /** Copies a Project, untokened, and says which one the copy is. */
@@ -163,41 +172,50 @@ export function useProjects(store: ProjectStore): Projects {
     [store, refuse]
   )
 
+  /**
+   * Makes a Project out of what the user was asked for, whatever was on the
+   * Canvas to begin with.
+   *
+   * A Project without a token is one whose Run button is dead the moment it
+   * opens, so it is refused here as well as in the dialog: the rule belongs
+   * with the Project, not with the field the user typed into. The example goes
+   * through the same door for the same reason — it is a Project of the user's
+   * own, so it is a Project of the user's own in every respect, including the
+   * one that decides whether it can run.
+   */
+  const make = useCallback(
+    (canvas: Project, details: ProjectDetails) => {
+      if (details.secret.trim().length === 0) {
+        setCreationProblem(translate("dashboard.create.tokenRequired"))
+        return Promise.resolve(undefined)
+      }
+      return put(
+        { ...canvas, name: details.name.trim() || translate("project.untitled") },
+        details.secret.trim(),
+        details.testServerId.trim()
+      )
+    },
+    [put]
+  )
+
   return {
     projects,
     problem,
     creationProblem,
     manageProblem,
+    forgetCreationProblem: useCallback(() => setCreationProblem(undefined), []),
 
-    /**
-     * A Project without a token is one whose Run button is dead the moment it
-     * opens, so it is refused here as well as in the dialog: the rule belongs
-     * with the Project, not with the field the user typed into.
-     */
-    create: useCallback(
-      async details => {
-        if (details.secret.trim().length === 0) {
-          setCreationProblem(translate("dashboard.create.tokenRequired"))
-          return undefined
-        }
-        return put(
-          { ...newProject(), name: details.name.trim() || translate("project.untitled") },
-          details.secret.trim(),
-          details.testServerId.trim()
-        )
-      },
-      [put]
-    ),
+    create: useCallback(details => make(newProject(), details), [make]),
 
     /**
      * The example is a Project of the user's own, not a read-only tour: it is
      * theirs to take apart, which is the only way somebody who has never built
-     * a bot finds out what the Nodes do. It arrives without a token, because
-     * nobody is being asked for one to look at something.
+     * a bot finds out what the Nodes do. A fresh id every time, so that asking
+     * for it twice gives two Projects rather than one overwritten.
      */
     createExample: useCallback(
-      () => put({ ...demonstrationProject(), id: newProject().id }, "", ""),
-      [put]
+      details => make({ ...demonstrationProject(), id: newProject().id }, details),
+      [make]
     ),
 
     /**

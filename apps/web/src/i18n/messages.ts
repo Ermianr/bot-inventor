@@ -56,6 +56,10 @@ const en = {
   "dashboard.subtitle": "Everything you have built. Pick one to carry on with it.",
   "dashboard.create": "New bot",
   "dashboard.example": "Open an example",
+  "dashboard.example.title": "Open the example",
+  "dashboard.example.description":
+    "It arrives as a bot of your own, already built, for you to take apart. It needs a token to run, like any other.",
+  "dashboard.example.name": "Example bot",
   "dashboard.empty.title": "You have not built a bot yet.",
   "dashboard.empty.body":
     "Make one from scratch, or open the example and take it apart to see how it works.",
@@ -264,6 +268,10 @@ const es: Record<MessageKey, string> = {
   "dashboard.subtitle": "Todo lo que has construido. Elige uno para seguir con él.",
   "dashboard.create": "Nuevo bot",
   "dashboard.example": "Abrir un ejemplo",
+  "dashboard.example.title": "Abrir el ejemplo",
+  "dashboard.example.description":
+    "Llega como un bot tuyo, ya construido, para que lo desarmes. Necesita un token para ejecutarse, como cualquier otro.",
+  "dashboard.example.name": "Bot de ejemplo",
   "dashboard.empty.title": "Todavía no has construido ningún bot.",
   "dashboard.empty.body":
     "Haz uno desde cero, o abre el ejemplo y desármalo para ver cómo funciona.",

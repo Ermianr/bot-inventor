@@ -36,6 +36,11 @@ async function fillIn({ name, token }: { name: string; token: string }) {
   })
 }
 
+/** What is written in the creation dialog's name field. */
+async function nameField() {
+  return ((await screen.findByTestId("create-project-name")) as HTMLInputElement).value
+}
+
 describe("the Dashboard", () => {
   it("shows a card for each Project the store holds", async () => {
     show(fakeProjectStore([helloProject(), greetingProject()]))
@@ -246,13 +251,62 @@ describe("creating a Project from the Dashboard", () => {
   it("makes the example a Project of the user's own and opens it", async () => {
     const { store, opened } = show()
 
-    const example = await screen.findByTestId("dashboard-example")
-    await act(async () => {
-      fireEvent.click(example)
-    })
+    fireEvent.click(await screen.findByTestId("dashboard-example"))
+    await fillIn({ name: "Example bot", token: "a-token" })
 
     const [created] = opened
     expect(created).toBeDefined()
     expect(store.contents.get(created ?? "")?.document).toContain("flow-hello")
+    expect(store.contents.get(created ?? "")?.secret).toBe("a-token")
+  })
+
+  /**
+   * The example is asked for with the same three questions as anything else,
+   * and the button that would make it stays dead until the token is one of the
+   * answers.
+   */
+  it("asks for a token before it will make the example", async () => {
+    const { opened } = show()
+
+    fireEvent.click(await screen.findByTestId("dashboard-example"))
+
+    const confirm = await screen.findByTestId("create-project-confirm")
+    expect(confirm.hasAttribute("disabled")).toBe(true)
+    await act(async () => {
+      fireEvent.click(confirm)
+    })
+    expect(opened).toEqual([])
+  })
+
+  /**
+   * A reason belongs to the attempt it was about. Opening the dialog again is
+   * not that attempt, and the user has not yet asked for anything to refuse.
+   */
+  it("does not carry a refusal into the next dialog the user opens", async () => {
+    const { store } = show()
+    store.breaks.create = "the disk is full"
+
+    fireEvent.click(await screen.findByTestId("dashboard-create"))
+    await fillIn({ name: "Moderation bot", token: "a-token" })
+    expect(await screen.findByTestId("create-project-problem")).toBeDefined()
+
+    fireEvent.click(screen.getByTestId("create-project-cancel"))
+    fireEvent.click(screen.getByTestId("dashboard-example"))
+
+    await screen.findByTestId("create-project-name")
+    expect(screen.queryByTestId("create-project-problem")).toBeNull()
+  })
+
+  /** Two buttons, one dialog: the fields must not carry over between them. */
+  it("does not leave the example's name in the dialog the other button opens", async () => {
+    show()
+
+    fireEvent.click(await screen.findByTestId("dashboard-example"))
+    expect(await nameField()).toBe(translate("dashboard.example.name"))
+
+    fireEvent.click(screen.getByTestId("create-project-cancel"))
+    fireEvent.click(screen.getByTestId("dashboard-create"))
+
+    expect(await nameField()).toBe("")
   })
 })
