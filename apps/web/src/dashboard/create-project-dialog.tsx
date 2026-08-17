@@ -116,13 +116,13 @@ export function CreateProjectDialog({
           <SecretField testId="create-project-token" value={secret} onChange={setSecret} />
 
           {/*
-            The same field Project Options offers, given no Project: asking
-            Discord for the servers a bot is in takes the token, and the token
-            is still being typed. What is left is the id pasted by hand, and the
-            list arrives in the editor once there is a Project to ask about.
+            The same field Project Options offers, given no Project: there is no
+            stored token to ask Discord with yet, so it asks with the one being
+            typed above, once the user presses the button to say it is there.
           */}
           <TestServerPicker
             testId="create-project-test-server"
+            token={secret}
             value={testServerId}
             onChange={setTestServerId}
           />
