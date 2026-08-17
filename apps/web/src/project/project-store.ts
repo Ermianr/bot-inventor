@@ -69,6 +69,20 @@ export type ProjectStore = {
   /** Whether the Project has a token, which is all anybody is told about one. */
   hasSecret(projectId: string): Promise<boolean>
   storeSecret(projectId: string, secret: string): Promise<void>
+  /**
+   * Takes a Project out of storage: the document, the settings beside it and
+   * the Secret keyed by it.
+   *
+   * All three, and in that order of importance: a token for a bot the user no
+   * longer has must not outlive it. So an implementation forgets the Secret
+   * first, and only then the folder — the other way round, a folder that
+   * refused to go would leave a credential behind for a Project nothing on the
+   * Dashboard points at any more.
+   *
+   * Removing a Project that is not there is not an error. What the caller asked
+   * for is that it be gone, and it is.
+   */
+  remove(projectId: string): Promise<void>
 }
 
 /** A Project as the Dashboard shows it, without reading the Flows inside it. */

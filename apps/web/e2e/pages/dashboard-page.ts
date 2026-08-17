@@ -74,6 +74,51 @@ export class DashboardPage {
     return this.page.getByTestId("create-project-confirm")
   }
 
+  /** The menu in the corner of a card: rename, copy, delete. */
+  manage(projectId: string): Locator {
+    return this.page.getByTestId(`card-manage-${projectId}`)
+  }
+
+  rename(projectId: string): Locator {
+    return this.page.getByTestId(`card-rename-${projectId}`)
+  }
+
+  duplicate(projectId: string): Locator {
+    return this.page.getByTestId(`card-duplicate-${projectId}`)
+  }
+
+  delete(projectId: string): Locator {
+    return this.page.getByTestId(`card-delete-${projectId}`)
+  }
+
+  /** The field a Project is renamed in, and the button that does it. */
+  renameField(): Locator {
+    return this.page.getByTestId("rename-project-name")
+  }
+
+  confirmRename(): Locator {
+    return this.page.getByTestId("rename-project-confirm")
+  }
+
+  /** The dialog that asks before a Project and its token go. */
+  deleteDialog(): Locator {
+    return this.page.getByTestId("delete-project-dialog")
+  }
+
+  confirmDelete(): Locator {
+    return this.page.getByTestId("delete-project-confirm")
+  }
+
+  /**
+   * The id of the only card on the Dashboard. The cards carry it in their test
+   * id, which is the one place a spec can learn it: the Project id is made by
+   * the application and never shown to the user.
+   */
+  async onlyProjectId(): Promise<string> {
+    const testId = await this.cards().first().getAttribute("data-testid")
+    return (testId ?? "").replace("project-card-", "")
+  }
+
   /**
    * Makes a bot the way a user does, and waits to be in the editor. The token
    * is nonsense on purpose: nothing in these specs talks to Discord, and what

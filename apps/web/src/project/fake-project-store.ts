@@ -120,6 +120,14 @@ export function fakeProjectStore(initial: readonly Project[] = []): FakeProjectS
     storeSecret: async (projectId, secret) => {
       check("storeSecret")
       contents.set(projectId, { ...entry(projectId), secret })
+    },
+
+    // The Secret goes with the entry that holds it, which is what a test asking
+    // whether a deleted Project's token survived is really asking about.
+    remove: async projectId => {
+      check("remove")
+      contents.delete(projectId)
+      changedAt.delete(projectId)
     }
   }
 

@@ -85,6 +85,118 @@ describe("the Dashboard", () => {
   })
 })
 
+describe("managing a Project from its card", () => {
+  /** Opens the menu in the corner of a card and picks one of the three things. */
+  async function pick(projectId: string, what: "rename" | "duplicate" | "delete") {
+    const menu = await screen.findByTestId(`card-manage-${projectId}`)
+    await act(async () => {
+      fireEvent.click(menu)
+    })
+
+    const item = await screen.findByTestId(`card-${what}-${projectId}`)
+    await act(async () => {
+      fireEvent.click(item)
+    })
+  }
+
+  it("renames the Project the dialog was opened from", async () => {
+    const { store } = show(fakeProjectStore([helloProject()]))
+
+    await pick(helloProject().id, "rename")
+    fireEvent.change(await screen.findByTestId("rename-project-name"), {
+      target: { value: "Welcome bot" }
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("rename-project-confirm"))
+    })
+
+    expect(store.contents.get(helloProject().id)?.document).toContain("Welcome bot")
+    await waitFor(() => {
+      expect(screen.queryByTestId("rename-project-dialog")).toBeNull()
+    })
+  })
+
+  it("keeps the rename dialog open and says why when the store would not take it", async () => {
+    const { store } = show(fakeProjectStore([helloProject()]))
+    store.breaks.write = "the disk is full"
+
+    await pick(helloProject().id, "rename")
+    fireEvent.change(await screen.findByTestId("rename-project-name"), {
+      target: { value: "Welcome bot" }
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("rename-project-confirm"))
+    })
+
+    expect((await screen.findByTestId("rename-project-problem")).textContent).toContain(
+      "the disk is full"
+    )
+  })
+
+  it("copies the Project without a dialog, and lists the copy beside it", async () => {
+    show(fakeProjectStore([helloProject()]))
+
+    await pick(helloProject().id, "duplicate")
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("card-name")).toHaveLength(2)
+    })
+  })
+
+  /** Duplicating has no dialog, so its card is the only place to say this. */
+  it("explains a copy that could not be made on the card it was asked of", async () => {
+    const { store } = show(fakeProjectStore([helloProject()]))
+    store.breaks.create = "the disk is full"
+
+    await pick(helloProject().id, "duplicate")
+
+    expect((await screen.findByTestId(`card-problem-${helloProject().id}`)).textContent).toContain(
+      "the disk is full"
+    )
+  })
+
+  it("asks before deleting, and removes nothing while the question stands", async () => {
+    const { store } = show(fakeProjectStore([helloProject()]))
+
+    await pick(helloProject().id, "delete")
+
+    expect(await screen.findByTestId("delete-project-dialog")).toBeDefined()
+    expect(store.contents.has(helloProject().id)).toBe(true)
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("delete-project-cancel"))
+    })
+    expect(store.contents.has(helloProject().id)).toBe(true)
+  })
+
+  it("deletes the Project once the question is answered", async () => {
+    const { store } = show(fakeProjectStore([helloProject()]))
+
+    await pick(helloProject().id, "delete")
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("delete-project-confirm"))
+    })
+
+    expect(store.contents.has(helloProject().id)).toBe(false)
+    expect(await screen.findByTestId("dashboard-empty")).toBeDefined()
+  })
+
+  it("keeps the question open and says why when the Project could not be deleted", async () => {
+    const { store } = show(fakeProjectStore([helloProject()]))
+    store.breaks.remove = "the folder is in use"
+
+    await pick(helloProject().id, "delete")
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("delete-project-confirm"))
+    })
+
+    expect((await screen.findByTestId("delete-project-problem")).textContent).toContain(
+      "the folder is in use"
+    )
+    expect(store.contents.has(helloProject().id)).toBe(true)
+  })
+})
+
 describe("creating a Project from the Dashboard", () => {
   it("stores what the dialog asked for and lands the user in the editor", async () => {
     const { store, opened } = show()

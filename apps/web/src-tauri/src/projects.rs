@@ -146,6 +146,27 @@ pub fn create_project(
     write_project(app, project_id, contents)
 }
 
+/// Deletes a Project's folder, and everything the application ever put in it.
+///
+/// One call takes the document, the settings beside it and every backup with
+/// it, which is the whole reason a Project is a folder rather than a file: there
+/// is no second place for a stray piece of a deleted Project to survive. The
+/// Secret is not here — it is not in the folder — and it is deleted first, by
+/// the caller, so that a folder that refuses to go never strands a token.
+///
+/// A folder that is not there is not a failure: what was asked for is that the
+/// Project be gone, and it is.
+#[tauri::command]
+pub fn delete_project(app: tauri::AppHandle, project_id: String) -> Result<(), String> {
+    let folder = folder(&app, &project_id)?;
+    if !folder.exists() {
+        return Ok(());
+    }
+
+    std::fs::remove_dir_all(&folder)
+        .map_err(|error| format!("{} could not be deleted: {error}", folder.display()))
+}
+
 /// Reads a Project's document as text.
 #[tauri::command]
 pub fn read_project(app: tauri::AppHandle, project_id: String) -> Result<String, String> {

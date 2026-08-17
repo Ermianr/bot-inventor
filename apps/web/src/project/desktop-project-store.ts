@@ -58,5 +58,19 @@ export const desktopProjectStore: ProjectStore = {
 
   storeSecret: async (projectId, secret) => {
     await invoke("store_secret", { projectId, secret })
+  },
+
+  /**
+   * The Secret goes first, and the folder only once it is gone — the mirror of
+   * the order creation takes, and for the same reason.
+   *
+   * A folder deleted first and a keychain that then refused would leave a bot
+   * token for a Project nothing points at any more, which is the one thing
+   * deleting must never leave. This way round, a refusal leaves a Project the
+   * user can see and delete again, with nothing but its token already gone.
+   */
+  remove: async projectId => {
+    await invoke("delete_secret", { projectId })
+    await invoke("delete_project", { projectId })
   }
 }
