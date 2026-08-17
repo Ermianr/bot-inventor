@@ -28,4 +28,9 @@ export class ConsolePage {
   output(): Locator {
     return this.page.getByTestId("session-output")
   }
+
+  /** Why the bot is not running, which the Console says under what it said. */
+  problem(): Locator {
+    return this.page.getByTestId("session-problem")
+  }
 }

@@ -85,6 +85,7 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
         saved={autosave.saved}
         problem={autosave.problem}
         exporting={exporting}
+        run={<RunControls session={session} testServerId={testServer.testServerId} />}
       />
 
       <ProjectOptionsDialog
@@ -105,11 +106,7 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
         </main>
       </div>
 
-      <Console
-        entries={session.entries}
-        problem={session.problem}
-        controls={<RunControls session={session} testServerId={testServer.testServerId} />}
-      />
+      <Console entries={session.entries} problem={session.problem} />
     </div>
   )
 }

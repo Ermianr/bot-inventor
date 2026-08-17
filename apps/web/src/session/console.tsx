@@ -29,8 +29,7 @@ type Panel = {
 
 export function Console({
   entries,
-  problem,
-  controls
+  problem
 }: {
   entries: readonly SessionEntry[]
   /**
@@ -40,12 +39,6 @@ export function Console({
    * user is already looking for why nothing is happening.
    */
   problem?: string
-  /**
-   * What the editor hangs in the header beside the tabs. The Console knows what
-   * a Session said, not how one is started, so running the bot is passed in
-   * rather than built here.
-   */
-  controls?: ReactNode
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const strip = useId()
@@ -88,8 +81,6 @@ export function Console({
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          {controls}
-
           <Button
             variant="ghost"
             size="icon-sm"
