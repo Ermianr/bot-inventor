@@ -1,5 +1,6 @@
 import type { OpenProjectOptions, OpenProjectResult, Project } from "@bot-inventor/schema"
-import { openProject } from "@bot-inventor/schema"
+
+import { openDocument } from "@/project/open-document"
 
 /**
  * Everything the application does with a Project outside the Canvas.
@@ -130,20 +131,7 @@ export async function readStoredProject(
   projectId: string,
   options: Omit<OpenProjectOptions, "writeBackup"> = {}
 ): Promise<OpenProjectResult> {
-  const contents = await store.read(projectId)
-
-  let document: unknown
-  try {
-    document = JSON.parse(contents)
-  } catch (error) {
-    return {
-      status: "malformed",
-      message: `This is not a Project: it is not readable as JSON. ${error instanceof Error ? error.message : String(error)}`,
-      issues: []
-    }
-  }
-
-  return openProject(document, {
+  return openDocument(await store.read(projectId), {
     ...options,
     writeBackup: async () => {
       await store.backUp(projectId)

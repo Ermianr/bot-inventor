@@ -58,6 +58,7 @@ const en = {
   "dashboard.title": "Your bots",
   "dashboard.subtitle": "Everything you have built. Pick one to carry on with it.",
   "dashboard.create": "New bot",
+  "dashboard.import": "Import a bot",
   "dashboard.example": "Open an example",
   "dashboard.example.title": "Open the example",
   "dashboard.example.description":
@@ -165,6 +166,12 @@ const en = {
   "share.fileKind": "Bot Inventor project",
   "share.written": "Shared to {path}. It holds no token, so it is safe to send.",
   "share.problem.failed": "Your bot could not be shared: {message}",
+
+  "import.title": "Take in a bot somebody sent",
+  "import.description":
+    "This makes a bot of your own out of their design. Yours needs its own token, and the copy you make is yours to change.",
+  "import.source": "Which bot did they send you?",
+  "import.problem.read": "That file could not be read: {message}",
 
   "flows.title": "Your flows",
   "flows.create": "Add a flow",
@@ -278,6 +285,7 @@ const es: Record<MessageKey, string> = {
   "dashboard.title": "Tus bots",
   "dashboard.subtitle": "Todo lo que has construido. Elige uno para seguir con él.",
   "dashboard.create": "Nuevo bot",
+  "dashboard.import": "Importar un bot",
   "dashboard.example": "Abrir un ejemplo",
   "dashboard.example.title": "Abrir el ejemplo",
   "dashboard.example.description":
@@ -380,6 +388,12 @@ const es: Record<MessageKey, string> = {
   "share.fileKind": "Proyecto de Bot Inventor",
   "share.written": "Compartido en {path}. No lleva ningún token, así que puedes enviarlo.",
   "share.problem.failed": "Tu bot no se pudo compartir: {message}",
+
+  "import.title": "Recibir un bot que te enviaron",
+  "import.description":
+    "Esto crea un bot tuyo a partir de su diseño. El tuyo necesita su propio token, y la copia que crees es tuya para cambiarla.",
+  "import.source": "¿Qué bot te enviaron?",
+  "import.problem.read": "Ese archivo no se pudo leer: {message}",
 
   "flows.title": "Tus flujos",
   "flows.create": "Añadir un flujo",

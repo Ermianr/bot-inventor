@@ -16,6 +16,16 @@ import { TestServerPicker } from "@/components/test-server-picker"
 import { translate } from "@/i18n/messages"
 import type { ProjectDetails } from "@/project/use-projects"
 
+/** The three ways a Project begins, all of them ending in this dialog. */
+export type ProjectKind = "blank" | "example" | "import"
+
+/** What the dialog says at the top, which is the only thing the kind changes. */
+const HEADINGS = {
+  blank: { title: "dashboard.create.title", description: "dashboard.create.description" },
+  example: { title: "dashboard.example.title", description: "dashboard.example.description" },
+  import: { title: "import.title", description: "import.description" }
+} as const
+
 /**
  * The three things a Project is made of: what it is called, the token that lets
  * it speak as a bot, and the server it is tried on.
@@ -32,13 +42,14 @@ import type { ProjectDetails } from "@/project/use-projects"
  * guess, and a dialog that assumes they can is where they stop.
  *
  * The example is asked for here too, rather than appearing behind the user's
- * back. What it makes is a Project like any other, so it is asked for like any
- * other; only the words at the top and the name already in the field say which
- * of the two the user pressed.
+ * back, and so is a Project somebody sent. What each of them makes is a Project
+ * like any other, so it is asked for like any other; only the words at the top
+ * and the name already in the field say which one the user pressed.
  */
 export function CreateProjectDialog({
   open,
   kind = "blank",
+  suggestedName,
   onOpenChange,
   onCreate,
   problem
@@ -48,17 +59,25 @@ export function CreateProjectDialog({
    * Which Canvas the Project starts on, and which words to say about it.
    *
    * The name it puts in the field is what that field starts as, so a caller
-   * offering both must key this component by the kind. Changing it on a live
-   * instance changes the words at the top and leaves the other one's name
-   * underneath them.
+   * offering more than one must key this component by the kind. Changing it on
+   * a live instance changes the words at the top and leaves the other one's
+   * name underneath them.
    */
-  kind?: "blank" | "example"
+  kind?: ProjectKind
+  /**
+   * The name the field starts with, when the Project already has one: an
+   * import arrives called whatever its author called it, and that is the name
+   * the user recognises the file by.
+   */
+  suggestedName?: string
   onOpenChange: (open: boolean) => void
   onCreate: (details: ProjectDetails) => void
   /** Why the last attempt did not make a Project, when it did not. */
   problem: string | undefined
 }) {
-  const [name, setName] = useState(kind === "example" ? translate("dashboard.example.name") : "")
+  const [name, setName] = useState(
+    suggestedName ?? (kind === "example" ? translate("dashboard.example.name") : "")
+  )
   const [secret, setSecret] = useState("")
   const [testServerId, setTestServerId] = useState("")
 
@@ -76,16 +95,8 @@ export function CreateProjectDialog({
           }}
         >
           <DialogHeader>
-            <DialogTitle>
-              {translate(kind === "example" ? "dashboard.example.title" : "dashboard.create.title")}
-            </DialogTitle>
-            <DialogDescription>
-              {translate(
-                kind === "example"
-                  ? "dashboard.example.description"
-                  : "dashboard.create.description"
-              )}
-            </DialogDescription>
+            <DialogTitle>{translate(HEADINGS[kind].title)}</DialogTitle>
+            <DialogDescription>{translate(HEADINGS[kind].description)}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-1.5">

@@ -1,5 +1,6 @@
 mod about;
 mod export;
+mod import;
 mod jail;
 mod projects;
 mod secrets;
@@ -19,6 +20,7 @@ pub fn run() {
       about::open_repository,
       export::export_project,
       export::show_export,
+      import::read_project_file,
       projects::back_up_project,
       projects::create_project,
       projects::delete_project,

@@ -69,6 +69,15 @@ export type Projects = {
   create(details: ProjectDetails): Promise<string | undefined>
   /** Makes the demonstration Project, for a Dashboard with nothing on it. */
   createExample(details: ProjectDetails): Promise<string | undefined>
+  /**
+   * Makes a Project of the user's own out of one somebody sent, and says which
+   * one it is.
+   *
+   * It takes the Project rather than the file: reading a Project File is
+   * `useImport`'s, and by the time this is called the questions the file cannot
+   * answer have been asked.
+   */
+  importProject(incoming: Project, details: ProjectDetails): Promise<string | undefined>
   /** Changes what a Project is called, in the list and in the document. */
   rename(projectId: string, name: string): Promise<boolean>
   /** Copies a Project, untokened, and says which one the copy is. */
@@ -215,6 +224,24 @@ export function useProjects(store: ProjectStore): Projects {
      */
     createExample: useCallback(
       details => make({ ...demonstrationProject(), id: newProject().id }, details),
+      [make]
+    ),
+
+    /**
+     * A Project somebody sent becomes a Project of this user's own, and one
+     * that has never been here before.
+     *
+     * The id in the file is dropped for a fresh one, which is what makes an
+     * import a copy rather than a landing place: the same file taken in twice
+     * gives two Projects instead of one overwriting the other, and a Project
+     * that came from one of the user's own — sent to a friend and sent back —
+     * never reaches the original. The id is also what a Secret is keyed by, so
+     * an id that travelled would be two Projects sharing a bot token.
+     *
+     * The document is otherwise untouched: what was built is what arrives.
+     */
+    importProject: useCallback(
+      (incoming, details) => make({ ...incoming, id: newProject().id }, details),
       [make]
     ),
 

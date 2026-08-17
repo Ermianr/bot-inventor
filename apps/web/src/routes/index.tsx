@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 
 import { Dashboard } from "@/dashboard/dashboard"
+import { desktopImport } from "@/project/desktop-import"
 import { projectStore } from "@/project/store"
 
 export const Route = createFileRoute("/")({
@@ -17,6 +18,7 @@ function DashboardRoute() {
   return (
     <Dashboard
       store={projectStore}
+      imports={desktopImport}
       onOpen={projectId => void navigate({ to: "/projects/$projectId", params: { projectId } })}
     />
   )
