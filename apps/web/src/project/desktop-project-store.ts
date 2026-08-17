@@ -24,7 +24,13 @@ export const desktopProjectStore: ProjectStore = {
    * looks for and nothing is broken by.
    */
   create: async (project, locals) => {
-    await invoke("store_secret", { projectId: project.id, secret: locals.secret })
+    // A Project made without one — the example, or a copy of another Project —
+    // gets no keychain entry at all. Storing an empty string would make one,
+    // and an entry that exists is what `secret_exists` calls having a token: it
+    // would leave the Run button live for a Project that cannot sign in.
+    if (locals.secret.length > 0) {
+      await invoke("store_secret", { projectId: project.id, secret: locals.secret })
+    }
     await invoke("create_project", {
       projectId: project.id,
       contents: serializeProject(project)

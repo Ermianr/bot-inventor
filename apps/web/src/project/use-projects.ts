@@ -74,6 +74,14 @@ export type ManageProblem = {
   message: string
 }
 
+/**
+ * The three things a user does to a Project without opening it.
+ *
+ * They are named the same here, in the card's menu and in the message keys that
+ * explain them, so that adding a fourth is one list rather than four.
+ */
+export type ManageAction = "rename" | "duplicate" | "delete"
+
 export function useProjects(store: ProjectStore): Projects {
   const [projects, setProjects] = useState<readonly ProjectSummary[] | undefined>(undefined)
   const [problem, setProblem] = useState<string | undefined>(undefined)
@@ -121,6 +129,20 @@ export function useProjects(store: ProjectStore): Projects {
   )
 
   /**
+   * Says why one thing asked of one Project did not happen.
+   *
+   * All three actions refuse the same shape — which Project, which action, and
+   * the reason underneath — so the sentence is assembled once. What differs is
+   * only the action, and the action is what picks the words.
+   */
+  const refuse = useCallback((projectId: string, action: ManageAction, reason: string) => {
+    setManageProblem({
+      projectId,
+      message: translate(`dashboard.problem.${action}`, { message: reason })
+    })
+  }, [])
+
+  /**
    * The Project behind a card, or nothing and a reason on that card.
    *
    * Renaming and duplicating both have to open the document first, and both owe
@@ -128,25 +150,17 @@ export function useProjects(store: ProjectStore): Projects {
    * editor would have used, rather than a rename that silently did nothing.
    */
   const documentOf = useCallback(
-    async (projectId: string, failure: "rename" | "duplicate") => {
+    async (projectId: string, action: ManageAction) => {
       try {
         const result = await readStoredProject(store, projectId)
         if (result.status === "opened") return result.project
-        setManageProblem({
-          projectId,
-          message: translate(`dashboard.problem.${failure}`, {
-            message: explainOpenProblem(result)
-          })
-        })
+        refuse(projectId, action, explainOpenProblem(result))
       } catch (error) {
-        setManageProblem({
-          projectId,
-          message: translate(`dashboard.problem.${failure}`, { message: describeError(error) })
-        })
+        refuse(projectId, action, describeError(error))
       }
       return undefined
     },
-    [store]
+    [store, refuse]
   )
 
   return {
@@ -211,16 +225,13 @@ export function useProjects(store: ProjectStore): Projects {
         try {
           await store.write({ ...project, name: wanted })
         } catch (error) {
-          setManageProblem({
-            projectId,
-            message: translate("dashboard.problem.rename", { message: describeError(error) })
-          })
+          refuse(projectId, "rename", describeError(error))
           return false
         }
         await refresh()
         return true
       },
-      [store, refresh, documentOf]
+      [store, refresh, documentOf, refuse]
     ),
 
     /**
@@ -260,16 +271,13 @@ export function useProjects(store: ProjectStore): Projects {
         try {
           await store.create(copy, { secret: "", testServerId })
         } catch (error) {
-          setManageProblem({
-            projectId,
-            message: translate("dashboard.problem.duplicate", { message: describeError(error) })
-          })
+          refuse(projectId, "duplicate", describeError(error))
           return undefined
         }
         await refresh()
         return copy.id
       },
-      [store, refresh, documentOf]
+      [store, refresh, documentOf, refuse]
     ),
 
     /**
@@ -284,17 +292,14 @@ export function useProjects(store: ProjectStore): Projects {
         try {
           await store.remove(projectId)
         } catch (error) {
-          setManageProblem({
-            projectId,
-            message: translate("dashboard.problem.delete", { message: describeError(error) })
-          })
+          refuse(projectId, "delete", describeError(error))
           await refresh()
           return false
         }
         await refresh()
         return true
       },
-      [store, refresh]
+      [store, refresh, refuse]
     )
   }
 }

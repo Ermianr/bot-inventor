@@ -41,9 +41,15 @@ export function RenameProjectDialog({
 }) {
   const [name, setName] = useState("")
 
+  // On which Project this is and what it is called, rather than on the summary
+  // carrying them. The Dashboard reads its list again after anything happens to
+  // any Project, and a fresh summary of the same Project under the same name
+  // must not throw away what the user has typed into the field.
+  const projectId = project?.id
+  const storedName = project?.name
   useEffect(() => {
-    if (project !== undefined) setName(project.name)
-  }, [project])
+    if (projectId !== undefined) setName(storedName ?? "")
+  }, [projectId, storedName])
 
   return (
     <Dialog open={project !== undefined} onOpenChange={onOpenChange}>
