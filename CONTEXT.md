@@ -43,7 +43,7 @@ _Avoid_: catch, error handler, error output
 ### The application
 
 **Dashboard**:
-The screen listing the user's Projects, and the first thing the application shows. It is where a Project is created, renamed, duplicated and deleted; opening one from here leads to the editor. A Project is shared from the editor's Menu Bar, where the Project that is open is the one being handed over.
+The screen listing the user's Projects, and the first thing the application shows. It is where a Project is created, imported, renamed, duplicated and deleted; opening one from here leads to the editor. A Project is shared from the editor's Menu Bar, where the Project that is open is the one being handed over.
 _Avoid_: home, start screen, launcher, library
 
 **Console**:
@@ -79,6 +79,10 @@ _Avoid_: save file, document, botinv (on its own)
 **Share**:
 Writing a Project to a `.botinv` somewhere outside the application's own storage, for somebody else to import. What is shared is the Project and never a Secret. Sharing hands over a bot's design; an Export hands over a bot that runs.
 _Avoid_: export, publish, save as
+
+**Import**:
+Taking a Project File from anywhere on disk into the application's own storage, as a Project of this user's own: a new id, and the Secret and Test Server asked for on the way in. It copies rather than opens — the file stays where it is and is no longer needed, and the same file taken in twice is two Projects.
+_Avoid_: open, load, restore
 
 **Compiler**:
 Translates a Project into JavaScript. It emits the same behaviour in two modes — Development Mode (with Tracing) and Build — from a single definition of each Node.

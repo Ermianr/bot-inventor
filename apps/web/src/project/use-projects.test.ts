@@ -382,3 +382,118 @@ describe("the example", () => {
     expect(result.current.projects).toEqual([])
   })
 })
+
+describe("taking in a Project somebody sent", () => {
+  /** What the Dashboard hands over once the file has been read. */
+  const details = { name: "Their bot", secret: "a-token", testServerId: "123" }
+
+  /**
+   * The id inside a shared file never decides where it lands. It is what a
+   * Secret is keyed by, so a Project arriving under the id of one already here
+   * would be two bots signing in as one account — and the file's own id is a
+   * stranger's, chosen on a machine this user has never seen.
+   */
+  it("gives the Project a new id rather than the one in the file", async () => {
+    const { store, result } = await dashboard()
+
+    let made: string | undefined
+    await act(async () => {
+      made = await result.current.importProject(helloProject(), details)
+    })
+
+    expect(made).toBeDefined()
+    expect(made).not.toBe(helloProject().id)
+    expect(store.contents.has(helloProject().id)).toBe(false)
+    expect(result.current.projects).toHaveLength(1)
+  })
+
+  /**
+   * Importing behaves like copying a file, not like overwriting one: nothing an
+   * import does can reach a Project that is already here, including the one the
+   * file was made from.
+   */
+  it("makes two independent Projects out of the same file taken in twice", async () => {
+    const { store, result } = await dashboard()
+
+    let first: string | undefined
+    let second: string | undefined
+    await act(async () => {
+      first = await result.current.importProject(helloProject(), details)
+      second = await result.current.importProject(helloProject(), details)
+    })
+
+    expect(first).not.toBe(second)
+    expect(result.current.projects).toHaveLength(2)
+
+    // What one is edited into never reaches the other.
+    await act(async () => {
+      await result.current.rename(first ?? "", "Something else")
+    })
+    expect(store.contents.get(second ?? "")?.document).toContain(details.name)
+    expect(store.contents.get(second ?? "")?.document).not.toContain("Something else")
+  })
+
+  it("never touches a Project already here, even one the file was made from", async () => {
+    const { store, result } = await dashboard(fakeProjectStore([helloProject()]))
+
+    await act(async () => {
+      await result.current.importProject({ ...helloProject(), name: "Changed elsewhere" }, details)
+    })
+
+    expect(result.current.projects).toHaveLength(2)
+    expect(store.contents.get(helloProject().id)?.document).toContain(helloProject().name)
+  })
+
+  it("keeps what was built, under the name the user typed", async () => {
+    const { store, result } = await dashboard()
+
+    let made: string | undefined
+    await act(async () => {
+      made = await result.current.importProject(greetingProject(), details)
+    })
+
+    const stored: unknown = JSON.parse(store.contents.get(made ?? "")?.document ?? "")
+    expect(stored).toEqual({ ...greetingProject(), id: made, name: "Their bot" })
+  })
+
+  it("arrives with the token and the Test Server the user gave it", async () => {
+    const { store, result } = await dashboard()
+
+    let made: string | undefined
+    await act(async () => {
+      made = await result.current.importProject(helloProject(), details)
+    })
+
+    await expect(store.hasSecret(made ?? "")).resolves.toBe(true)
+    await expect(store.readTestServer(made ?? "")).resolves.toBe("123")
+  })
+
+  /** The same rule creating obeys: a Project without a token cannot run. */
+  it("refuses without a token, and makes nothing", async () => {
+    const { result } = await dashboard()
+
+    let made: string | undefined
+    await act(async () => {
+      made = await result.current.importProject(helloProject(), { ...details, secret: " " })
+    })
+
+    expect(made).toBeUndefined()
+    expect(result.current.projects).toEqual([])
+    expect(result.current.creationProblem).toBe(translate("dashboard.create.tokenRequired"))
+  })
+
+  it("says why the store would not take it", async () => {
+    const store = fakeProjectStore()
+    store.breaks.create = "the disk is full"
+    const { result } = await dashboard(store)
+
+    let made: string | undefined
+    await act(async () => {
+      made = await result.current.importProject(helloProject(), details)
+    })
+
+    expect(made).toBeUndefined()
+    expect(result.current.creationProblem).toContain("the disk is full")
+    expect(result.current.projects).toEqual([])
+  })
+})

@@ -6,7 +6,9 @@ import { afterEach, describe, expect, it } from "vitest"
 
 import { Dashboard } from "@/dashboard/dashboard"
 import { translate } from "@/i18n/messages"
+import { fakeImportGateway } from "@/project/fake-import-gateway"
 import { fakeProjectStore } from "@/project/fake-project-store"
+import { serializeProject } from "@/project/project-store"
 
 /**
  * The Dashboard as the user meets it, with the store in memory.
@@ -21,10 +23,10 @@ import { fakeProjectStore } from "@/project/fake-project-store"
 afterEach(cleanup)
 
 /** The screen, and every Project it was asked to open. */
-function show(store = fakeProjectStore()) {
+function show(store = fakeProjectStore(), imports = fakeImportGateway()) {
   const opened: string[] = []
-  render(<Dashboard store={store} onOpen={projectId => opened.push(projectId)} />)
-  return { store, opened }
+  render(<Dashboard store={store} imports={imports} onOpen={projectId => opened.push(projectId)} />)
+  return { store, imports, opened }
 }
 
 /** Fills the creation dialog and presses the button that makes the Project. */
@@ -308,5 +310,92 @@ describe("creating a Project from the Dashboard", () => {
     fireEvent.click(screen.getByTestId("dashboard-create"))
 
     expect(await nameField()).toBe("")
+  })
+})
+
+describe("taking in a Project somebody sent", () => {
+  /** A Project File on the user's disk, as the open dialog would hand it over. */
+  const sent = (project = helloProject()) =>
+    fakeImportGateway({ path: "C:/sent/their-bot.botinv", contents: serializeProject(project) })
+
+  it("asks the same questions creating asks, then makes the Project and opens it", async () => {
+    const { store, opened } = show(fakeProjectStore(), sent())
+
+    fireEvent.click(await screen.findByTestId("dashboard-import"))
+    await fillIn({ name: "Their bot", token: "a-token" })
+
+    const [created] = opened
+    expect(created).toBeDefined()
+    // The id in the file is not where it landed, and the file's Project is.
+    expect(created).not.toBe(helloProject().id)
+    expect(store.contents.get(created ?? "")?.secret).toBe("a-token")
+    expect(store.contents.get(created ?? "")?.document).toContain("flow-hello")
+  })
+
+  it("offers the name the Project arrived under", async () => {
+    show(fakeProjectStore(), sent())
+
+    fireEvent.click(await screen.findByTestId("dashboard-import"))
+
+    expect(await nameField()).toBe(helloProject().name)
+  })
+
+  it("says why a file it could not read was refused, and makes nothing", async () => {
+    const { store } = show(
+      fakeProjectStore(),
+      fakeImportGateway({ path: "C:/sent/broken.botinv", contents: "half a file" })
+    )
+
+    fireEvent.click(await screen.findByTestId("dashboard-import"))
+
+    expect((await screen.findByTestId("dashboard-import-problem")).textContent).toContain(
+      translate("project.problem.malformed")
+    )
+    expect(screen.queryByTestId("create-project-dialog")).toBeNull()
+    expect(store.contents.size).toBe(0)
+  })
+
+  it("does nothing and says nothing when the user closes the open dialog", async () => {
+    const { store } = show(fakeProjectStore(), fakeImportGateway({ path: undefined }))
+
+    fireEvent.click(await screen.findByTestId("dashboard-import"))
+
+    await waitFor(() => {
+      expect(screen.getByTestId("dashboard-import")).toBeDefined()
+    })
+    expect(screen.queryByTestId("create-project-dialog")).toBeNull()
+    expect(screen.queryByTestId("dashboard-import-problem")).toBeNull()
+    expect(store.contents.size).toBe(0)
+  })
+
+  /** Cancelling the questions leaves the Dashboard exactly as it was. */
+  it("makes nothing when the user cancels the dialog it opens", async () => {
+    const { store, opened } = show(fakeProjectStore(), sent())
+
+    fireEvent.click(await screen.findByTestId("dashboard-import"))
+    await screen.findByTestId("create-project-dialog")
+    fireEvent.click(screen.getByTestId("create-project-cancel"))
+
+    expect(opened).toEqual([])
+    expect(store.contents.size).toBe(0)
+  })
+
+  /**
+   * The same file twice is two Projects, and the second one never lands on the
+   * first: an import copies, it does not overwrite.
+   */
+  it("makes a second Project out of the same file, leaving the first alone", async () => {
+    const { store } = show(fakeProjectStore(), sent())
+
+    fireEvent.click(await screen.findByTestId("dashboard-import"))
+    await fillIn({ name: "Their bot", token: "a-token" })
+
+    fireEvent.click(await screen.findByTestId("dashboard-import"))
+    await fillIn({ name: "Their bot again", token: "another-token" })
+
+    expect(store.contents.size).toBe(2)
+    const documents = [...store.contents.values()].map(held => held.document)
+    expect(documents.filter(document => document.includes("Their bot again"))).toHaveLength(1)
+    expect(documents.filter(document => document.includes('"name": "Their bot"'))).toHaveLength(1)
   })
 })
