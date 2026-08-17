@@ -24,20 +24,6 @@ import type {
  */
 
 /**
- * Names a Project.
- *
- * A name that is blank is refused rather than written: a Project the user
- * cannot tell apart from any other is worse than the name they had before. The
- * name is trimmed, because the spaces around it are a typing accident and not
- * something the user meant to call their bot.
- */
-export function renameProject(project: Project, name: string): Project {
-  const trimmed = name.trim()
-  if (trimmed.length === 0) return project
-  return { ...project, name: trimmed }
-}
-
-/**
  * Why a rename was refused, or the Project it produced.
  *
  * A refusal says which rule it broke rather than handing back the Project

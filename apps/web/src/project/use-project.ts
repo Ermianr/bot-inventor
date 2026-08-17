@@ -20,7 +20,6 @@ import {
   removeFlow,
   removeNode,
   renameFlow,
-  renameProject,
   setNodeField,
   updateFlow
 } from "@/project/edits"
@@ -43,10 +42,6 @@ export type ProjectEditor = {
    * put the user straight into naming it.
    */
   createFlow(): string
-  /** Puts another Project on the Canvas: opening a file, or starting a new one. */
-  replace(project: Project): void
-  /** Names the Project. A blank name is refused and the old one kept. */
-  renameProject(name: string): void
   /**
    * Names a Flow. Says why a name was refused so the list can explain it, and
    * leaves the Project untouched when it was.
@@ -71,9 +66,18 @@ export type ProjectEditor = {
   disconnectWire(wireId: string): void
 }
 
-/** `createInitial` is called once: the Project the editor opens with. */
+/**
+ * `createInitial` is called once: the Project the editor opens with, reconciled
+ * with the catalogue this build has.
+ *
+ * A Wire whose Port is not there cannot be drawn — React Flow renders no edge
+ * for a handle that does not exist — so it cannot be removed on the Canvas
+ * either, while the Compiler refuses to run or export the Flow that holds it.
+ * Clearing it on the way in is the only reading under which the user is not
+ * locked out of their own Project by something invisible.
+ */
 export function useProject(createInitial: () => Project): ProjectEditor {
-  const [project, setProject] = useState(createInitial)
+  const [project, setProject] = useState(() => pruneProjectWires(createInitial(), catalogue))
   const [openFlowId, setOpenFlowId] = useState(() => project.flows[0]?.id ?? "")
 
   const flow = useMemo(() => {
@@ -111,27 +115,6 @@ export function useProject(createInitial: () => Project): ProjectEditor {
       setProject(previous => createFlow(previous, id, translate("project.flow.default")))
       setOpenFlowId(id)
       return id
-    }, []),
-    /**
-     * Opens a Project, reconciled with the catalogue this build has.
-     *
-     * A Wire whose Port is not there cannot be drawn — React Flow renders no
-     * edge for a handle that does not exist — so it cannot be removed on the
-     * Canvas either, while the Compiler refuses to run or export the Flow that
-     * holds it. Clearing it on the way in is the only reading under which the
-     * user is not locked out of their own Project by something invisible.
-     */
-    replace: useCallback((next: Project) => {
-      setProject(pruneProjectWires(next, catalogue))
-      setOpenFlowId(next.flows[0]?.id ?? "")
-    }, []),
-    /**
-     * The name is the Project's, not the file's: the `.botinv` on disk keeps
-     * the name it was saved under, and only the next Save As is offered this
-     * one as a suggestion.
-     */
-    renameProject: useCallback((name: string) => {
-      setProject(previous => renameProject(previous, name))
     }, []),
     /**
      * The rule lives in `edits.ts`, so what happens to a refused rename is

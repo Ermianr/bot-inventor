@@ -2,12 +2,12 @@ import type { Project } from "@bot-inventor/schema"
 import { helloProject } from "@bot-inventor/schema/fixtures"
 
 /**
- * A Project to look at when there is no file to open one from: `/hello` wired
- * to a reply, and a second, empty Flow beside it.
+ * A Project to look at before the user has built one: `/hello` wired to a
+ * reply, and a second, empty Flow beside it.
  *
- * The desktop application starts from an empty Project and opens `.botinv`
- * files. A plain browser can do neither, so this is what it shows there — see
- * `use-projects.ts`, which is what the Dashboard's example button makes.
+ * This is what the Dashboard's example button makes — see `use-projects.ts` —
+ * so that both a first-time user and the end-to-end specs have a Canvas with
+ * something on it without anybody having to wire one up first.
  *
  * The first Flow is the schema package's own `helloProject`, rather than a
  * second copy of the same Nodes: the end-to-end tests read this Canvas and the

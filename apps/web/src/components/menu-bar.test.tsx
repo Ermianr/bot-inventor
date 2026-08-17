@@ -63,7 +63,6 @@ function renderMenuBar(
   return render(
     <MenuBar
       name="Bot"
-      onRename={() => {}}
       onDashboard={overrides.onDashboard ?? (() => {})}
       saved
       problem={overrides.problem}
@@ -271,19 +270,11 @@ describe("what the Menu Bar says back", () => {
     // when that one fails the same way. A user losing work twice is told twice.
     const view = renderMenuBar(exporting, { problem })
     view.rerender(
-      <MenuBar
-        name="Bot"
-        onRename={() => {}}
-        onDashboard={() => {}}
-        saved
-        problem={undefined}
-        exporting={exporting}
-      />
+      <MenuBar name="Bot" onDashboard={() => {}} saved problem={undefined} exporting={exporting} />
     )
     view.rerender(
       <MenuBar
         name="Bot"
-        onRename={() => {}}
         onDashboard={() => {}}
         saved={false}
         problem={problem}
