@@ -1,4 +1,4 @@
-import { readSessionLine, redactSecret, renderDevelopmentSession } from "@bot-inventor/compiler"
+import { readSessionLine, renderDevelopmentSession } from "@bot-inventor/compiler"
 import type { Project } from "@bot-inventor/schema"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { type MessageKey, translate } from "@/i18n/messages"
@@ -26,11 +26,11 @@ import { type RunTrace, watchFailure, watchTrace } from "@/session/trace"
  */
 export type SessionStatus = "stopped" | "connecting" | "ready" | "failed"
 
-/** One line in the output panel. */
+/** One line the Console shows: Session Output. */
 export type SessionEntry = {
   id: number
   text: string
-  /** `problem` is what the panel colours: a failure, not news. */
+  /** `problem` is what the Console colours: a failure, not news. */
   tone: "output" | "note" | "problem"
 }
 
@@ -57,7 +57,6 @@ export const RELOAD_DELAY = 400
 /** What a bot needs to be started, kept so the next one can be started the same. */
 type Running = {
   testServerId: string
-  secret: string
   /** The entry point the running bot was started on: what an edit is compared to. */
   entry: string
 }
@@ -74,11 +73,10 @@ export type Session = {
    */
   problem: string | undefined
   /**
-   * The token is the shell's to read, out of the keychain under the Project.
-   * `secret` is only ever a token typed in this window and not yet stored: the
-   * one the shell cannot know about, and so the one it cannot redact.
+   * No token is asked for. It is in the operating system keychain under the
+   * Project, and the shell that starts the bot is the only thing that reads it.
    */
-  start(options: { testServerId: string; secret?: string }): Promise<void>
+  start(options: { testServerId: string }): Promise<void>
   stop(): Promise<void>
 }
 
@@ -88,12 +86,6 @@ export function useSession(project: Project, shell: SessionGateway): Session {
   const [problem, setProblem] = useState<string | undefined>(undefined)
   const [trace, setTrace] = useState<RunTrace | undefined>(undefined)
 
-  /**
-   * The token as it currently sits in the field. The Tauri side redacts what
-   * the bot prints, because it is the only side that has the stored token; this
-   * covers the one it does not know about — a token typed but not yet saved.
-   */
-  const typed = useRef("")
   const nextId = useRef(0)
   const givingUp = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -130,8 +122,10 @@ export function useSession(project: Project, shell: SessionGateway): Session {
       shell.onOutput(event => {
         if (event.session !== current.current) return
 
-        const line = redactSecret(event.line, typed.current)
-        const message = readSessionLine(line)
+        // What the bot prints is redacted where the token lives, on the shell
+        // side. Nothing here ever holds one to redact: the editor stores a
+        // token straight into the keychain and is never handed it back.
+        const message = readSessionLine(event.line)
         if (message === undefined) return
 
         switch (message.kind) {
@@ -193,18 +187,17 @@ export function useSession(project: Project, shell: SessionGateway): Session {
 
   /**
    * Puts a bot on the sidecar, whether it is the first one or the one an edit
-   * asked for. The panel is only emptied for a first Run: a reload is meant to
+   * asked for. The Console is only emptied for a first Run: a reload is meant to
    * be something the user reads straight through.
    */
   const launch = useCallback(
-    async (entry: string, options: { testServerId: string; secret: string }) => {
+    async (entry: string, options: { testServerId: string }) => {
       // Taking the number first is what closes the gap: from here on the bot
       // being replaced is already somebody the editor does not listen to.
       const session = nextSession.current++
       current.current = session
       running.current = { ...options, entry }
 
-      typed.current = options.secret
       setProblem(undefined)
       // The Canvas belongs to the bot that is running: runs are numbered from
       // one again, and what the last bot did is not this one's doing.
@@ -212,7 +205,7 @@ export function useSession(project: Project, shell: SessionGateway): Session {
       setStatus("connecting")
 
       // A bot that spawns and then hangs on the gateway would otherwise leave
-      // the panel saying "connecting" for as long as the user is willing to
+      // the status saying "connecting" for as long as the user is willing to
       // look at it. Stopping is what makes Run pressable again.
       settled()
       givingUp.current = setTimeout(() => {
@@ -245,7 +238,7 @@ export function useSession(project: Project, shell: SessionGateway): Session {
     try {
       await shell.stop()
     } finally {
-      // The button says Stop, so the panel says stopped. Leaving the status on
+      // The button says Stop, so the Console says stopped. Leaving the status on
       // `ready` because the call itself failed would leave the user looking at
       // a bot they cannot stop and cannot restart.
       setStatus("stopped")
@@ -253,7 +246,7 @@ export function useSession(project: Project, shell: SessionGateway): Session {
   }, [settled, shell])
 
   const start = useCallback(
-    async (options: { testServerId: string; secret?: string }) => {
+    async (options: { testServerId: string }) => {
       setEntries([])
 
       let entry: string
@@ -265,7 +258,7 @@ export function useSession(project: Project, shell: SessionGateway): Session {
         return
       }
 
-      await launch(entry, { testServerId: options.testServerId, secret: options.secret ?? "" })
+      await launch(entry, options)
     },
     [launch, project]
   )
@@ -312,7 +305,7 @@ export function useSession(project: Project, shell: SessionGateway): Session {
       }
 
       note("run.reloading")
-      void launch(entry, { testServerId: bot.testServerId, secret: bot.secret })
+      void launch(entry, { testServerId: bot.testServerId })
     }, RELOAD_DELAY)
 
     return () => clearTimeout(reload)

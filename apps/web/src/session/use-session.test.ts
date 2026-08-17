@@ -100,7 +100,8 @@ function withGreeting(project: Project, greeting: string): Project {
   }
 }
 
-const RUNNING = { testServerId: "1", secret: "a-token" }
+/** What starting a bot takes. The token is not part of it: the shell reads it. */
+const RUNNING = { testServerId: "1" }
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
