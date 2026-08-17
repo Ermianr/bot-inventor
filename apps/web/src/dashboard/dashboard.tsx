@@ -37,7 +37,12 @@ export function Dashboard({
     duplicate,
     remove
   } = useProjects(store)
-  const [creating, setCreating] = useState(false)
+  /**
+   * Which Project the creation dialog is about to make, or nothing when it is
+   * closed. One dialog serves both: the example is a Project like any other, so
+   * it is asked for with the same three questions.
+   */
+  const [creating, setCreating] = useState<"blank" | "example" | undefined>(undefined)
   /**
    * The Project a dialog is about, held as an id rather than as a summary: the
    * list is read again after every one of these, and a dialog left holding the
@@ -53,11 +58,6 @@ export function Dashboard({
   const problemOf = (projectId: string) =>
     manageProblem?.projectId === projectId ? manageProblem.message : undefined
 
-  const openExample = async () => {
-    const created = await createExample()
-    if (created !== undefined) onOpen(created)
-  }
-
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto grid max-w-5xl gap-8 px-8 py-12">
@@ -67,7 +67,7 @@ export function Dashboard({
             <p className="text-muted-foreground text-sm">{translate("dashboard.subtitle")}</p>
           </div>
 
-          <Button data-testid="dashboard-create" onClick={() => setCreating(true)}>
+          <Button data-testid="dashboard-create" onClick={() => setCreating("blank")}>
             {translate("dashboard.create")}
           </Button>
         </header>
@@ -84,7 +84,7 @@ export function Dashboard({
           they have none, which is the one thing this screen must never say.
         */}
         {projects === undefined ? null : projects.length === 0 ? (
-          <Empty onCreate={() => setCreating(true)} onExample={() => void openExample()} />
+          <Empty onCreate={() => setCreating("blank")} onExample={() => setCreating("example")} />
         ) : (
           <ul
             className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4"
@@ -113,15 +113,23 @@ export function Dashboard({
         )}
       </div>
 
+      {/*
+        Keyed by which of the two was asked for, so that the fields start again
+        from what that one begins with rather than from what the last one was
+        left holding.
+      */}
       <CreateProjectDialog
-        open={creating}
-        onOpenChange={setCreating}
+        key={creating ?? "closed"}
+        open={creating !== undefined}
+        kind={creating === "example" ? "example" : "blank"}
+        onOpenChange={open => open || setCreating(undefined)}
         problem={creationProblem}
         onCreate={details => {
           void (async () => {
-            const created = await create(details)
+            const created =
+              creating === "example" ? await createExample(details) : await create(details)
             if (created === undefined) return
-            setCreating(false)
+            setCreating(undefined)
             onOpen(created)
           })()
         }}
