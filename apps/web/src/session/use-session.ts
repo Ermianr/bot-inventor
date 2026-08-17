@@ -73,7 +73,12 @@ export type Session = {
    * the previous bot keeps running.
    */
   problem: string | undefined
-  start(options: { testServerId: string; secret: string }): Promise<void>
+  /**
+   * The token is the shell's to read, out of the keychain under the Project.
+   * `secret` is only ever a token typed in this window and not yet stored: the
+   * one the shell cannot know about, and so the one it cannot redact.
+   */
+  start(options: { testServerId: string; secret?: string }): Promise<void>
   stop(): Promise<void>
 }
 
@@ -248,7 +253,7 @@ export function useSession(project: Project, shell: SessionGateway): Session {
   }, [settled, shell])
 
   const start = useCallback(
-    async (options: { testServerId: string; secret: string }) => {
+    async (options: { testServerId: string; secret?: string }) => {
       setEntries([])
 
       let entry: string
@@ -260,7 +265,7 @@ export function useSession(project: Project, shell: SessionGateway): Session {
         return
       }
 
-      await launch(entry, options)
+      await launch(entry, { testServerId: options.testServerId, secret: options.secret ?? "" })
     },
     [launch, project]
   )
