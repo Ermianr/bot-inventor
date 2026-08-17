@@ -38,7 +38,13 @@ const LIMIT = 1000
 export type TestServerPickerProps = {
   /** The Project whose servers are listed, or nothing when there is no Project. */
   projectId?: string
-  /** How the pasted-id field is found by a test, since its words are translated. */
+  /**
+   * What this picker is called on the page: it names the fields for their
+   * labels and for a test, whose words are translated and cannot be searched
+   * for. Two pickers can be on the page at once — Project Options opens over
+   * the Run Panel — and a label pointing at the other one's field is a label
+   * that focuses the wrong thing.
+   */
   testId: string
   /** The id currently chosen, which is what a Session registers to. */
   value: string
@@ -79,7 +85,7 @@ export function TestServerPicker({ projectId, testId, value, onChange }: TestSer
       {!listing ? null : (
         <>
           <div className="flex items-center justify-between">
-            <Label htmlFor="test-server">{translate("run.testServer.label")}</Label>
+            <Label htmlFor={`${testId}-search`}>{translate("run.testServer.label")}</Label>
             <Button variant="ghost" size="xs" onClick={look} disabled={loading}>
               {translate("run.testServer.reload")}
             </Button>
@@ -99,7 +105,7 @@ export function TestServerPicker({ projectId, testId, value, onChange }: TestSer
             disabled={loading || servers.length === 0}
           >
             <ComboboxInput
-              id="test-server"
+              id={`${testId}-search`}
               placeholder={translate(loading ? "run.testServer.loading" : "run.testServer.search")}
             />
             <ComboboxContent>
@@ -133,11 +139,11 @@ export function TestServerPicker({ projectId, testId, value, onChange }: TestSer
                 })}
             </p>
           )}
-          <Label htmlFor="test-server-id" className={listing ? "text-muted-foreground" : undefined}>
+          <Label htmlFor={testId} className={listing ? "text-muted-foreground" : undefined}>
             {translate(listing ? "run.testServer.manual" : "run.testServer.label")}
           </Label>
           <Input
-            id="test-server-id"
+            id={testId}
             data-testid={testId}
             inputMode="numeric"
             value={value}

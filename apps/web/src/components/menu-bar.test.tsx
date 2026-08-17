@@ -130,7 +130,7 @@ describe("the Project menu", () => {
     })
 
     openProjectMenu()
-    await pick(translate("project.options.menu"))
+    await pick(translate("project.options.title"))
 
     expect(asked).toBe(1)
   })

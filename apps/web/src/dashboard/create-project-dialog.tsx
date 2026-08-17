@@ -79,12 +79,7 @@ export function CreateProjectDialog({
             />
           </div>
 
-          <SecretField
-            id="project-token"
-            testId="create-project-token"
-            value={secret}
-            onChange={setSecret}
-          />
+          <SecretField testId="create-project-token" value={secret} onChange={setSecret} />
 
           {/*
             The same field Project Options offers, given no Project: asking

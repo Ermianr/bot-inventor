@@ -19,13 +19,16 @@ import { translate } from "@/i18n/messages"
  * exists: whether there is one. Nothing hands one back.
  */
 export function SecretField({
-  id,
   testId,
   value,
   onChange,
   stored
 }: {
-  id: string
+  /**
+   * What this field is called on the page: it ties the label to the input and
+   * finds it in a test, whose words are translated. Two of these can be on the
+   * page at once, since Project Options opens over the Run Panel.
+   */
   testId: string
   value: string
   onChange: (secret: string) => void
@@ -34,9 +37,9 @@ export function SecretField({
 }) {
   return (
     <div className="grid gap-1.5">
-      <Label htmlFor={id}>{translate("run.token.label")}</Label>
+      <Label htmlFor={testId}>{translate("run.token.label")}</Label>
       <Input
-        id={id}
+        id={testId}
         data-testid={testId}
         type="password"
         autoComplete="off"

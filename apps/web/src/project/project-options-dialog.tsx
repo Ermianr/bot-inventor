@@ -30,7 +30,9 @@ import { describeRefusal } from "@/session/refusal"
  * which is what tells the user whether typing here replaces something.
  *
  * The Test Server is written the moment it is picked, the way it is everywhere
- * else, so the button below is about the token alone.
+ * else. So there is nothing here to cancel and nothing to save but the token:
+ * one button, which stores what was typed and closes. A Cancel beside it would
+ * promise to put back a server that was already changed.
  */
 export function ProjectOptionsDialog({
   open,
@@ -46,10 +48,17 @@ export function ProjectOptionsDialog({
   testServer: TestServer
 }) {
   const [secret, setSecret] = useState("")
-  const [stored, setStored] = useState(false)
-  /** Why the token was not stored, when it was not. */
+  /** Whether a token is stored, or nothing while the keychain has not said. */
+  const [stored, setStored] = useState<boolean | undefined>(undefined)
+  /** Why the keychain could not be read or written, when it could not. */
   const [problem, setProblem] = useState<string | undefined>(undefined)
 
+  /**
+   * A keychain that will not answer says so, rather than being read as a
+   * Project with no token: that would tell somebody whose token is perfectly
+   * safe that it is gone, and invite them to paste it again into a keychain
+   * that is not going to take it either.
+   */
   useEffect(() => {
     let current = true
     store
@@ -57,8 +66,10 @@ export function ProjectOptionsDialog({
       .then(has => {
         if (current) setStored(has)
       })
-      .catch(() => {
-        if (current) setStored(false)
+      .catch((error: unknown) => {
+        if (!current) return
+        setStored(undefined)
+        setProblem(describeRefusal(error))
       })
     return () => {
       current = false
@@ -107,7 +118,6 @@ export function ProjectOptionsDialog({
           </DialogHeader>
 
           <SecretField
-            id="project-options-token"
             testId="project-options-token"
             value={secret}
             onChange={setSecret}
@@ -128,11 +138,8 @@ export function ProjectOptionsDialog({
           )}
 
           <DialogFooter>
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-              {translate("project.options.cancel")}
-            </Button>
-            <Button type="submit" data-testid="project-options-save">
-              {translate("project.options.save")}
+            <Button type="submit" data-testid="project-options-done">
+              {translate("project.options.done")}
             </Button>
           </DialogFooter>
         </form>

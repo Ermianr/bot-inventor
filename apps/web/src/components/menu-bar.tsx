@@ -115,7 +115,7 @@ export function MenuBar({
               in the way for the whole of the time it is not being changed.
             */}
             <MenubarItem data-testid="menu-project-options" onClick={onOptions}>
-              {translate("project.options.menu")}
+              {translate("project.options.title")}
             </MenubarItem>
 
             {/*

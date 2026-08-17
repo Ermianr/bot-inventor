@@ -48,7 +48,7 @@ async function replaceToken(token: string) {
     target: { value: token }
   })
   await act(async () => {
-    fireEvent.click(screen.getByTestId("project-options-save"))
+    fireEvent.click(screen.getByTestId("project-options-done"))
   })
 }
 
@@ -71,6 +71,22 @@ describe("Project Options", () => {
 
     const note = await screen.findByTestId("project-options-token-state")
     expect(note.textContent).toBe(translate("project.token.absent"))
+  })
+
+  /**
+   * "No token" is a sentence about somebody's Project, not about the keychain
+   * that would not answer. Saying it when nothing was asked tells a user whose
+   * token is perfectly safe that it is gone.
+   */
+  it("says nothing about a token when the keychain would not answer", async () => {
+    const store = fakeProjectStore([project])
+    store.breaks.hasSecret = "the keychain is locked"
+    show(store)
+
+    expect((await screen.findByTestId("project-options-problem")).textContent).toContain(
+      "the keychain is locked"
+    )
+    expect(screen.queryByTestId("project-options-token-state")).toBeNull()
   })
 
   it("replaces the token the Project runs with", async () => {
@@ -103,7 +119,7 @@ describe("Project Options", () => {
     await store.storeSecret(project.id, "the-stored-token")
     show(store)
 
-    const save = await screen.findByTestId("project-options-save")
+    const save = await screen.findByTestId("project-options-done")
     await act(async () => {
       fireEvent.click(save)
     })
