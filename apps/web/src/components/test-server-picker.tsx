@@ -23,10 +23,10 @@ import { describeRefusal } from "@/session/refusal"
  * plain dropdown, and why an id can still be pasted by hand: the list is
  * capped, and the one server the user wants might be past the cap.
  *
- * A Project that does not exist yet has nothing to ask Discord with — its token
- * is still being typed in the form beside this — so it is given no id, and what
- * is left is the pasted id alone. That is the same field either way rather than
- * a second one that happens to look like it.
+ * A Project that does not exist yet has no stored token, so the one being typed
+ * in the form beside this is what it asks with, and the user presses Look for
+ * servers when they have pasted it. Nothing looks on its own there: a token
+ * half-typed would only produce a refusal the user has to read past.
  */
 
 /** One server, as the Tauri side reports it. */
@@ -38,6 +38,12 @@ const LIMIT = 1000
 export type TestServerPickerProps = {
   /** The Project whose servers are listed, or nothing when there is no Project. */
   projectId?: string
+  /**
+   * The token to ask Discord with when there is no Project to read one for:
+   * what the form beside this has been typed into so far. A stored token is
+   * never sent here — the Tauri side reads that one itself.
+   */
+  token?: string
   /**
    * What this picker is called on the page: it names the fields for their
    * labels and for a test, whose words are translated and cannot be searched
@@ -51,77 +57,117 @@ export type TestServerPickerProps = {
   onChange(testServerId: string): void
 }
 
-export function TestServerPicker({ projectId, testId, value, onChange }: TestServerPickerProps) {
+export function TestServerPicker({
+  projectId,
+  token,
+  testId,
+  value,
+  onChange
+}: TestServerPickerProps) {
   const [servers, setServers] = useState<readonly TestServer[]>([])
   const [loading, setLoading] = useState(false)
   const [problem, setProblem] = useState<string | undefined>(undefined)
+  /** Whether Discord has been asked at all, which is what a list means anything after. */
+  const [asked, setAsked] = useState(false)
 
-  const look = useCallback(async () => {
-    if (projectId === undefined) return
-    setLoading(true)
-    setProblem(undefined)
-    try {
-      setServers(await invoke<TestServer[]>("list_test_servers", { projectId }))
-    } catch (error) {
-      // Not having a token yet is the ordinary state of a new Project, not
-      // something to shout about: the token field above says what to do.
-      setServers([])
-      setProblem(describeRefusal(error))
-    } finally {
-      setLoading(false)
-    }
-  }, [projectId])
+  const typed = token?.trim() ?? ""
+  /** Something to ask Discord with: a Project to read a token for, or one typed. */
+  const askable = projectId !== undefined || typed.length > 0
 
+  /**
+   * The token is passed in rather than read from above, so that looking again
+   * is what the button does and not what every keystroke of the token does.
+   */
+  const look = useCallback(
+    async (token: string) => {
+      if (projectId === undefined && token.length === 0) return
+      setLoading(true)
+      setProblem(undefined)
+      setAsked(true)
+      try {
+        setServers(await invoke<TestServer[]>("list_test_servers", { projectId, token }))
+      } catch (error) {
+        // Not having a token yet is the ordinary state of a new Project, not
+        // something to shout about: the token field above says what to do.
+        setServers([])
+        setProblem(describeRefusal(error))
+      } finally {
+        setLoading(false)
+      }
+    },
+    [projectId]
+  )
+
+  // A Project already has its token, so its servers are there to be picked from
+  // the moment the dialog opens. A Project being created has not been typed one
+  // yet, and waits for the button.
   useEffect(() => {
-    void look()
-  }, [look])
+    if (projectId === undefined) return
+    void look("")
+  }, [look, projectId])
 
   const chosen = servers.find(server => server.id === value) ?? null
   const capped = servers.length >= LIMIT
-  const listing = projectId !== undefined
+  const listing = projectId !== undefined || asked
+
+  /** Beside whichever field is on top, because that is the one it fills. */
+  const lookButton = (
+    <Button
+      variant="outline"
+      type="button"
+      data-testid={`${testId}-look`}
+      onClick={() => void look(typed)}
+      disabled={loading || !askable}
+    >
+      {translate("run.testServer.look")}
+    </Button>
+  )
 
   return (
     <div className="grid gap-1.5">
-      {!listing ? null : (
-        <>
-          <div className="flex items-center justify-between">
-            <Label htmlFor={`${testId}-search`}>{translate("run.testServer.label")}</Label>
-            <Button variant="ghost" size="xs" onClick={look} disabled={loading}>
-              {translate("run.testServer.reload")}
-            </Button>
-          </div>
+      <Label htmlFor={listing ? `${testId}-search` : testId}>
+        {translate("run.testServer.label")}
+      </Label>
 
-          <Combobox
-            items={servers as TestServer[]}
-            value={chosen}
-            onValueChange={(server: TestServer | null) => onChange(server?.id ?? "")}
-            itemToStringLabel={(server: TestServer) => server.name}
-            // Searching by id as well as by name, because the id is what someone
-            // arrives with when they copied it out of Discord.
-            filter={(server: TestServer, query: string) =>
-              server.name.toLowerCase().includes(query.trim().toLowerCase()) ||
-              server.id.includes(query.trim())
-            }
-            disabled={loading || servers.length === 0}
-          >
-            <ComboboxInput
-              id={`${testId}-search`}
-              placeholder={translate(loading ? "run.testServer.loading" : "run.testServer.search")}
-            />
-            <ComboboxContent>
-              <ComboboxEmpty>{translate("run.testServer.noMatch")}</ComboboxEmpty>
-              <ComboboxList>
-                <ComboboxCollection>
-                  {(server: TestServer) => (
-                    <ComboboxItem key={server.id} value={server}>
-                      {server.name}
-                    </ComboboxItem>
-                  )}
-                </ComboboxCollection>
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </>
+      {!listing ? null : (
+        <div className="flex items-center gap-2">
+          {/* The Combobox renders no element of its own, so the width lives here. */}
+          <div className="min-w-0 flex-1">
+            <Combobox
+              items={servers as TestServer[]}
+              value={chosen}
+              onValueChange={(server: TestServer | null) => onChange(server?.id ?? "")}
+              itemToStringLabel={(server: TestServer) => server.name}
+              // Searching by id as well as by name, because the id is what someone
+              // arrives with when they copied it out of Discord.
+              filter={(server: TestServer, query: string) =>
+                server.name.toLowerCase().includes(query.trim().toLowerCase()) ||
+                server.id.includes(query.trim())
+              }
+              disabled={loading || servers.length === 0}
+            >
+              <ComboboxInput
+                id={`${testId}-search`}
+                placeholder={translate(
+                  loading ? "run.testServer.loading" : "run.testServer.search"
+                )}
+              />
+              <ComboboxContent>
+                <ComboboxEmpty>{translate("run.testServer.noMatch")}</ComboboxEmpty>
+                <ComboboxList>
+                  <ComboboxCollection>
+                    {(server: TestServer) => (
+                      <ComboboxItem key={server.id} value={server}>
+                        {server.name}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxCollection>
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+          {lookButton}
+        </div>
       )}
 
       {/*
@@ -139,16 +185,24 @@ export function TestServerPicker({ projectId, testId, value, onChange }: TestSer
                 })}
             </p>
           )}
-          <Label htmlFor={testId} className={listing ? "text-muted-foreground" : undefined}>
-            {translate(listing ? "run.testServer.manual" : "run.testServer.label")}
-          </Label>
-          <Input
-            id={testId}
-            data-testid={testId}
-            inputMode="numeric"
-            value={value}
-            onChange={event => onChange(event.target.value)}
-          />
+          {/* The label above is this field's own until there is a list to prefer. */}
+          {!listing ? null : (
+            <Label htmlFor={testId} className="text-muted-foreground">
+              {translate("run.testServer.manual")}
+            </Label>
+          )}
+          <div className="flex items-center gap-2">
+            <Input
+              className="min-w-0 flex-1"
+              id={testId}
+              data-testid={testId}
+              inputMode="numeric"
+              value={value}
+              onChange={event => onChange(event.target.value)}
+            />
+            {/* Only once on the page: the list above already carries it. */}
+            {listing ? null : lookButton}
+          </div>
         </>
       )}
 

@@ -5,10 +5,15 @@ use crate::secrets::{self, Refusal};
 /// The servers a Project's bot is in, so the user picks their Test Server from
 /// a list instead of pasting an id.
 ///
-/// Asking Discord takes the token, which means it happens here: the webview is
-/// never sent one. What comes back is a name and an id, and the name is the
-/// only reason this exists — an id pasted by hand is a typo away from
-/// registering someone's commands on a server they are not looking at.
+/// Asking Discord takes the token, which means it happens here: a stored token
+/// is never sent to the webview. What comes back is a name and an id, and the
+/// name is the only reason this exists — an id pasted by hand is a typo away
+/// from registering someone's commands on a server they are not looking at.
+///
+/// A Project that does not exist yet has no stored token, so the one being
+/// typed into the Create a bot dialog is passed in instead. That token is
+/// already in the webview — it was typed there — so handing it back here gives
+/// nothing away, and it is used for this call alone: nothing writes it.
 
 /// Discord's own maximum for one page of this endpoint.
 const PAGE: usize = 200;
@@ -37,13 +42,23 @@ struct Guild {
 
 /// Lists the servers the bot is in, oldest first, as Discord orders them.
 ///
-/// The bot does not have to be running: this is a REST call with the stored
-/// token, so the user can choose where to test before ever pressing Run.
+/// The bot does not have to be running: this is a REST call with the token, so
+/// the user can choose where to test before ever pressing Run — and, with a
+/// token passed in, before the Project itself exists.
 #[tauri::command]
-pub async fn list_test_servers(project_id: String) -> Result<Vec<TestServer>, Refusal> {
-    let token = secrets::read(&project_id)
-        .map_err(Refusal::failed)?
-        .ok_or(Refusal::MissingSecret)?;
+pub async fn list_test_servers(
+    project_id: Option<String>,
+    token: Option<String>,
+) -> Result<Vec<TestServer>, Refusal> {
+    let token = match token
+        .map(|token| token.trim().to_owned())
+        .filter(|token| !token.is_empty())
+    {
+        Some(token) => token,
+        None => secrets::read(&project_id.ok_or(Refusal::MissingSecret)?)
+            .map_err(Refusal::failed)?
+            .ok_or(Refusal::MissingSecret)?,
+    };
 
     let client = reqwest::Client::new();
     let mut servers: Vec<TestServer> = Vec::new();

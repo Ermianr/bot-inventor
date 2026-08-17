@@ -18,7 +18,7 @@ const en = {
   "run.testServer.help": "Your commands appear on this server straight away.",
   "run.testServer.search": "Search your servers",
   "run.testServer.loading": "Looking for your servers…",
-  "run.testServer.reload": "Look again",
+  "run.testServer.look": "Look for servers",
   "run.testServer.none": "This bot is not in any server yet. Invite it to one, then look again.",
   "run.testServer.noMatch": "No server matches that.",
   "run.testServer.capped": "Showing the first {count}. If yours is not here, type its id below.",
@@ -243,7 +243,7 @@ const es: Record<MessageKey, string> = {
   "run.testServer.help": "Tus comandos aparecen en este servidor de inmediato.",
   "run.testServer.search": "Busca entre tus servidores",
   "run.testServer.loading": "Buscando tus servidores…",
-  "run.testServer.reload": "Buscar de nuevo",
+  "run.testServer.look": "Buscar servidores",
   "run.testServer.none":
     "Este bot todavía no está en ningún servidor. Invítalo a uno y vuelve a buscar.",
   "run.testServer.noMatch": "Ningún servidor coincide.",
