@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MenuBar } from "@/components/menu-bar"
 import { translate } from "@/i18n/messages"
 import type { Exporting } from "@/project/use-export"
+import type { Sharing } from "@/project/use-share"
 
 // The toaster itself belongs to the root route, so what the Menu Bar can be
 // held to is which toast it raised and what it said.
@@ -38,6 +39,24 @@ vi.mock("sonner", () => ({
 /** Every Export the Menu Bar asked for, in the order it asked. */
 type Asked = { exports: ExportFormat[] }
 
+/** How many times the row asked for the Project to be shared. */
+type Shared = { count: number }
+
+function fakeSharing(overrides: Partial<Sharing> = {}) {
+  const shared: Shared = { count: 0 }
+
+  const sharing: Sharing = {
+    written: undefined,
+    problem: undefined,
+    share: async () => {
+      shared.count += 1
+    },
+    ...overrides
+  }
+
+  return { shared, sharing }
+}
+
 function fakeExporting(overrides: Partial<Exporting> = {}) {
   const asked: Asked = { exports: [] }
 
@@ -58,7 +77,12 @@ function fakeExporting(overrides: Partial<Exporting> = {}) {
 /** The row as the editor renders it, with only what a test is about changed. */
 function renderMenuBar(
   exporting: Exporting,
-  overrides: { onDashboard?: () => void; onOptions?: () => void; problem?: string } = {}
+  overrides: {
+    onDashboard?: () => void
+    onOptions?: () => void
+    problem?: string
+    sharing?: Sharing
+  } = {}
 ) {
   return render(
     <MenuBar
@@ -68,6 +92,7 @@ function renderMenuBar(
       saved
       problem={overrides.problem}
       exporting={exporting}
+      sharing={overrides.sharing ?? fakeSharing().sharing}
     />
   )
 }
@@ -160,6 +185,24 @@ describe("the Project menu", () => {
 
     expect(await screen.findByText(translate("export.singleFile.help"))).toBeDefined()
     expect(await screen.findByText(translate("export.nodeProject.help"))).toBeDefined()
+  })
+
+  /**
+   * Share and Export are two different offers on one menu, and the entry that
+   * is wired to the wrong one is the mistake nothing else catches: both are
+   * "give this bot to somebody", and only one of them writes a Project File.
+   */
+  it("shares the Project when Share is picked", async () => {
+    const { asked, exporting } = fakeExporting()
+    const { shared, sharing } = fakeSharing()
+    renderMenuBar(exporting, { sharing })
+
+    openProjectMenu()
+    await pick(translate("share.title"))
+
+    expect(shared.count).toBe(1)
+    // And nothing was Exported: the two entries are not the same offer.
+    expect(asked.exports).toEqual([])
   })
 
   it("says it is working and cannot be asked again while it is", async () => {
@@ -281,6 +324,23 @@ describe("what the Menu Bar says back", () => {
     expect(raised[0]?.action).toBeUndefined()
   })
 
+  it("says where the Project was shared", () => {
+    const { exporting } = fakeExporting()
+    const { sharing } = fakeSharing({ written: "Shared to C:/shared/bot.botinv" })
+    renderMenuBar(exporting, { sharing })
+
+    expect(raised).toEqual([{ kind: "success", message: "Shared to C:/shared/bot.botinv" }])
+  })
+
+  // A Share that failed is a file the user believes they have and does not.
+  it("says a Share that did not happen", () => {
+    const { exporting } = fakeExporting()
+    const { sharing } = fakeSharing({ problem: "Your bot could not be shared." })
+    renderMenuBar(exporting, { sharing })
+
+    expect(raised).toEqual([{ kind: "error", message: "Your bot could not be shared." }])
+  })
+
   it("says the same problem again when it happens again", () => {
     const problem = "This Project could not be saved."
     const { exporting } = fakeExporting()
@@ -288,7 +348,8 @@ describe("what the Menu Bar says back", () => {
     // What the hook underneath does between two goes at the same thing: the
     // message is dropped before the next write is attempted, and comes back
     // when that one fails the same way. A user losing work twice is told twice.
-    const view = renderMenuBar(exporting, { problem })
+    const { sharing } = fakeSharing()
+    const view = renderMenuBar(exporting, { problem, sharing })
     view.rerender(
       <MenuBar
         name="Bot"
@@ -297,6 +358,7 @@ describe("what the Menu Bar says back", () => {
         saved
         problem={undefined}
         exporting={exporting}
+        sharing={sharing}
       />
     )
     view.rerender(
@@ -307,6 +369,7 @@ describe("what the Menu Bar says back", () => {
         saved={false}
         problem={problem}
         exporting={exporting}
+        sharing={sharing}
       />
     )
 

@@ -6,10 +6,12 @@ import { Canvas } from "@/canvas/canvas"
 import { FlowList } from "@/canvas/flow-list"
 import { MenuBar } from "@/components/menu-bar"
 import { desktopExports } from "@/project/desktop-exports"
+import { desktopShare } from "@/project/desktop-share"
 import { ProjectOptionsDialog } from "@/project/project-options-dialog"
 import { projectStore } from "@/project/store"
 import { useExport } from "@/project/use-export"
 import { useProject } from "@/project/use-project"
+import { useShare } from "@/project/use-share"
 import { useAutosave, useStoredProject } from "@/project/use-stored-project"
 import { useTestServer } from "@/project/use-test-server"
 import { Console } from "@/session/console"
@@ -72,6 +74,7 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
   // watching the bot think happens on the Canvas: both sides read one run.
   const session = useSession(editor.project, shell)
   const exporting = useExport(editor.project, desktopExports)
+  const sharing = useShare(editor.project, desktopShare)
 
   return (
     // The Console is a row of its own rather than something floating over the
@@ -85,6 +88,7 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
         saved={autosave.saved}
         problem={autosave.problem}
         exporting={exporting}
+        sharing={sharing}
         run={<RunControls session={session} testServerId={testServer.testServerId} />}
       />
 

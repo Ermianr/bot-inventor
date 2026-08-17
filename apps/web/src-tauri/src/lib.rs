@@ -4,6 +4,7 @@ mod jail;
 mod projects;
 mod secrets;
 mod session;
+mod share;
 mod test_servers;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -31,6 +32,7 @@ pub fn run() {
       secrets::secret_exists,
       session::start_session,
       session::stop_session,
+      share::share_project,
       test_servers::list_test_servers
     ])
     .setup(|app| {
