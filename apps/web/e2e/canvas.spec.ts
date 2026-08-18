@@ -41,7 +41,10 @@ test.describe("the Canvas", () => {
   })
 
   test("connects a Data Wire and writes the Coercion on it", async () => {
-    await canvas.drawWire(canvas.port("node-trigger", "user"), canvas.port("node-reply", "content"))
+    await canvas.drawWire(
+      canvas.port("node-trigger", "user"),
+      canvas.port("node-reply", "slot.slot-who")
+    )
 
     await expect(canvas.wires()).toHaveCount(2)
     // `wire-2` is the second Wire the Flow has ever had: the Execution Wire it
@@ -50,7 +53,10 @@ test.describe("the Canvas", () => {
   })
 
   test("refuses a Wire between an Execution Port and a Data Port", async () => {
-    await canvas.drawWire(canvas.port("node-trigger", "next"), canvas.port("node-reply", "content"))
+    await canvas.drawWire(
+      canvas.port("node-trigger", "next"),
+      canvas.port("node-reply", "slot.slot-who")
+    )
 
     await expect(canvas.refusal()).toBeVisible()
     await expect(canvas.wires()).toHaveCount(1)
@@ -64,10 +70,16 @@ test.describe("the Canvas", () => {
   })
 
   test("refuses a second Wire arriving at a Data input Port", async () => {
-    await canvas.drawWire(canvas.port("node-trigger", "user"), canvas.port("node-reply", "content"))
+    await canvas.drawWire(
+      canvas.port("node-trigger", "user"),
+      canvas.port("node-reply", "slot.slot-who")
+    )
     await expect(canvas.wires()).toHaveCount(2)
 
-    await canvas.drawWire(canvas.port("node-trigger", "user"), canvas.port("node-reply", "content"))
+    await canvas.drawWire(
+      canvas.port("node-trigger", "user"),
+      canvas.port("node-reply", "slot.slot-who")
+    )
 
     await expect(canvas.refusal()).toContainText("already reads a value")
     await expect(canvas.wires()).toHaveCount(2)

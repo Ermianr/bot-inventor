@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import { catalogue, type NodeDefinition } from "@bot-inventor/nodes"
-import { render, within } from "@testing-library/react"
+import { type FieldValue, literalText } from "@bot-inventor/schema"
+import { fireEvent, render, within } from "@testing-library/react"
 import { ReactFlowProvider } from "@xyflow/react"
 import type { ComponentProps } from "react"
 import { describe, expect, it } from "vitest"
@@ -30,7 +31,7 @@ function draw(runState: NodeRunState | undefined) {
       id: "node-reply",
       type: definition.id,
       position: { x: 0, y: 0 },
-      fields: { content: "Hello!" }
+      fields: { content: literalText("Hello!") }
     },
     definition,
     runState,
@@ -118,5 +119,73 @@ describe("drawing a Node the run reached", () => {
 
     expect(node.dataset.runState).toBeUndefined()
     expect(node.className).not.toContain("ring-")
+  })
+})
+
+describe("typing into a Slotted text field", () => {
+  function drawReply(content: FieldValue, setField: (id: string, value: FieldValue) => void) {
+    const data: FlowNodeData = {
+      node: {
+        id: "node-reply",
+        type: definition.id,
+        position: { x: 0, y: 0 },
+        fields: { content }
+      },
+      definition,
+      runState: undefined,
+      setField,
+      remove: () => {}
+    }
+    const props = { data, id: "reply", type: "flowNode" } as unknown as ComponentProps<
+      typeof FlowNode
+    >
+
+    const { container } = render(
+      <ReactFlowProvider>
+        <FlowNode {...props} />
+      </ReactFlowProvider>
+    )
+    const box = container.querySelector<HTMLInputElement>("#reply-content")
+    if (box === null) throw new Error("the Reply Node drew no text box for its message")
+    return box
+  }
+
+  it("shows the text of the field in a plain text box", () => {
+    expect(drawReply(literalText("Hello!"), () => {}).value).toBe("Hello!")
+  })
+
+  it("writes what was typed back as one literal segment", () => {
+    const written: FieldValue[] = []
+    const box = drawReply(literalText("Hello!"), (_id, value) => written.push(value))
+
+    fireEvent.change(box, { target: { value: "Goodbye!" } })
+
+    expect(written).toEqual([literalText("Goodbye!")])
+  })
+
+  it("draws a Port for the Slot the message holds", () => {
+    const data: FlowNodeData = {
+      node: {
+        id: "node-reply",
+        type: definition.id,
+        position: { x: 0, y: 0 },
+        fields: { content: [{ kind: "slot", slot: "caller" }] }
+      },
+      definition,
+      runState: undefined,
+      setField: () => {},
+      remove: () => {}
+    }
+    const props = { data, id: "reply", type: "flowNode" } as unknown as ComponentProps<
+      typeof FlowNode
+    >
+
+    const { container } = render(
+      <ReactFlowProvider>
+        <FlowNode {...props} />
+      </ReactFlowProvider>
+    )
+
+    expect(within(container).getByTestId("port-reply-slot.caller")).toBeDefined()
   })
 })

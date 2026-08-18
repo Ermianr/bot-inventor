@@ -129,9 +129,38 @@ describe("the Ports a slash command's parameters declare", () => {
 })
 
 describe("the Reply Node", () => {
-  it("takes its text from a Data input Port backed by a field of the same id", () => {
-    expect(findPort(reply, "content")).toMatchObject({ kind: "data", direction: "input" })
-    expect(findField(reply, "content")).toMatchObject({ control: "text" })
+  it("holds its message in a Slotted text field, and no Data input beside it", () => {
+    expect(findField(reply, "content")).toMatchObject({ control: "slottedText" })
+    // The old rule — an inline field unless a Wire is connected — is gone: a
+    // value reaches the message through a Slot and nowhere else (ADR 0010).
+    expect(findPort(reply, "content")).toBeUndefined()
+  })
+
+  it("declares one Data input Port per Slot typed into its message", () => {
+    const ports = portsOf(reply, {
+      content: [
+        { kind: "literal", text: "Hola " },
+        { kind: "slot", slot: "caller" },
+        { kind: "literal", text: ", hola " },
+        { kind: "slot", slot: "caller" }
+      ]
+    })
+
+    expect(ports.filter(port => port.id.startsWith("slot."))).toEqual([
+      {
+        id: "slot.caller",
+        kind: "data",
+        direction: "input",
+        dataType: "text",
+        labelKey: "ports.slot.label"
+      }
+    ])
+  })
+
+  it("has no Slot Port while its message is nothing but text", () => {
+    const ports = portsOf(reply, { content: [{ kind: "literal", text: "Hello!" }] })
+
+    expect(ports.some(port => port.id.startsWith("slot."))).toBe(false)
   })
 
   it("carries on to a next Execution Port", () => {

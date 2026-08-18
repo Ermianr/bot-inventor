@@ -43,4 +43,5 @@ export {
 } from "./definition.js"
 export { reply } from "./discord/reply.js"
 export { slashCommandTrigger } from "./discord/slash-command-trigger.js"
+export { slotPortId, slotPorts } from "./slots.js"
 export { addableNodes, hasTrigger, type NodeChoice } from "./triggers.js"

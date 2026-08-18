@@ -4,7 +4,13 @@ import {
   type PortDefinition,
   portsOf
 } from "@bot-inventor/nodes"
-import type { FieldValue, Node } from "@bot-inventor/schema"
+import {
+  type FieldValue,
+  literalText,
+  type Node,
+  plainTextOf,
+  readSlottedText
+} from "@bot-inventor/schema"
 import { Checkbox } from "@bot-inventor/ui/components/checkbox"
 import {
   ContextMenu,
@@ -62,7 +68,12 @@ export type FlowNodeType = ReactFlowNode<FlowNodeData, "flowNode">
  * what the caller answered — the Ports are there as soon as the field holds
  * parameters — so what is left is the editing surface.
  */
-const DRAWN_CONTROLS = new Set<FieldDefinition["control"]>(["text", "number", "switch"])
+const DRAWN_CONTROLS = new Set<FieldDefinition["control"]>([
+  "text",
+  "slottedText",
+  "number",
+  "switch"
+])
 
 export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
   const { node, definition, runState, setField, remove } = data
@@ -170,6 +181,26 @@ function FieldRow({
 }) {
   const inputId = `${nodeId}-${field.id}`
   const label = translateDefinitionKey(field.labelKey)
+
+  // A Slotted field is drawn as the plain text box it has always been: the
+  // pills a Slot reads as are the next piece of work, and until they land the
+  // box shows the literal text and writes back one literal segment (ADR 0010).
+  if (field.control === "slottedText") {
+    return (
+      <div className="grid gap-1">
+        <Label className="text-xs" htmlFor={inputId}>
+          {label}
+        </Label>
+        <Input
+          className="nodrag h-8"
+          id={inputId}
+          onChange={event => setField(field.id, literalText(event.target.value))}
+          type="text"
+          value={plainTextOf(readSlottedText(value))}
+        />
+      </div>
+    )
+  }
 
   if (field.control === "switch") {
     return (

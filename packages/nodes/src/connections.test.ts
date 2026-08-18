@@ -62,6 +62,9 @@ const catalogue = buildCatalogue([slashCommandTrigger, reply, textSource, userSi
 /**
  * A Flow with the two Nodes of the catalogue on it and nothing wired, so each
  * test states exactly the Wires its case is about.
+ *
+ * Each Reply's message holds one Slot, which is where its text arrives from now
+ * that a Data input is a Slot rather than a field of the same id (ADR 0010).
  */
 function bareFlow(): Flow {
   return {
@@ -78,13 +81,13 @@ function bareFlow(): Flow {
         id: "node-reply",
         type: "discord.interaction.reply",
         position: { x: 320, y: 0 },
-        fields: {}
+        fields: { content: [{ kind: "slot", slot: "message" }] }
       },
       {
         id: "node-second-reply",
         type: "discord.interaction.reply",
         position: { x: 640, y: 0 },
-        fields: {}
+        fields: { content: [{ kind: "slot", slot: "message" }] }
       },
       {
         id: "node-text-source",
@@ -121,21 +124,29 @@ describe("checking whether a Wire is legal", () => {
   })
 
   it("accepts the caller into a text input, and says it coerces", () => {
-    const result = check(bareFlow(), port("node-trigger", "user"), port("node-reply", "content"))
+    const result = check(
+      bareFlow(),
+      port("node-trigger", "user"),
+      port("node-reply", "slot.message")
+    )
 
     expect(result).toMatchObject({ legal: true, kind: "data" })
     expect(result.legal && result.coercion).toMatchObject({ runtimeCall: "userToText" })
   })
 
   it("rejects a Wire between an Execution Port and a Data Port", () => {
-    expect(check(bareFlow(), port("node-trigger", "next"), port("node-reply", "content"))).toEqual({
+    expect(
+      check(bareFlow(), port("node-trigger", "next"), port("node-reply", "slot.message"))
+    ).toEqual({
       legal: false,
       reasonKey: "connections.rejected.kind"
     })
   })
 
   it("rejects a Wire that does not run from an output to an input", () => {
-    expect(check(bareFlow(), port("node-reply", "content"), port("node-trigger", "user"))).toEqual({
+    expect(
+      check(bareFlow(), port("node-reply", "slot.message"), port("node-trigger", "user"))
+    ).toEqual({
       legal: false,
       reasonKey: "connections.rejected.direction"
     })
@@ -192,10 +203,10 @@ describe("checking whether a Wire is legal", () => {
       id: "wire-data",
       kind: "data",
       from: port("node-trigger", "user"),
-      to: port("node-reply", "content")
+      to: port("node-reply", "slot.message")
     })
 
-    expect(check(flow, port("node-trigger", "user"), port("node-reply", "content"))).toEqual({
+    expect(check(flow, port("node-trigger", "user"), port("node-reply", "slot.message"))).toEqual({
       legal: false,
       reasonKey: "connections.rejected.dataInputTaken"
     })
@@ -207,11 +218,11 @@ describe("checking whether a Wire is legal", () => {
       id: "wire-data",
       kind: "data",
       from: port("node-trigger", "user"),
-      to: port("node-reply", "content")
+      to: port("node-reply", "slot.message")
     })
 
     expect(
-      check(flow, port("node-trigger", "user"), port("node-second-reply", "content"))
+      check(flow, port("node-trigger", "user"), port("node-second-reply", "slot.message"))
     ).toMatchObject({ legal: true })
   })
 
@@ -224,7 +235,7 @@ describe("checking whether a Wire is legal", () => {
     }
 
     expect(
-      check(flow, port("node-trigger", "parameter.message"), port("node-reply", "content"))
+      check(flow, port("node-trigger", "parameter.message"), port("node-reply", "slot.message"))
     ).toEqual({ legal: true, kind: "data", coercion: undefined })
   })
 
@@ -264,7 +275,7 @@ describe("Wires left pointing at a Port that is no longer there", () => {
         id: "wire-data",
         kind: "data",
         from: port("node-trigger", "parameter.message"),
-        to: port("node-reply", "content")
+        to: port("node-reply", "slot.message")
       }
     )
     return flow
@@ -318,7 +329,7 @@ describe("Wires left pointing at a Port that is no longer there", () => {
       id: "wire-elsewhere",
       kind: "data",
       from: port("node-text-source", "gone"),
-      to: port("node-second-reply", "content")
+      to: port("node-second-reply", "slot.message")
     })
 
     // Editing one Node must not destroy a Wire that dangles for a reason of its

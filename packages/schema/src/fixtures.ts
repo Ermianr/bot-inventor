@@ -1,4 +1,5 @@
 import { CURRENT_SCHEMA_VERSION, type Project } from "./project.js"
+import { literalText } from "./slotted-text.js"
 
 /**
  * Project fixtures for tests in this package and in the ones built on top of
@@ -34,8 +35,9 @@ export function emptyProject(): Project {
 }
 
 /**
- * A Project with one Flow: a slash command Trigger wired into a reply, with a
- * Data Wire carrying the command's caller into the reply text.
+ * A Project with one Flow: a slash command Trigger wired into a reply whose
+ * message is nothing but a Slot, with a Data Wire carrying the command's caller
+ * into it.
  */
 export function greetingProject(): Project {
   return {
@@ -57,7 +59,7 @@ export function greetingProject(): Project {
             id: "node-reply",
             type: "discord.interaction.reply",
             position: { x: 320, y: 0 },
-            fields: { ephemeral: false }
+            fields: { content: [{ kind: "slot", slot: "slot-caller" }], ephemeral: false }
           }
         ],
         wires: [
@@ -71,7 +73,7 @@ export function greetingProject(): Project {
             id: "wire-data",
             kind: "data",
             from: { node: "node-trigger", port: "user" },
-            to: { node: "node-reply", port: "content" }
+            to: { node: "node-reply", port: "slot.slot-caller" }
           }
         ]
       }
@@ -103,7 +105,7 @@ export function helloProject(): Project {
             id: "node-reply",
             type: "discord.interaction.reply",
             position: { x: 320, y: 0 },
-            fields: { content: "Hello!", ephemeral: false }
+            fields: { content: literalText("Hello!"), ephemeral: false }
           }
         ],
         wires: [
@@ -117,6 +119,29 @@ export function helloProject(): Project {
       }
     ]
   }
+}
+
+/**
+ * A Project whose reply is text with a Slot inside it: `/greet` answers
+ * `Hola <caller>, hola <caller>` — the same Slot twice, fed by one Wire from
+ * the Trigger's caller through the Coercion into text.
+ */
+export function slottedGreetingProject(): Project {
+  const project = greetingProject()
+  const flow = requireFirst(project.flows, "Flow")
+  const reply = flow.nodes[1]
+  if (reply === undefined) throw new Error("the fixture has no Reply Node")
+
+  reply.fields = {
+    content: [
+      { kind: "literal", text: "Hola " },
+      { kind: "slot", slot: "slot-caller" },
+      { kind: "literal", text: ", hola " },
+      { kind: "slot", slot: "slot-caller" }
+    ],
+    ephemeral: false
+  }
+  return project
 }
 
 /**
@@ -170,7 +195,7 @@ export function echoParameterProject(): Project {
             id: "node-reply",
             type: "discord.interaction.reply",
             position: { x: 320, y: 0 },
-            fields: { ephemeral: false }
+            fields: { content: [{ kind: "slot", slot: "slot-message" }], ephemeral: false }
           }
         ],
         wires: [
@@ -184,7 +209,7 @@ export function echoParameterProject(): Project {
             id: "wire-data",
             kind: "data",
             from: { node: "node-trigger", port: "parameter.message" },
-            to: { node: "node-reply", port: "content" }
+            to: { node: "node-reply", port: "slot.slot-message" }
           }
         ]
       }
@@ -203,7 +228,7 @@ export function unreachableNodeProject(): Project {
     id: "node-orphan",
     type: "discord.interaction.reply",
     position: { x: 320, y: 240 },
-    fields: { content: "Nobody asked for this", ephemeral: false }
+    fields: { content: literalText("Nobody asked for this"), ephemeral: false }
   })
   return project
 }

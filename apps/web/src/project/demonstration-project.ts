@@ -1,4 +1,4 @@
-import type { Project } from "@bot-inventor/schema"
+import { literalText, type Project } from "@bot-inventor/schema"
 import { helloProject } from "@bot-inventor/schema/fixtures"
 
 /**
@@ -9,7 +9,12 @@ import { helloProject } from "@bot-inventor/schema/fixtures"
  * so that both a first-time user and the end-to-end specs have a Canvas with
  * something on it without anybody having to wire one up first.
  *
- * The first Flow is the schema package's own `helloProject`, rather than a
+ * The first Flow is the schema package's own `helloProject`, with a Slot put
+ * into its reply so that the Canvas has a hole a value can be wired into: a
+ * Slotted field is where a Data Wire arrives now (ADR 0010), and a Project to
+ * look at with nowhere to draw one shows half of what the editor does.
+ *
+ * It is otherwise that fixture rather than a
  * second copy of the same Nodes: the end-to-end tests read this Canvas and the
  * unit tests read that fixture, and two copies would drift the first time a
  * Node changes. The second Flow exists so the list has two rows to choose
@@ -20,6 +25,17 @@ import { helloProject } from "@bot-inventor/schema/fixtures"
  */
 export function demonstrationProject(): Project {
   const project = helloProject()
+  const hello = project.flows[0]
+  const reply = hello?.nodes[1]
+  if (reply === undefined) throw new Error("the Hello Flow has no Reply Node")
+  reply.fields = {
+    ...reply.fields,
+    content: [
+      { kind: "literal", text: "Hello, " },
+      { kind: "slot", slot: "slot-who" }
+    ]
+  }
+
   return {
     ...project,
     flows: [
@@ -38,7 +54,7 @@ export function demonstrationProject(): Project {
             id: "node-goodbye-reply",
             type: "discord.interaction.reply",
             position: { x: 320, y: 0 },
-            fields: { content: "Goodbye!", ephemeral: false }
+            fields: { content: literalText("Goodbye!"), ephemeral: false }
           }
         ],
         wires: [

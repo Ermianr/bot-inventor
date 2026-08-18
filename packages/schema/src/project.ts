@@ -5,7 +5,7 @@ import { z } from "zod"
  * change to the shapes below raises it and ships a migration (see
  * `migrations.ts`).
  */
-export const CURRENT_SCHEMA_VERSION = 1
+export const CURRENT_SCHEMA_VERSION = 2
 
 /** Identifiers are opaque strings, unique within the collection that holds them. */
 const identifier = z.string().min(1, "an identifier must not be empty").describe("identifier")

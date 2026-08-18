@@ -1,4 +1,5 @@
 import type { FieldValue, Node } from "@bot-inventor/schema"
+import { slotPorts } from "./slots.js"
 
 /**
  * The interface every Node of the catalogue implements. A Node's visual
@@ -48,11 +49,12 @@ export type DataPortDefinition = PortIdentity & {
 export type PortDefinition = ExecutionPortDefinition | DataPortDefinition
 
 /**
- * How a field is edited on the Canvas. `commandParameters` is the list of
- * values a slash command asks its caller for, edited as a list rather than as
- * one control.
+ * How a field is edited on the Canvas. `slottedText` is text a Slot can be put
+ * inside of, so its value is a sequence rather than a string (ADR 0010).
+ * `commandParameters` is the list of values a slash command asks its caller
+ * for, edited as a list rather than as one control.
  */
-export type FieldControl = "text" | "number" | "switch" | "commandParameters"
+export type FieldControl = "text" | "slottedText" | "number" | "switch" | "commandParameters"
 
 /** The values typed into one Node's fields, as the Project stores them. */
 export type NodeFields = Node["fields"]
@@ -95,6 +97,13 @@ export type GenerationContext = {
    * when nothing is wired.
    */
   input(id: string): string
+  /**
+   * A JavaScript expression for a Slotted text field: its segments joined in
+   * order, each Slot read from the Wire drawn to its Port and put through
+   * whatever Coercion that Wire needs. A Slot nothing is wired to reads as
+   * empty text (ADR 0010).
+   */
+  slottedField(id: string): string
   /** The identifier this Node must bind a Data output Port's value to. */
   output(id: string): string
   /** The statements of everything reachable from an Execution output Port. */
@@ -135,9 +144,16 @@ export type NodeDefinition = {
 /**
  * Every Port a Node instance has: the fixed ones its type always carries, then
  * the ones its own fields declare.
+ *
+ * The Slots typed into its text fields are among those: a Slot is a Port like
+ * any other, and deriving it here rather than in each Node's `dynamicPorts`
+ * means a Node that gains a Slotted field gains nothing else to write.
  */
 export function portsOf(definition: NodeDefinition, fields: NodeFields): readonly PortDefinition[] {
-  const dynamic = definition.dynamicPorts?.(fields) ?? []
+  const dynamic = [
+    ...slotPorts(definition.fields, fields),
+    ...(definition.dynamicPorts?.(fields) ?? [])
+  ]
   return dynamic.length === 0 ? definition.ports : [...definition.ports, ...dynamic]
 }
 
