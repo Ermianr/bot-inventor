@@ -50,7 +50,9 @@ export type PortDefinition = ExecutionPortDefinition | DataPortDefinition
 
 /**
  * How a field is edited on the Canvas. `slottedText` is text a Slot can be put
- * inside of, so its value is a sequence rather than a string (ADR 0010).
+ * inside of, so its value is a sequence rather than a string (ADR 0010), and
+ * `slottedParagraph` is the same value written over several lines — an Embed's
+ * description is one, a Node's title is not.
  * `commandParameters` is the list of values a slash command asks its caller
  * for, edited as a list rather than as one control. `colour` is a colour the
  * user picks and the Project stores as the integer Discord takes: the number
@@ -59,6 +61,7 @@ export type PortDefinition = ExecutionPortDefinition | DataPortDefinition
 export type FieldControl =
   | "text"
   | "slottedText"
+  | "slottedParagraph"
   | "number"
   | "switch"
   | "commandParameters"

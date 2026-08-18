@@ -1,5 +1,6 @@
 import {
   type FieldDefinition,
+  isSlotted,
   type NodeDefinition,
   type PortDefinition,
   portsOf
@@ -74,6 +75,7 @@ export type FlowNodeType = ReactFlowNode<FlowNodeData, "flowNode">
 const DRAWN_CONTROLS = new Set<FieldDefinition["control"]>([
   "text",
   "slottedText",
+  "slottedParagraph",
   "number",
   "switch",
   "colour"
@@ -206,12 +208,14 @@ function FieldRow({
   const label = translateDefinitionKey(field.labelKey)
 
   // A Slotted field is a text box with the values that were dropped into it
-  // drawn as pills inside the sentence (ADR 0010).
-  if (field.control === "slottedText") {
+  // drawn as pills inside the sentence (ADR 0010), written over one line or
+  // over several depending on which control the Node asked for.
+  if (isSlotted(field.control)) {
     return (
       <SlottedField
         fieldId={field.id}
         label={label}
+        multiline={field.control === "slottedParagraph"}
         nodeId={nodeId}
         onChange={segments => setField(field.id, segments)}
         slotIsWired={slotIsWired}

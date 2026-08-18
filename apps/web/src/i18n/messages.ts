@@ -252,8 +252,17 @@ const en = {
   "nodes.discord.embed.build.label": "Embed",
   "nodes.discord.embed.build.description": "Builds a rich block to reply with.",
   "nodes.discord.embed.build.fields.title.label": "Title",
+  "nodes.discord.embed.build.fields.url.label": "Title link",
   "nodes.discord.embed.build.fields.description.label": "Text",
   "nodes.discord.embed.build.fields.colour.label": "Colour",
+  "nodes.discord.embed.build.fields.authorName.label": "Author",
+  "nodes.discord.embed.build.fields.authorUrl.label": "Author link",
+  "nodes.discord.embed.build.fields.authorIcon.label": "Author picture",
+  "nodes.discord.embed.build.fields.image.label": "Image",
+  "nodes.discord.embed.build.fields.thumbnail.label": "Small image",
+  "nodes.discord.embed.build.fields.footerText.label": "Footer",
+  "nodes.discord.embed.build.fields.footerIcon.label": "Footer picture",
+  "nodes.discord.embed.build.fields.timestamp.label": "Stamp it with the time it was sent",
   "nodes.discord.embed.build.ports.embed.label": "Embed"
 } as const
 
@@ -489,8 +498,17 @@ const es: Record<MessageKey, string> = {
   "nodes.discord.embed.build.label": "Bloque",
   "nodes.discord.embed.build.description": "Crea un bloque con formato para responder.",
   "nodes.discord.embed.build.fields.title.label": "Título",
+  "nodes.discord.embed.build.fields.url.label": "Enlace del título",
   "nodes.discord.embed.build.fields.description.label": "Texto",
   "nodes.discord.embed.build.fields.colour.label": "Color",
+  "nodes.discord.embed.build.fields.authorName.label": "Autor",
+  "nodes.discord.embed.build.fields.authorUrl.label": "Enlace del autor",
+  "nodes.discord.embed.build.fields.authorIcon.label": "Imagen del autor",
+  "nodes.discord.embed.build.fields.image.label": "Imagen",
+  "nodes.discord.embed.build.fields.thumbnail.label": "Imagen pequeña",
+  "nodes.discord.embed.build.fields.footerText.label": "Pie",
+  "nodes.discord.embed.build.fields.footerIcon.label": "Imagen del pie",
+  "nodes.discord.embed.build.fields.timestamp.label": "Marcarlo con la hora de envío",
   "nodes.discord.embed.build.ports.embed.label": "Bloque"
 }
 

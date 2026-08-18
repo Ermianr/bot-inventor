@@ -218,6 +218,14 @@ describe("running a compiled Project", () => {
   })
 })
 
+/** The Embed Node of a fixture, for a test that types more into it. */
+function embedNode(project: Project) {
+  const flow = requireFirst(project.flows, "Flow")
+  const node = flow.nodes.find(candidate => candidate.type === "discord.embed.build")
+  if (node === undefined) throw new Error("the fixture has no Embed Node")
+  return node
+}
+
 describe("answering with an Embed", () => {
   const useCard = [{ type: "slashCommand", command: "card" }] as const
 
@@ -242,10 +250,7 @@ describe("answering with an Embed", () => {
 
   it("normalises the colour a hand-edited Project holds", async () => {
     const project = embedReplyProject()
-    const flow = requireFirst(project.flows, "Flow")
-    const node = flow.nodes.find(candidate => candidate.type === "discord.embed.build")
-    if (node === undefined) throw new Error("the fixture has no Embed Node")
-    node.fields = { ...node.fields, colour: 0xffffff + 1 }
+    embedNode(project).fields = { ...embedNode(project).fields, colour: 0xffffff + 1 }
 
     const result = await runProject(project, useCard)
 
@@ -255,8 +260,7 @@ describe("answering with an Embed", () => {
   it("puts a value from a Wire inside the Embed's text, through its Slot", async () => {
     const project = embedReplyProject()
     const flow = requireFirst(project.flows, "Flow")
-    const node = flow.nodes.find(candidate => candidate.type === "discord.embed.build")
-    if (node === undefined) throw new Error("the fixture has no Embed Node")
+    const node = embedNode(project)
     node.fields = {
       ...node.fields,
       description: [
@@ -276,6 +280,84 @@ describe("answering with an Embed", () => {
     ])
 
     expect(embedOf(result)).toMatchObject({ description: "Asked for by <@42>" })
+  })
+
+  it("carries every part of the Embed to Discord", async () => {
+    const project = embedReplyProject()
+    const node = embedNode(project)
+    node.fields = {
+      ...node.fields,
+      url: literalText("https://example.com/rules"),
+      authorName: literalText("The moderators"),
+      authorUrl: literalText("https://example.com/team"),
+      authorIcon: literalText("https://example.com/team.png"),
+      image: literalText("https://example.com/banner.png"),
+      thumbnail: literalText("https://example.com/badge.png"),
+      footerText: literalText("Asked once a month"),
+      footerIcon: literalText("https://example.com/clock.png")
+    }
+
+    const result = await runProject(project, useCard)
+
+    expect(result.failures).toEqual([])
+    expect(embedOf(result)).toEqual({
+      title: "Server rules",
+      url: "https://example.com/rules",
+      description: "Be kind to one another.",
+      colour: 5793266,
+      author: {
+        name: "The moderators",
+        url: "https://example.com/team",
+        icon: "https://example.com/team.png"
+      },
+      image: "https://example.com/banner.png",
+      thumbnail: "https://example.com/badge.png",
+      footer: { text: "Asked once a month", icon: "https://example.com/clock.png" }
+    })
+  })
+
+  it("stamps the Embed with the time it was sent when the switch is on", async () => {
+    const project = embedReplyProject()
+    const node = embedNode(project)
+    node.fields = { ...node.fields, timestamp: true }
+    const before = Date.now()
+
+    const result = await runProject(project, useCard)
+    const stamped = embedOf(result)?.timestamp
+
+    expect(stamped).toBeDefined()
+    expect(Date.parse(stamped ?? "")).toBeGreaterThanOrEqual(before)
+  })
+
+  it("stamps nothing when the switch is off, which is how an Embed starts", async () => {
+    const result = await runProject(embedReplyProject(), useCard)
+
+    expect(embedOf(result)?.timestamp).toBeUndefined()
+  })
+
+  it("puts a value from a Wire inside the footer, as it does inside the text", async () => {
+    const project = embedReplyProject()
+    const flow = requireFirst(project.flows, "Flow")
+    const node = embedNode(project)
+    node.fields = {
+      ...node.fields,
+      footerText: [
+        { kind: "literal", text: "Asked for by " },
+        { kind: "slot", slot: "slot-caller" }
+      ]
+    }
+    flow.wires.push({
+      id: "wire-caller",
+      kind: "data",
+      from: { node: "node-trigger", port: "user" },
+      to: { node: "node-embed", port: "slot.slot-caller" }
+    })
+
+    const result = await runProject(project, [
+      { type: "slashCommand", command: "card", user: { id: "42" } }
+    ])
+
+    expect(embedOf(result)?.footer).toEqual({ text: "Asked for by <@42>" })
   })
 
   it("keeps the ephemeral switch, so a rich reply can be private too", async () => {

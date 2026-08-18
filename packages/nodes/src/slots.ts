@@ -1,5 +1,5 @@
 import { readSlottedText, slotIdsOf } from "@bot-inventor/schema"
-import type { DataPortDefinition, FieldDefinition, NodeFields } from "./definition.js"
+import type { DataPortDefinition, FieldControl, FieldDefinition, NodeFields } from "./definition.js"
 
 /**
  * A Slot is a hole inside a text field, filled by a value that arrives along a
@@ -13,6 +13,11 @@ import type { DataPortDefinition, FieldDefinition, NodeFields } from "./definiti
  * out of the way of the Ports a Node declares for itself.
  */
 const PORT_PREFIX = "slot."
+
+/** Whether a field is one a Slot can be put inside of, however it is written. */
+export function isSlotted(control: FieldControl): boolean {
+  return control === "slottedText" || control === "slottedParagraph"
+}
 
 /** The Port a Slot of this id is fed through. */
 export function slotPortId(slot: string): string {
@@ -34,7 +39,7 @@ export function slotPorts(
   const ports: DataPortDefinition[] = []
 
   for (const field of fields) {
-    if (field.control !== "slottedText") continue
+    if (!isSlotted(field.control)) continue
 
     for (const slot of slotIdsOf(readSlottedText(values[field.id]))) {
       if (seen.has(slot)) continue

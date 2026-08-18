@@ -348,7 +348,7 @@ function slotDropTarget(event: MouseEvent | TouchEvent): SlotDrop | undefined {
   if (point === undefined) return undefined
 
   const box = document.elementFromPoint(point.clientX, point.clientY)?.closest("[data-slot-field]")
-  if (!(box instanceof HTMLInputElement)) return undefined
+  if (!(box instanceof HTMLTextAreaElement)) return undefined
 
   const { slotCaret, slotField, slotLiteral, slotNode } = box.dataset
   if (slotField === undefined || slotLiteral === undefined || slotNode === undefined) {

@@ -44,6 +44,83 @@ describe("building an Embed", () => {
     expect(embeds.build({ colour: Number.NaN })).toEqual({})
   })
 
+  it("keeps the author, its link and its icon together", () => {
+    expect(
+      embeds.build({
+        authorName: "Ada",
+        authorUrl: "https://example.com/ada",
+        authorIcon: "https://example.com/ada.png"
+      }).author
+    ).toEqual({
+      name: "Ada",
+      url: "https://example.com/ada",
+      icon: "https://example.com/ada.png"
+    })
+  })
+
+  it("leaves out an author with no name, link and icon included", () => {
+    expect(
+      embeds.build({
+        authorUrl: "https://example.com/ada",
+        authorIcon: "https://example.com/a.png"
+      })
+    ).toEqual({})
+  })
+
+  it("keeps the footer and its icon, and leaves out a footer with no text", () => {
+    expect(
+      embeds.build({ footerText: "Rule 1", footerIcon: "https://example.com/i.png" }).footer
+    ).toEqual({ text: "Rule 1", icon: "https://example.com/i.png" })
+    expect(embeds.build({ footerIcon: "https://example.com/i.png" })).toEqual({})
+  })
+
+  it("keeps the large image and the thumbnail as the URLs they were given as", () => {
+    expect(
+      embeds.build({ image: "https://example.com/big.png", thumbnail: "https://example.com/s.png" })
+    ).toEqual({ image: "https://example.com/big.png", thumbnail: "https://example.com/s.png" })
+  })
+
+  it("links the title, and leaves the link out when there is no title to click", () => {
+    expect(embeds.build({ title: "Rules", url: "https://example.com/rules" })).toEqual({
+      title: "Rules",
+      url: "https://example.com/rules"
+    })
+    expect(embeds.build({ url: "https://example.com/rules" })).toEqual({})
+  })
+
+  it("drops what is not a public link rather than sending an Embed Discord refuses", () => {
+    expect(
+      embeds.build({
+        title: "Rules",
+        url: "example.com/rules",
+        image: "  ",
+        thumbnail: "javascript:alert(1)",
+        authorName: "Ada",
+        authorIcon: "not a url"
+      })
+    ).toEqual({ title: "Rules", author: { name: "Ada" } })
+  })
+
+  it("stamps the Embed with the time it was sent when the switch is on", () => {
+    const before = Date.now()
+    const stamped = embeds.build({ timestamp: true }).timestamp
+
+    expect(stamped).toBeDefined()
+    expect(Date.parse(stamped ?? "")).toBeGreaterThanOrEqual(before)
+  })
+
+  it("stamps nothing when the switch is off", () => {
+    expect(embeds.build({ timestamp: false })).toEqual({})
+    expect(embeds.build({})).toEqual({})
+  })
+
+  it("cuts an author name and a footer text down to the length Discord accepts", () => {
+    const built = embeds.build({ authorName: "a".repeat(300), footerText: "b".repeat(3000) })
+
+    expect(built.author?.name).toHaveLength(256)
+    expect(built.footer?.text).toHaveLength(2048)
+  })
+
   it("keeps a title whole rather than cutting a character in half", () => {
     const built = embeds.build({ title: `${"a".repeat(255)}😀` })
 
@@ -64,6 +141,39 @@ describe("handing an Embed to Discord", () => {
       title: "Rules",
       description: "Be kind.",
       color: 5793266
+    })
+  })
+
+  it("sends every part under the name Discord's API knows it by", () => {
+    expect(
+      toDiscordEmbed({
+        title: "Rules",
+        url: "https://example.com/rules",
+        author: { name: "Ada", url: "https://example.com/ada", icon: "https://example.com/a.png" },
+        image: "https://example.com/big.png",
+        thumbnail: "https://example.com/small.png",
+        footer: { text: "Rule 1", icon: "https://example.com/i.png" },
+        timestamp: "2026-08-18T10:00:00.000Z"
+      })
+    ).toEqual({
+      title: "Rules",
+      url: "https://example.com/rules",
+      author: {
+        name: "Ada",
+        url: "https://example.com/ada",
+        icon_url: "https://example.com/a.png"
+      },
+      image: { url: "https://example.com/big.png" },
+      thumbnail: { url: "https://example.com/small.png" },
+      footer: { text: "Rule 1", icon_url: "https://example.com/i.png" },
+      timestamp: "2026-08-18T10:00:00.000Z"
+    })
+  })
+
+  it("sends an author and a footer with no picture of their own", () => {
+    expect(toDiscordEmbed({ author: { name: "Ada" }, footer: { text: "Rule 1" } })).toEqual({
+      author: { name: "Ada" },
+      footer: { text: "Rule 1" }
     })
   })
 

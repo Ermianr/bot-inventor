@@ -8,9 +8,14 @@ const DEFAULT_COLOUR = 0x5865f2
  * its Data output, and nothing else can read that: an Embed is a value of its
  * own and never text, so the Coercion table has no entry taking it anywhere.
  *
- * Its title and description are Slotted text fields, which is what lets an
- * Embed say `Who: @someone` without a Node whose only job is gluing two
- * strings together (ADR 0010).
+ * Every text part of it is a Slotted field, which is what lets an Embed say
+ * `Who: @someone` without a Node whose only job is gluing two strings together
+ * (ADR 0010). Its description is edited over several lines, because that is the
+ * one part of an Embed people write paragraphs in.
+ *
+ * The time it was sent is a switch rather than a date field: what people want
+ * is the Embed stamped with when it went out, and the Runtime is what reads
+ * the clock.
  */
 export const embed: NodeDefinition = {
   id: "discord.embed.build",
@@ -36,9 +41,15 @@ export const embed: NodeDefinition = {
       defaultValue: []
     },
     {
+      id: "url",
+      labelKey: "nodes.discord.embed.build.fields.url.label",
+      control: "slottedText",
+      defaultValue: []
+    },
+    {
       id: "description",
       labelKey: "nodes.discord.embed.build.fields.description.label",
-      control: "slottedText",
+      control: "slottedParagraph",
       defaultValue: []
     },
     {
@@ -46,13 +57,76 @@ export const embed: NodeDefinition = {
       labelKey: "nodes.discord.embed.build.fields.colour.label",
       control: "colour",
       defaultValue: DEFAULT_COLOUR
+    },
+    {
+      id: "authorName",
+      labelKey: "nodes.discord.embed.build.fields.authorName.label",
+      control: "slottedText",
+      defaultValue: []
+    },
+    {
+      id: "authorUrl",
+      labelKey: "nodes.discord.embed.build.fields.authorUrl.label",
+      control: "slottedText",
+      defaultValue: []
+    },
+    {
+      id: "authorIcon",
+      labelKey: "nodes.discord.embed.build.fields.authorIcon.label",
+      control: "slottedText",
+      defaultValue: []
+    },
+    {
+      id: "image",
+      labelKey: "nodes.discord.embed.build.fields.image.label",
+      control: "slottedText",
+      defaultValue: []
+    },
+    {
+      id: "thumbnail",
+      labelKey: "nodes.discord.embed.build.fields.thumbnail.label",
+      control: "slottedText",
+      defaultValue: []
+    },
+    {
+      id: "footerText",
+      labelKey: "nodes.discord.embed.build.fields.footerText.label",
+      control: "slottedText",
+      defaultValue: []
+    },
+    {
+      id: "footerIcon",
+      labelKey: "nodes.discord.embed.build.fields.footerIcon.label",
+      control: "slottedText",
+      defaultValue: []
+    },
+    {
+      id: "timestamp",
+      labelKey: "nodes.discord.embed.build.fields.timestamp.label",
+      control: "switch",
+      defaultValue: false
     }
   ],
   generate(context) {
+    // Every text part of the Embed is a Slotted field and reads the same way,
+    // and each one is handed over under the name the Runtime's builder knows
+    // it by, which is the field's own id.
+    const slotted = [
+      "title",
+      "url",
+      "description",
+      "authorName",
+      "authorUrl",
+      "authorIcon",
+      "image",
+      "thumbnail",
+      "footerText",
+      "footerIcon"
+    ]
     const parts = [
-      `title: ${context.slottedField("title")}`,
-      `description: ${context.slottedField("description")}`,
-      `colour: ${context.literal(context.field("colour"))}`
+      ...slotted.map(id => `${id}: ${context.slottedField(id)}`),
+      `colour: ${context.literal(context.field("colour"))}`,
+      `timestamp: ${context.literal(context.field("timestamp"))}`
     ].join(", ")
 
     // The Runtime is what decides what Discord ends up seeing — an empty title
