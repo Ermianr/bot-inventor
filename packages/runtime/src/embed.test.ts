@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { toDiscordEmbed } from "./discord-js-runtime.js"
 import { embeds } from "./embed.js"
 
 /**
@@ -41,5 +42,35 @@ describe("building an Embed", () => {
   it("leaves out a colour that is not a number at all", () => {
     expect(embeds.build({ colour: "blurple" })).toEqual({})
     expect(embeds.build({ colour: Number.NaN })).toEqual({})
+  })
+
+  it("keeps a title whole rather than cutting a character in half", () => {
+    const built = embeds.build({ title: `${"a".repeat(255)}😀` })
+
+    // The emoji is two code units, so it does not fit: what is left is the
+    // text before it, and not half an emoji.
+    expect(built.title).toBe("a".repeat(255))
+  })
+})
+
+/**
+ * The one place Discord's own spelling is written. A rename got wrong here
+ * sends an Embed with no colour bar and nothing at all saying why, and no test
+ * of the builder would catch it.
+ */
+describe("handing an Embed to Discord", () => {
+  it("sends our colour under the name Discord's API knows it by", () => {
+    expect(toDiscordEmbed({ title: "Rules", description: "Be kind.", colour: 5793266 })).toEqual({
+      title: "Rules",
+      description: "Be kind.",
+      color: 5793266
+    })
+  })
+
+  it("sends no colour at all for an Embed that has none", () => {
+    const sent = toDiscordEmbed({ title: "Rules" })
+
+    expect(sent).toEqual({ title: "Rules" })
+    expect("color" in sent).toBe(false)
   })
 })

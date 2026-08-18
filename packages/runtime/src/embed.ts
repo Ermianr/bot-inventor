@@ -67,7 +67,13 @@ function text(value: unknown, limit: number): string | undefined {
   if (value === undefined || value === null) return undefined
   const rendered = typeof value === "string" ? value : String(value)
   if (rendered.length === 0) return undefined
-  return rendered.length > limit ? rendered.slice(0, limit) : rendered
+  if (rendered.length <= limit) return rendered
+
+  // Cutting between the two halves of a surrogate pair leaves a broken
+  // character where an emoji was, so the pair goes rather than half of it.
+  const cut = rendered.slice(0, limit)
+  const last = cut.charCodeAt(limit - 1)
+  return last >= 0xd800 && last <= 0xdbff ? cut.slice(0, -1) : cut
 }
 
 /**
