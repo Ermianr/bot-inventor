@@ -16,7 +16,7 @@ export type CompilerMode = "development" | "build"
  * Wire between two of them is legal only when they match or the Coercion table
  * has an entry for the pair.
  */
-export type DataType = "text" | "number" | "boolean" | "user"
+export type DataType = "text" | "number" | "boolean" | "user" | "embed"
 
 export type PortDirection = "input" | "output"
 
@@ -52,9 +52,17 @@ export type PortDefinition = ExecutionPortDefinition | DataPortDefinition
  * How a field is edited on the Canvas. `slottedText` is text a Slot can be put
  * inside of, so its value is a sequence rather than a string (ADR 0010).
  * `commandParameters` is the list of values a slash command asks its caller
- * for, edited as a list rather than as one control.
+ * for, edited as a list rather than as one control. `colour` is a colour the
+ * user picks and the Project stores as the integer Discord takes: the number
+ * is never shown to them.
  */
-export type FieldControl = "text" | "slottedText" | "number" | "switch" | "commandParameters"
+export type FieldControl =
+  | "text"
+  | "slottedText"
+  | "number"
+  | "switch"
+  | "commandParameters"
+  | "colour"
 
 /** The values typed into one Node's fields, as the Project stores them. */
 export type NodeFields = Node["fields"]
@@ -97,6 +105,15 @@ export type GenerationContext = {
    * when nothing is wired.
    */
   input(id: string): string
+  /**
+   * Whether a Data input Port has a Wire arriving at it.
+   *
+   * A Node asks when the answer changes what it emits rather than only which
+   * expression it reads — Reply sends an Embed when one is wired and a line of
+   * text when none is — because a Data input Port with no field behind it has
+   * nothing to fall back on.
+   */
+  isWired(id: string): boolean
   /**
    * A JavaScript expression for a Slotted text field: its segments joined in
    * order, each Slot read from the Wire drawn to its Port and put through

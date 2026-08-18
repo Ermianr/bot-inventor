@@ -19,6 +19,10 @@ export type CoercionDefinition = {
  * The Coercion table. It is data on purpose: the Compiler reads it to decide
  * what to emit and the editor reads it to decide whether a Wire is legal, so
  * the two cannot disagree, and the editor can name the Coercion on the Wire.
+ *
+ * `embed` appears nowhere in it, and that is the decision rather than an
+ * omission: an Embed is a rich block Discord draws, not a line of text, and
+ * turning one into text could only ever produce something nobody asked for.
  */
 export const coercions: readonly CoercionDefinition[] = [
   {

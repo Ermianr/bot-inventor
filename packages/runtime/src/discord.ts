@@ -1,3 +1,5 @@
+import type { Embed } from "./embed.js"
+
 /**
  * The slice of Discord the generated code is allowed to see. Generated code
  * never imports discord.js: it receives one of these from the Runtime, which is
@@ -69,6 +71,11 @@ export type SlashCommandHandler = (event: SlashCommandEvent) => Promise<void>
 export type ReplyOptions = {
   content: string
   ephemeral: boolean
+  /**
+   * The rich block to answer with, when an Embed is wired into the Reply. A
+   * reply without one is the line of text it has always been.
+   */
+  embed?: Embed
 }
 
 /** Everything the generated code may ask Discord to do. */

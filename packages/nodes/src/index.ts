@@ -8,6 +8,7 @@ export {
 export {
   type CommandParameter,
   commandParameterPorts,
+  type ParameterType,
   parameterPortId,
   readCommandParameters
 } from "./command-parameters.js"
@@ -41,6 +42,7 @@ export {
   portsOf,
   type TraceRequest
 } from "./definition.js"
+export { embed } from "./discord/embed.js"
 export { reply } from "./discord/reply.js"
 export { slashCommandTrigger } from "./discord/slash-command-trigger.js"
 export { slotPortId, slotPorts } from "./slots.js"

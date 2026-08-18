@@ -1,11 +1,11 @@
 import {
   type CommandParameter,
   commandParameterPorts,
+  type ParameterType,
   parameterPortId,
   readCommandParameters
 } from "../command-parameters.js"
 import {
-  type DataType,
   type GenerationContext,
   indent,
   joinStatements,
@@ -18,7 +18,7 @@ import {
  * what the Port hands downstream is the empty value of its own type, so that a
  * Flow reading an unanswered parameter says nothing rather than "undefined".
  */
-const EMPTY_VALUE: Record<DataType, string> = {
+const EMPTY_VALUE: Record<ParameterType, string> = {
   text: '""',
   number: "0",
   boolean: "false",

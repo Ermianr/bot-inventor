@@ -177,3 +177,61 @@ describe("typing into a Slotted text field", () => {
     expect(within(container).getByTestId("port-reply-slot.caller")).toBeDefined()
   })
 })
+
+describe("picking an Embed's colour", () => {
+  const embedDefinition = requireDefinition("discord.embed.build")
+
+  function drawEmbed(
+    colour: FieldValue,
+    setField: (id: string, value: FieldValue) => void = () => {}
+  ) {
+    const data: FlowNodeData = {
+      node: {
+        id: "node-embed",
+        type: embedDefinition.id,
+        position: { x: 0, y: 0 },
+        fields: { title: literalText("Rules"), description: [], colour }
+      },
+      definition: embedDefinition,
+      runState: undefined,
+      setField,
+      remove: () => {}
+    }
+    const props = { data, id: "embed", type: "flowNode" } as unknown as ComponentProps<
+      typeof FlowNode
+    >
+
+    const { container } = render(
+      <ReactFlowProvider>
+        <FlowNode {...props} />
+      </ReactFlowProvider>
+    )
+    return container
+  }
+
+  function swatch(container: HTMLElement): HTMLInputElement {
+    const box = container.querySelector<HTMLInputElement>("#embed-colour")
+    if (box === null) throw new Error("the Embed Node drew no colour control")
+    return box
+  }
+
+  it("shows the stored number as a colour, never as the integer itself", () => {
+    const control = swatch(drawEmbed(5793266))
+
+    expect(control.type).toBe("color")
+    expect(control.value).toBe("#5865f2")
+  })
+
+  it("writes back the number Discord takes when a colour is picked", () => {
+    const written: FieldValue[] = []
+    const container = drawEmbed(5793266, (_id, value) => written.push(value))
+
+    fireEvent.change(swatch(container), { target: { value: "#ff0000" } })
+
+    expect(written).toEqual([0xff0000])
+  })
+
+  it("falls back to black for a colour a hand-edited Project holds", () => {
+    expect(swatch(drawEmbed("blurple")).value).toBe("#000000")
+  })
+})

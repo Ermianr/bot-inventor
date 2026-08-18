@@ -72,7 +72,8 @@ const DRAWN_CONTROLS = new Set<FieldDefinition["control"]>([
   "text",
   "slottedText",
   "number",
-  "switch"
+  "switch",
+  "colour"
 ])
 
 export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
@@ -168,6 +169,19 @@ function PortRow({ nodeId, port }: { nodeId: string; port: PortDefinition }) {
   )
 }
 
+/** The `#rrggbb` a colour input takes, from the integer the Project stores. */
+function colourHex(value: FieldValue): string {
+  const colour = typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : 0
+  const clamped = Math.min(Math.max(colour, 0), 0xffffff)
+  return `#${clamped.toString(16).padStart(6, "0")}`
+}
+
+/** The integer the Project stores, from what a colour input hands back. */
+function colourNumber(hex: string): number {
+  const parsed = Number.parseInt(hex.replace("#", ""), 16)
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
 function FieldRow({
   field,
   nodeId,
@@ -197,6 +211,25 @@ function FieldRow({
           onChange={event => setField(field.id, literalText(event.target.value))}
           type="text"
           value={plainTextOf(readSlottedText(value))}
+        />
+      </div>
+    )
+  }
+
+  // A colour is picked, never typed: the Project stores the integer Discord
+  // takes, and the user only ever sees the swatch it stands for.
+  if (field.control === "colour") {
+    return (
+      <div className="grid gap-1">
+        <Label className="text-xs" htmlFor={inputId}>
+          {label}
+        </Label>
+        <Input
+          className="nodrag h-8 w-16 p-1"
+          id={inputId}
+          onChange={event => setField(field.id, colourNumber(event.target.value))}
+          type="color"
+          value={colourHex(value)}
         />
       </div>
     )

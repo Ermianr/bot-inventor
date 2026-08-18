@@ -17,6 +17,7 @@ import type {
   SlashCommandParameters,
   SlashCommandParameterValue
 } from "./discord.js"
+import { embeds } from "./embed.js"
 import type { FlowFailure, Runtime, TraceEvent } from "./runtime.js"
 import { createTracing } from "./tracing.js"
 
@@ -116,6 +117,12 @@ export async function createDiscordRuntime(options: DiscordRuntimeOptions): Prom
       const interaction = event.source as ChatInputCommandInteraction
       const message: InteractionReplyOptions = { content: replyOptions.content }
       if (replyOptions.ephemeral) message.flags = MessageFlags.Ephemeral
+      // Our word is `colour` and Discord's is `color`; this is the boundary
+      // where the two meet, and the only place the API's spelling is written.
+      if (replyOptions.embed !== undefined) {
+        const { colour, ...rest } = replyOptions.embed
+        message.embeds = [colour === undefined ? rest : { ...rest, color: colour }]
+      }
 
       // An interaction is answered once; every Reply Node after the first in a
       // Flow sends a follow-up instead.
@@ -132,6 +139,7 @@ export async function createDiscordRuntime(options: DiscordRuntimeOptions): Prom
   return {
     discord,
     coerce: coercions,
+    embed: embeds,
     ...createTracing(trace),
     reportFailure(failure) {
       options.onFailure?.(failure)
