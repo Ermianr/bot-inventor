@@ -36,6 +36,10 @@ _Avoid_: graph, workflow, sequence
 A predefined automatic conversion between two Port types that the editor applies when a Wire is connected, instead of rejecting the connection. It is drawn on the Wire: never invisible.
 _Avoid_: cast, implicit conversion
 
+**Slot**:
+A hole inside a Node's text field, filled by a value that arrives along a Wire. A Slot declares a Data Port on the Node that owns the field, so it is fed like any other value; on the Canvas it reads as a pill inside the text rather than as a separate control. The same Slot may appear more than once.
+_Avoid_: variable, placeholder, token, interpolation, merge tag
+
 **Failure Port**:
 The extra Execution Port carried by Nodes that can fail, where execution continues when the action could not be completed. Leaving it unconnected stops the Flow and records the error.
 _Avoid_: catch, error handler, error output
@@ -135,6 +139,18 @@ _Avoid_: folder export, npm project, source export
 **Secret**:
 A sensitive value that Nodes reference by name and that is never stored inside the Project: it lives in the operating system keychain while editing, and as an environment variable in the exported bot.
 _Avoid_: credential, variable, token, API key
+
+### Discord
+
+> **Naming collision**: an **Embed Field** is written in full, always. A **field** on its own is only ever a value typed into a Node.
+
+**Embed**:
+The rich block Discord draws under a message: a coloured bar down its side, an author, a title, a description, images, a footer, and its Embed Fields. It is a value in its own right — one Node builds it, another sends it — and never plain text.
+_Avoid_: card, rich message, attachment, block
+
+**Embed Field**:
+One name-and-value pair inside an Embed, shown on its own line or side by side with its neighbours. An Embed holds up to twenty-five of them.
+_Avoid_: field, row, property, entry
 
 ### Memory
 
