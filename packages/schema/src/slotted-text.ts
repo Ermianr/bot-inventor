@@ -52,14 +52,6 @@ export function literalText(text: string): SlottedText {
   return text.length === 0 ? [] : [{ kind: "literal", text }]
 }
 
-/**
- * The text of a field with its Slots left out: what a plain text box shows
- * until the editor can draw a Slot as a pill inside the text.
- */
-export function plainTextOf(segments: SlottedText): string {
-  return segments.map(segment => (segment.kind === "literal" ? segment.text : "")).join("")
-}
-
 /** The ids of the Slots a sequence names, once each, in the order they appear. */
 export function slotIdsOf(segments: SlottedText): readonly string[] {
   const ids: string[] = []

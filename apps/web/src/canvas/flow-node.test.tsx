@@ -36,6 +36,8 @@ function draw(runState: NodeRunState | undefined) {
     definition,
     runState,
     setField: () => {},
+    slotLabel: () => "",
+    slotIsWired: () => false,
     remove: () => {}
   }
 
@@ -68,6 +70,8 @@ describe("drawing the Ports a Node's own fields declare", () => {
       definition: trigger,
       runState: undefined,
       setField: () => {},
+      slotLabel: () => "",
+      slotIsWired: () => false,
       remove: () => {}
     }
     const props = { data, id: "trigger", type: "flowNode" } as unknown as ComponentProps<
@@ -122,7 +126,7 @@ describe("drawing a Node the run reached", () => {
   })
 })
 
-describe("typing into a Slotted text field", () => {
+describe("a Slotted text field on a Node", () => {
   function drawReply(
     content: FieldValue,
     setField: (id: string, value: FieldValue) => void = () => {}
@@ -137,6 +141,8 @@ describe("typing into a Slotted text field", () => {
       definition,
       runState: undefined,
       setField,
+      slotLabel: slot => `from ${slot}`,
+      slotIsWired: () => false,
       remove: () => {}
     }
     const props = { data, id: "reply", type: "flowNode" } as unknown as ComponentProps<
@@ -151,14 +157,14 @@ describe("typing into a Slotted text field", () => {
     return container
   }
 
-  /** The plain text box a Slotted field is still edited in. */
+  /** The first text box of the message field, which is the whole of it until a pill lands. */
   function messageBox(container: HTMLElement): HTMLInputElement {
     const box = container.querySelector<HTMLInputElement>("#reply-content")
     if (box === null) throw new Error("the Reply Node drew no text box for its message")
     return box
   }
 
-  it("shows the text of the field in a plain text box", () => {
+  it("shows the text of the field in a text box", () => {
     expect(messageBox(drawReply(literalText("Hello!"))).value).toBe("Hello!")
   })
 
@@ -169,6 +175,17 @@ describe("typing into a Slotted text field", () => {
     fireEvent.change(messageBox(container), { target: { value: "Goodbye!" } })
 
     expect(written).toEqual([literalText("Goodbye!")])
+  })
+
+  it("draws the Slot the message holds as a pill inside the text", () => {
+    const container = drawReply([
+      { kind: "literal", text: "Hello, " },
+      { kind: "slot", slot: "caller" }
+    ])
+
+    expect(within(container).getByTestId("slot-reply-content-0").textContent).toContain(
+      "from caller"
+    )
   })
 
   it("draws a Port for the Slot the message holds", () => {
@@ -195,6 +212,8 @@ describe("picking an Embed's colour", () => {
       definition: embedDefinition,
       runState: undefined,
       setField,
+      slotLabel: () => "",
+      slotIsWired: () => false,
       remove: () => {}
     }
     const props = { data, id: "embed", type: "flowNode" } as unknown as ComponentProps<

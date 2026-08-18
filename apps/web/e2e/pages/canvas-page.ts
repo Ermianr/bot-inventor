@@ -69,6 +69,42 @@ export class CanvasPage {
   }
 
   /**
+   * One of the text boxes a Slotted field is made of, counted from the left. A
+   * field with no Slots in it has exactly one; each pill adds another after it.
+   */
+  fieldBox(nodeId: string, fieldId: string, index: number): Locator {
+    return this.page.getByTestId(`field-box-${nodeId}-${fieldId}-${index}`)
+  }
+
+  /** One Slot, drawn as a pill inside the text of a field. */
+  slot(nodeId: string, fieldId: string, index: number): Locator {
+    return this.page.getByTestId(`slot-${nodeId}-${fieldId}-${index}`)
+  }
+
+  /** Every pill in a field, which is how many Slots the sentence holds. */
+  slots(nodeId: string, fieldId: string): Locator {
+    return this.page.locator(`[data-testid^="slot-${nodeId}-${fieldId}-"]`)
+  }
+
+  /** The control on a pill that takes it out of the text. */
+  removeSlot(nodeId: string, fieldId: string, index: number): Locator {
+    return this.page.getByTestId(`slot-remove-${nodeId}-${fieldId}-${index}`)
+  }
+
+  /** The question asked before a pill takes a Wire with it. */
+  slotRemovalQuestion(): Locator {
+    return this.page.getByTestId("slot-remove-dialog")
+  }
+
+  confirmSlotRemoval(): Locator {
+    return this.page.getByTestId("slot-remove-confirm")
+  }
+
+  cancelSlotRemoval(): Locator {
+    return this.page.getByTestId("slot-remove-cancel")
+  }
+
+  /**
    * The empty part of the Canvas, which is React Flow's own element rather than
    * anything of ours: it is what the pointer lands on between the Nodes.
    */
@@ -139,6 +175,16 @@ export class CanvasPage {
   /** One Node of that list, found by the catalogue id the user never sees. */
   nodeChoice(definitionId: string): Locator {
     return this.page.getByTestId(`add-node-${definitionId}`)
+  }
+
+  /**
+   * Drags a Wire from a Port onto a text box, which is what puts a Slot into
+   * the sentence. It is the same gesture as drawing a Wire between two Ports —
+   * only where it is let go of is different — so it is `drawWire` under
+   * another name, kept apart because a test reads better saying what it means.
+   */
+  async dropWireOnField(from: Locator, box: Locator) {
+    await this.drawWire(from, box)
   }
 
   /** Drags a Wire from one Port to another, the way a user does. */

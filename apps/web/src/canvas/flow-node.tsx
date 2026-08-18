@@ -4,13 +4,7 @@ import {
   type PortDefinition,
   portsOf
 } from "@bot-inventor/nodes"
-import {
-  type FieldValue,
-  literalText,
-  type Node,
-  plainTextOf,
-  readSlottedText
-} from "@bot-inventor/schema"
+import { type FieldValue, type Node, readSlottedText } from "@bot-inventor/schema"
 import { Checkbox } from "@bot-inventor/ui/components/checkbox"
 import {
   ContextMenu,
@@ -26,6 +20,7 @@ import {
   type NodeProps,
   type Node as ReactFlowNode
 } from "@xyflow/react"
+import { SlottedField } from "@/canvas/slotted-field"
 import { translate, translateDefinitionKey } from "@/i18n/messages"
 import type { NodeRunState } from "@/session/trace"
 
@@ -45,6 +40,14 @@ export type FlowNodeData = {
   /** How far the run being watched got in this Node, if it reached it at all. */
   runState: NodeRunState | undefined
   setField: (fieldId: string, value: FieldValue) => void
+  /**
+   * What the pill for one of this Node's Slots says: where its value comes
+   * from, or that nothing feeds it yet. The Wire that answers it is the Flow's,
+   * so the Canvas answers it and the Node only draws it.
+   */
+  slotLabel: (slot: string) => string
+  /** Whether a Wire feeds this Slot, which is what removing its last pill costs. */
+  slotIsWired: (slot: string) => boolean
   /** Takes this Node off the Canvas, and its Wires with it. */
   remove: () => void
 }
@@ -77,7 +80,7 @@ const DRAWN_CONTROLS = new Set<FieldDefinition["control"]>([
 ])
 
 export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
-  const { node, definition, runState, setField, remove } = data
+  const { node, definition, runState, setField, slotIsWired, slotLabel, remove } = data
   const ports = portsOf(definition, node.fields)
   const inputs = ports.filter(port => port.direction === "input")
   const outputs = ports.filter(port => port.direction === "output")
@@ -131,6 +134,8 @@ export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
                   field={field}
                   nodeId={id}
                   setField={setField}
+                  slotIsWired={slotIsWired}
+                  slotLabel={slotLabel}
                   value={node.fields[field.id] ?? field.defaultValue}
                 />
               ))}
@@ -186,33 +191,33 @@ function FieldRow({
   field,
   nodeId,
   setField,
+  slotIsWired,
+  slotLabel,
   value
 }: {
   field: FieldDefinition
   nodeId: string
   setField: (fieldId: string, value: FieldValue) => void
+  slotIsWired: (slot: string) => boolean
+  slotLabel: (slot: string) => string
   value: FieldValue
 }) {
   const inputId = `${nodeId}-${field.id}`
   const label = translateDefinitionKey(field.labelKey)
 
-  // A Slotted field is drawn as the plain text box it has always been: the
-  // pills a Slot reads as are the next piece of work, and until they land the
-  // box shows the literal text and writes back one literal segment (ADR 0010).
+  // A Slotted field is a text box with the values that were dropped into it
+  // drawn as pills inside the sentence (ADR 0010).
   if (field.control === "slottedText") {
     return (
-      <div className="grid gap-1">
-        <Label className="text-xs" htmlFor={inputId}>
-          {label}
-        </Label>
-        <Input
-          className="nodrag h-8"
-          id={inputId}
-          onChange={event => setField(field.id, literalText(event.target.value))}
-          type="text"
-          value={plainTextOf(readSlottedText(value))}
-        />
-      </div>
+      <SlottedField
+        fieldId={field.id}
+        label={label}
+        nodeId={nodeId}
+        onChange={segments => setField(field.id, segments)}
+        slotIsWired={slotIsWired}
+        slotLabel={slotLabel}
+        value={readSlottedText(value)}
+      />
     )
   }
 

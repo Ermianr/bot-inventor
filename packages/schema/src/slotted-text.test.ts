@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-  literalText,
-  plainTextOf,
-  readSlottedText,
-  type SlottedText,
-  slotIdsOf
-} from "./slotted-text.js"
+import { literalText, readSlottedText, type SlottedText, slotIdsOf } from "./slotted-text.js"
 
 const greeting: SlottedText = [
   { kind: "literal", text: "Hello " },
@@ -34,12 +28,6 @@ describe("literalText", () => {
 
   it("holds nothing at all for empty text", () => {
     expect(literalText("")).toEqual([])
-  })
-})
-
-describe("plainTextOf", () => {
-  it("reads the literals and leaves the Slots out", () => {
-    expect(plainTextOf(greeting)).toBe("Hello , hello ")
   })
 })
 

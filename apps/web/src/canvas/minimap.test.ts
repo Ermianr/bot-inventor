@@ -35,6 +35,8 @@ function node(isTrigger: boolean, runState?: NodeRunState): FlowNodeType {
       definition: definition(isTrigger),
       runState,
       setField: () => {},
+      slotLabel: () => "",
+      slotIsWired: () => false,
       remove: () => {}
     }
   }

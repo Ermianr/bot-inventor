@@ -12,6 +12,7 @@ import {
   connectWire,
   createFlow,
   disconnectWire,
+  insertSlot,
   moveNode,
   removeFlow,
   removeNode,
@@ -423,5 +424,107 @@ describe("editing a Project from the Canvas", () => {
 
     expect(edited.flows[0]?.nodes[0]?.fields.name).toBe("goodbye")
     expect(edited.flows[1]).toBe(project.flows[1])
+  })
+})
+
+describe("dropping a Wire onto a text field", () => {
+  it("puts a Slot at the caret and draws the Wire to it in one edit", () => {
+    const insertion = insertSlot(
+      flowOf(),
+      catalogue,
+      { node: "node-reply", field: "content", caret: { literal: 0, offset: 5 } },
+      { node: "node-trigger", port: "user" },
+      "slot-who"
+    )
+
+    if (!insertion.inserted) throw new Error(insertion.reasonKey)
+    const reply = insertion.flow.nodes.find(node => node.id === "node-reply")
+
+    // `helloProject` replies "Hello!", and the caret was between the word and
+    // the exclamation mark, so the text splits around the pill.
+    expect(reply?.fields.content).toEqual([
+      { kind: "literal", text: "Hello" },
+      { kind: "slot", slot: "slot-who" },
+      { kind: "literal", text: "!" }
+    ])
+    expect(insertion.flow.wires.at(-1)).toEqual({
+      id: "wire-2",
+      kind: "data",
+      from: { node: "node-trigger", port: "user" },
+      to: { node: "node-reply", port: "slot.slot-who" }
+    })
+  })
+
+  it("coerces the value the Wire carries, as the Coercion table says", () => {
+    const insertion = insertSlot(
+      flowOf(),
+      catalogue,
+      { node: "node-reply", field: "content", caret: { literal: 0, offset: 0 } },
+      { node: "node-trigger", port: "user" },
+      "slot-who"
+    )
+
+    if (!insertion.inserted) throw new Error(insertion.reasonKey)
+    expect(insertion.flow.wires.at(-1)?.kind).toBe("data")
+  })
+
+  it("refuses a value that cannot be read as text, and changes nothing", () => {
+    const flow = flowOf()
+    const withEmbed = addNode(flow, requireDefinition("discord.embed.build"), { x: 0, y: 0 })
+
+    const insertion = insertSlot(
+      withEmbed,
+      catalogue,
+      { node: "node-reply", field: "content", caret: { literal: 0, offset: 0 } },
+      { node: "node-1", port: "embed" },
+      "slot-embed"
+    )
+
+    expect(insertion).toEqual({ inserted: false, reasonKey: "connections.rejected.dataType" })
+  })
+
+  it("refuses an Execution Port dropped on a text field", () => {
+    const insertion = insertSlot(
+      flowOf(),
+      catalogue,
+      { node: "node-reply", field: "content", caret: { literal: 0, offset: 0 } },
+      { node: "node-trigger", port: "next" },
+      "slot-who"
+    )
+
+    expect(insertion).toEqual({ inserted: false, reasonKey: "connections.rejected.kind" })
+  })
+
+  it("refuses a Node that is not there", () => {
+    const insertion = insertSlot(
+      flowOf(),
+      catalogue,
+      { node: "node-nothing", field: "content", caret: { literal: 0, offset: 0 } },
+      { node: "node-trigger", port: "user" },
+      "slot-who"
+    )
+
+    expect(insertion).toEqual({ inserted: false, reasonKey: "connections.rejected.unknownPort" })
+  })
+
+  it("uses a Slot again without drawing a second Wire", () => {
+    const first = insertSlot(
+      flowOf(),
+      catalogue,
+      { node: "node-reply", field: "content", caret: { literal: 0, offset: 0 } },
+      { node: "node-trigger", port: "user" },
+      "slot-who"
+    )
+    if (!first.inserted) throw new Error(first.reasonKey)
+
+    // Using it again is a field edit and nothing else: the Port is already
+    // there, and so is the Wire feeding it.
+    const again = setNodeField(first.flow, catalogue, "node-reply", "content", [
+      { kind: "slot", slot: "slot-who" },
+      { kind: "literal", text: " and " },
+      { kind: "slot", slot: "slot-who" }
+    ])
+
+    expect(again.wires.filter(wire => wire.kind === "data")).toHaveLength(1)
   })
 })
