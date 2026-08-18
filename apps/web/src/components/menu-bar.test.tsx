@@ -87,7 +87,6 @@ function renderMenuBar(
 ) {
   return render(
     <MenuBar
-      name="Bot"
       onDashboard={overrides.onDashboard ?? (() => {})}
       onOptions={overrides.onOptions ?? (() => {})}
       saved
@@ -365,7 +364,6 @@ describe("what the Menu Bar says back", () => {
     const view = renderMenuBar(exporting, { problem, sharing })
     view.rerender(
       <MenuBar
-        name="Bot"
         onDashboard={() => {}}
         onOptions={() => {}}
         saved
@@ -376,7 +374,6 @@ describe("what the Menu Bar says back", () => {
     )
     view.rerender(
       <MenuBar
-        name="Bot"
         onDashboard={() => {}}
         onOptions={() => {}}
         saved={false}

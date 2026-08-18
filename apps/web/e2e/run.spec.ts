@@ -64,7 +64,7 @@ test.describe("running the bot", () => {
 
     await expect(run.status()).toHaveAttribute("data-status", "failed")
     await expect(consolePanel.problem()).toBeVisible()
-    await expect(menuBar.name()).toBeVisible()
+    await expect(menuBar.row()).toBeVisible()
   })
 
   /** Shift+F5 is as dead as the Stop button is while there is nothing to stop. */

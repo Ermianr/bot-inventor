@@ -104,11 +104,13 @@ function RunButton({
 }
 
 /**
- * Stopped, connecting, ready or failed — the one thing the user looks at.
+ * Stopped, connecting, running or failed — the one thing the user looks at.
  *
- * It is a light and not a sentence: it sits in a row measured in pixels, and it
- * is read at a glance and never twice. What the colour means is its accessible
- * name and its tooltip, so nobody has to know the colours to use the editor.
+ * It is said in words beside its colour, and not by the colour alone: this sits
+ * where the Project's name used to, which the window title now carries, and the
+ * pixels are better spent on what changes while the bot runs than on what the
+ * user chose once. The dot is read at a glance, the word settles what it meant,
+ * and nobody has to learn the colours to use the editor.
  */
 function Status({ status }: { status: SessionStatus }) {
   const tone: Record<SessionStatus, string> = {
@@ -121,18 +123,13 @@ function Status({ status }: { status: SessionStatus }) {
   const said = translate(`run.status.${status}`)
 
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={<span />}
-        role="img"
-        aria-label={said}
-        data-testid="run-status"
-        data-status={status}
-        className="ml-1 inline-flex items-center"
-      >
-        <span className={`size-2 rounded-full ${tone[status]}`} />
-      </TooltipTrigger>
-      <TooltipContent>{said}</TooltipContent>
-    </Tooltip>
+    <span
+      className="ml-1 inline-flex items-center gap-1.5 text-muted-foreground text-sm"
+      data-testid="run-status"
+      data-status={status}
+    >
+      <span className={`size-2 shrink-0 rounded-full ${tone[status]}`} aria-hidden="true" />
+      {said}
+    </span>
   )
 }
