@@ -176,8 +176,8 @@ function text(value: unknown, limit: number): string | undefined {
  * it was meant for with it rather than the reply the user was expecting.
  */
 function link(value: unknown): string | undefined {
-  const rendered = text(value, Number.POSITIVE_INFINITY)
-  if (rendered === undefined) return undefined
+  if (value === undefined || value === null) return undefined
+  const rendered = typeof value === "string" ? value : String(value)
 
   try {
     return LINK_SCHEMES.has(new URL(rendered).protocol) ? rendered : undefined

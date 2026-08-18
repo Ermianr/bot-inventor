@@ -5,7 +5,11 @@ import {
   reply,
   slashCommandTrigger
 } from "@bot-inventor/nodes"
-import { registerCommands, type SlashCommandDefinition } from "@bot-inventor/runtime"
+import {
+  registerCommands,
+  type SlashCommandDefinition,
+  toDiscordEmbed
+} from "@bot-inventor/runtime"
 import { createFakeDiscordCommandApi, type RecordedCall } from "@bot-inventor/runtime/testing"
 import { literalText, type Project, type SlottedText } from "@bot-inventor/schema"
 import {
@@ -250,7 +254,8 @@ describe("answering with an Embed", () => {
 
   it("normalises the colour a hand-edited Project holds", async () => {
     const project = embedReplyProject()
-    embedNode(project).fields = { ...embedNode(project).fields, colour: 0xffffff + 1 }
+    const node = embedNode(project)
+    node.fields = { ...node.fields, colour: 0xffffff + 1 }
 
     const result = await runProject(project, useCard)
 
@@ -313,6 +318,33 @@ describe("answering with an Embed", () => {
       image: "https://example.com/banner.png",
       thumbnail: "https://example.com/badge.png",
       footer: { text: "Asked once a month", icon: "https://example.com/clock.png" }
+    })
+  })
+
+  it("hands every part to Discord under the name its API knows it by", async () => {
+    const project = embedReplyProject()
+    const node = embedNode(project)
+    node.fields = {
+      ...node.fields,
+      authorName: literalText("The moderators"),
+      authorIcon: literalText("https://example.com/team.png"),
+      image: literalText("https://example.com/banner.png"),
+      thumbnail: literalText("https://example.com/badge.png"),
+      footerText: literalText("Asked once a month")
+    }
+
+    const result = await runProject(project, useCard)
+    const built = embedOf(result)
+    if (built === undefined) throw new Error("the reply carried no Embed")
+
+    // The run stops at the Runtime's own Embed, so the last step to Discord is
+    // taken here: a rename lost at that boundary is an Embed that never draws.
+    expect(toDiscordEmbed(built)).toMatchObject({
+      color: 5793266,
+      author: { name: "The moderators", icon_url: "https://example.com/team.png" },
+      image: { url: "https://example.com/banner.png" },
+      thumbnail: { url: "https://example.com/badge.png" },
+      footer: { text: "Asked once a month" }
     })
   })
 

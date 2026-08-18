@@ -189,7 +189,12 @@ export function SlottedField({
               is stretched over the same cell.
             */}
             <span
-              className={`grid min-w-[2ch] [&>*]:col-start-1 [&>*]:row-start-1${multiline ? "w-full" : ""}`}
+              className={[
+                "grid min-w-[2ch] [&>*]:col-start-1 [&>*]:row-start-1",
+                // A paragraph's box takes the whole width, so its text wraps
+                // where the field ends rather than growing past it.
+                multiline ? "w-full" : ""
+              ].join(" ")}
             >
               <span
                 aria-hidden
