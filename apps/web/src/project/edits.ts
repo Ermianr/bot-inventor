@@ -1,18 +1,22 @@
 import {
+  checkConnection,
   defaultFieldValue,
   type NodeCatalogue,
   type NodeDefinition,
-  pruneDanglingWires
+  pruneDanglingWires,
+  slotPortId
 } from "@bot-inventor/nodes"
-import type {
-  FieldValue,
-  Flow,
-  Node,
-  PortReference,
-  Position,
-  Project,
-  WireKind
+import {
+  type FieldValue,
+  type Flow,
+  type Node,
+  type PortReference,
+  type Position,
+  type Project,
+  readSlottedText,
+  type WireKind
 } from "@bot-inventor/schema"
+import { type Caret, editableText, slottedTextOf, withSlotInserted } from "@/project/editable-text"
 
 /**
  * Every change the Canvas makes to a Project, as pure functions.
@@ -243,6 +247,55 @@ export function setNodeField(
   }
 
   return pruneDanglingWires(edited, catalogue, nodeId)
+}
+
+/**
+ * Why dropping a Wire on a text field was refused, or the Project it produced.
+ *
+ * A refusal names the rule it broke, the same way a Wire refused at a Port
+ * does: the user made one gesture and it was turned down, and which gesture it
+ * was must not change whether they are told why.
+ */
+export type SlotInsertion = { inserted: true; flow: Flow } | { inserted: false; reasonKey: string }
+
+/**
+ * Drops a Wire onto a text field: a Slot appears at the caret, and the Wire
+ * arrives at the Port that Slot declares.
+ *
+ * The two are one edit. A Slot with no Wire is a hole the user never asked for,
+ * and a Wire with no Slot cannot exist at all — the Port it would arrive at is
+ * the field's to declare (ADR 0010) — so a refusal leaves the Flow untouched
+ * rather than half of each.
+ *
+ * Whether the Wire is allowed is asked of `checkConnection` on the Flow the
+ * Slot is already in, so the Port it names is there to be found and the answer
+ * comes from the same Coercion table every other Wire is judged by. A Slot's
+ * Port takes text, so a value with no Coercion to text — an Embed — is refused
+ * here in the words the Canvas already uses for it.
+ *
+ * The Slot's id is the caller's, for the same reason a Flow's is: it is opaque
+ * and it outlives the session, and a function that invents its own is one no
+ * test can pin down.
+ */
+export function insertSlot(
+  flow: Flow,
+  catalogue: NodeCatalogue,
+  at: { node: string; field: string; caret: Caret },
+  from: PortReference,
+  slot: string
+): SlotInsertion {
+  const node = flow.nodes.find(candidate => candidate.id === at.node)
+  if (node === undefined) return { inserted: false, reasonKey: "connections.rejected.unknownPort" }
+
+  const editable = editableText(readSlottedText(node.fields[at.field]))
+  const value = slottedTextOf(withSlotInserted(editable, at.caret, slot))
+  const slotted = setNodeField(flow, catalogue, at.node, at.field, value)
+
+  const to: PortReference = { node: at.node, port: slotPortId(slot) }
+  const check = checkConnection({ flow: slotted, catalogue, from, to })
+  if (!check.legal) return { inserted: false, reasonKey: check.reasonKey }
+
+  return { inserted: true, flow: connectWire(slotted, { kind: check.kind, from, to }) }
 }
 
 /**

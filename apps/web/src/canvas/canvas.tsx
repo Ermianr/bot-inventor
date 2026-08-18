@@ -4,9 +4,10 @@ import {
   checkConnection,
   findCoercion,
   findFlowPort,
-  type NodeDefinition
+  type NodeDefinition,
+  slotPortId
 } from "@bot-inventor/nodes"
-import type { PortReference, Wire as ProjectWire } from "@bot-inventor/schema"
+import type { Flow, PortReference, Wire as ProjectWire } from "@bot-inventor/schema"
 import {
   Background,
   type Connection,
@@ -27,6 +28,7 @@ import { FlowMinimap } from "@/canvas/minimap"
 import { Wire, type WireData, type WireType } from "@/canvas/wire"
 import { translate, translateDefinitionKey } from "@/i18n/messages"
 import { useMinimap } from "@/preferences/minimap"
+import type { Caret } from "@/project/editable-text"
 import type { ProjectEditor } from "@/project/use-project"
 import type { RunTrace } from "@/session/trace"
 
@@ -119,6 +121,8 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
           definition,
           runState: watching?.nodes[node.id],
           setField: (fieldId, value) => editor.setNodeField(node.id, fieldId, value),
+          slotLabel: slot => slotLabelOf(flow, node.id, slot),
+          slotIsWired: slot => slotWireOf(flow, node.id, slot) !== undefined,
           remove: () => editor.removeNode(node.id)
         }
         return [
@@ -130,7 +134,7 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
           }
         ]
       }),
-    [flow.nodes, editor.setNodeField, editor.removeNode, watching]
+    [flow, editor.setNodeField, editor.removeNode, watching]
   )
 
   const wires = useMemo<WireType[]>(
@@ -243,11 +247,32 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
    * leaves `isValid` null, and that is someone changing their mind, not the
    * editor turning them down.
    */
-  const onConnectEnd = useCallback<OnConnectEnd>((_event, state) => {
-    if (state.isValid !== false) return
-    setRefusal(lastRefusal.current)
-    lastRefusal.current = undefined
-  }, [])
+  const onConnectEnd = useCallback<OnConnectEnd>(
+    (event, state) => {
+      const from = state.fromHandle
+      const fromPort = from?.id
+      const drop = slotDropTarget(event)
+
+      /*
+        A Wire let go over a text field is a Slot being dropped into the
+        sentence, not a Wire nobody finished. React Flow can only read it as
+        landing on nothing — the Port the Wire arrives at does not exist until
+        the Slot is in the field — so the gesture is answered here, and the
+        Slot and the Wire are made in one edit.
+      */
+      if (drop !== undefined && from?.type === "source" && typeof fromPort === "string") {
+        const insertion = editor.insertSlot(drop, { node: from.nodeId, port: fromPort })
+        setRefusal(insertion.inserted ? undefined : insertion.reasonKey)
+        lastRefusal.current = undefined
+        return
+      }
+
+      if (state.isValid !== false) return
+      setRefusal(lastRefusal.current)
+      lastRefusal.current = undefined
+    },
+    [editor.insertSlot]
+  )
 
   /**
    * What the catalogue offers this Flow. It is read off the Flow's Nodes, so a
@@ -302,6 +327,72 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
       )}
     </section>
   )
+}
+
+/** A text field a Wire was let go over, and where in it the Slot lands. */
+type SlotDrop = { node: string; field: string; caret: Caret }
+
+/**
+ * The text box under the point a Wire was let go at, if there is one.
+ *
+ * It is read from the point rather than from the event's target because the
+ * pointer is captured for the length of a connection drag, which leaves the
+ * target saying where the drag started rather than where it ended.
+ *
+ * `data-slot-*` are the Slotted field's own attributes, and this is the other
+ * half of that arrangement: the field says which box is which, and this turns
+ * a drop into the caret position the Slot goes at.
+ */
+function slotDropTarget(event: MouseEvent | TouchEvent): SlotDrop | undefined {
+  const point = event instanceof MouseEvent ? event : event.changedTouches[0]
+  if (point === undefined) return undefined
+
+  const box = document.elementFromPoint(point.clientX, point.clientY)?.closest("[data-slot-field]")
+  if (!(box instanceof HTMLInputElement)) return undefined
+
+  const { slotCaret, slotField, slotLiteral, slotNode } = box.dataset
+  if (slotField === undefined || slotLiteral === undefined || slotNode === undefined) {
+    return undefined
+  }
+
+  // Where the caret was left, or the end of what is written there: a value
+  // dropped on a field nobody has typed in yet lands after the text rather
+  // than in front of it.
+  const caret = Number(slotCaret)
+  const offset = Number.isFinite(caret) ? caret : box.value.length
+  return {
+    node: slotNode,
+    field: slotField,
+    caret: { literal: Number(slotLiteral), offset }
+  }
+}
+
+/** The Wire feeding one of a Node's Slots, if the user has drawn one. */
+function slotWireOf(flow: Flow, nodeId: string, slot: string): ProjectWire | undefined {
+  const port = slotPortId(slot)
+  return flow.wires.find(wire => wire.to.node === nodeId && wire.to.port === port)
+}
+
+/**
+ * What a Slot's pill says. A Slot with a Wire is named after where its value
+ * comes from — the Node, and what that Node calls the value — so two pills fed
+ * by the same Node are still told apart at a glance. A Slot with no Wire is
+ * named as the empty hole it is.
+ */
+function slotLabelOf(flow: Flow, nodeId: string, slot: string): string {
+  const wire = slotWireOf(flow, nodeId, slot)
+  if (wire === undefined) return translate("canvas.slot.empty")
+
+  const source = flow.nodes.find(node => node.id === wire.from.node)
+  const definition = source === undefined ? undefined : catalogue.get(source.type)
+  const port = findFlowPort(flow, catalogue, wire.from)
+  if (definition === undefined || port === undefined) return translate("canvas.slot.empty")
+
+  return translate("canvas.slot.label", {
+    node: translateDefinitionKey(definition.labelKey),
+    // A Port the user named is shown in their own words; the rest are translated.
+    value: port.label ?? translateDefinitionKey(port.labelKey)
+  })
 }
 
 /**

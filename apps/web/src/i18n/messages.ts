@@ -196,6 +196,18 @@ const en = {
   "canvas.wire.remove": "Remove this wire",
   "canvas.wire.carried": "Last run carried: {value}",
 
+  // What a pill inside a text field says. A Slot shows where its value comes
+  // from — the Node, then what that Node calls it — so two pills fed by the
+  // same Node are still told apart at a glance.
+  "canvas.slot.label": "{node} · {value}",
+  "canvas.slot.empty": "Empty value",
+  "canvas.slot.remove": "Remove this value",
+  "canvas.slot.removeWire.title": "This will remove a wire too",
+  "canvas.slot.removeWire.body":
+    "{value} is not used anywhere else in this node, so the wire that feeds it goes with it.",
+  "canvas.slot.removeWire.cancel": "Keep it",
+  "canvas.slot.removeWire.confirm": "Remove both",
+
   "connections.rejected.direction":
     "Wires run from an output on the right of a node to an input on the left.",
   "connections.rejected.kind":
@@ -219,8 +231,9 @@ const en = {
   // Shown only when a parameter has somehow lost its name: a parameter's Port is
   // normally labelled with what the user called it.
   "ports.commandParameter.label": "What they answered",
-  // A Slot's Port, until the Canvas can draw the Slot as a pill inside the text
-  // it belongs to and name it there.
+  // The Port a Slot is fed through. It is named for what it does rather than
+  // for which Slot it belongs to, because the pill inside the text is where the
+  // user reads which value goes where.
   "ports.slot.label": "Goes in the text",
 
   "nodes.discord.trigger.slashCommand.label": "Slash command",
@@ -428,6 +441,14 @@ const es: Record<MessageKey, string> = {
   "canvas.node.remove": "Eliminar este nodo",
   "canvas.wire.remove": "Quitar este cable",
   "canvas.wire.carried": "La última ejecución llevó: {value}",
+  "canvas.slot.label": "{node} · {value}",
+  "canvas.slot.empty": "Valor vacío",
+  "canvas.slot.remove": "Quitar este valor",
+  "canvas.slot.removeWire.title": "Esto también quitará un cable",
+  "canvas.slot.removeWire.body":
+    "{value} no se usa en ningún otro sitio de este nodo, así que el cable que lo alimenta se va con él.",
+  "canvas.slot.removeWire.cancel": "Conservarlo",
+  "canvas.slot.removeWire.confirm": "Quitar los dos",
 
   "connections.rejected.direction":
     "Los cables van de una salida a la derecha de un nodo a una entrada a la izquierda.",

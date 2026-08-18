@@ -35,7 +35,6 @@ export {
   type LiteralSegment,
   literalSegmentSchema,
   literalText,
-  plainTextOf,
   readSlottedText,
   type SlotSegment,
   type SlottedText,

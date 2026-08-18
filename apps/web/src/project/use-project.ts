@@ -9,6 +9,7 @@ import type {
 } from "@bot-inventor/schema"
 import { useCallback, useMemo, useState } from "react"
 import { translate } from "@/i18n/messages"
+import type { Caret } from "@/project/editable-text"
 import {
   addNode,
   connectWire,
@@ -16,10 +17,12 @@ import {
   disconnectWire,
   type FlowRemoval,
   type FlowRename,
+  insertSlot,
   moveNode,
   removeFlow,
   removeNode,
   renameFlow,
+  type SlotInsertion,
   setNodeField,
   updateFlow
 } from "@/project/edits"
@@ -62,6 +65,12 @@ export type ProjectEditor = {
   removeNode(nodeId: string): void
   moveNode(nodeId: string, position: Position): void
   setNodeField(nodeId: string, fieldId: string, value: FieldValue): void
+  /**
+   * Drops a Wire onto a text field: the Slot and the Wire arrive together, or
+   * neither does. Says why it was refused, so the Canvas can tell the user in
+   * the same words it uses for a Wire refused at a Port.
+   */
+  insertSlot(at: { node: string; field: string; caret: Caret }, from: PortReference): SlotInsertion
   connectWire(wire: { kind: WireKind; from: PortReference; to: PortReference }): void
   disconnectWire(wireId: string): void
 }
@@ -178,6 +187,30 @@ export function useProject(createInitial: () => Project): ProjectEditor {
       (nodeId, fieldId, value) =>
         edit(current => setNodeField(current, catalogue, nodeId, fieldId, value)),
       [edit]
+    ),
+    /**
+     * The Slot's id is made here, once, and it is a UUID rather than a count:
+     * a Slot outlives the session that made it, and two Projects open beside
+     * each other must not both hold a Slot answering to the same id.
+     *
+     * The refusal is decided on the Flow this render is showing, because the
+     * caller is told there and then whether the drop was turned down; the edit
+     * itself is applied to whatever Project the state is holding by the time
+     * React gets here, the same as every other edit.
+     */
+    insertSlot: useCallback(
+      (at, from) => {
+        const slot = `slot-${crypto.randomUUID()}`
+        const insertion = insertSlot(flow, catalogue, at, from, slot)
+        if (insertion.inserted) {
+          edit(current => {
+            const applied = insertSlot(current, catalogue, at, from, slot)
+            return applied.inserted ? applied.flow : current
+          })
+        }
+        return insertion
+      },
+      [edit, flow]
     ),
     connectWire: useCallback(wire => edit(current => connectWire(current, wire)), [edit]),
     disconnectWire: useCallback(wireId => edit(current => disconnectWire(current, wireId)), [edit])
