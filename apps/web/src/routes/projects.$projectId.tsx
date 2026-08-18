@@ -2,6 +2,7 @@ import type { Project } from "@bot-inventor/schema"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
 
+import { useWindowTitle } from "@/about/window-title"
 import { Canvas } from "@/canvas/canvas"
 import { FlowList } from "@/canvas/flow-list"
 import { MenuBar } from "@/components/menu-bar"
@@ -69,6 +70,9 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
   const editor = useProject(() => loaded)
   const autosave = useAutosave(projectStore, editor.project, { migrated })
   const testServer = useTestServer(projectStore, editor.project.id)
+
+  // Renaming the Project renames the window with it: it is the same name.
+  useWindowTitle(editor.project.name)
 
   // The Session is held here rather than in the panel that starts it, because
   // watching the bot think happens on the Canvas: both sides read one run.

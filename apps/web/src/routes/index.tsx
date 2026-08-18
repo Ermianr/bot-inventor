@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 
+import { useWindowTitle } from "@/about/window-title"
 import { Dashboard } from "@/dashboard/dashboard"
 import { desktopImport } from "@/project/desktop-import"
 import { projectStore } from "@/project/store"
@@ -14,6 +15,9 @@ export const Route = createFileRoute("/")({
  */
 function DashboardRoute() {
   const navigate = useNavigate()
+
+  // No Project is open here, so the title bar is the application alone.
+  useWindowTitle()
 
   return (
     <Dashboard
