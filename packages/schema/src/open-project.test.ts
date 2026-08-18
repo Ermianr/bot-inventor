@@ -11,6 +11,14 @@ import { CURRENT_SCHEMA_VERSION } from "./project.js"
 
 const writeBackup = () => vi.fn(async () => {})
 
+/**
+ * A document written at the format before this build's. The migration tests
+ * drive the mechanism with a chain of their own, so what matters about it is
+ * only that it is behind: what the real chain does to a real Project is
+ * `migrate-to-slotted-text.test.ts`.
+ */
+const olderProject = () => ({ ...emptyProject(), schemaVersion: 1 })
+
 describe("openProject", () => {
   it("opens a current-version Project without migrating or backing it up", async () => {
     const backup = writeBackup()
@@ -73,14 +81,14 @@ describe("openProject", () => {
       }
     ]
 
-    const result = await openProject(emptyProject(), {
+    const result = await openProject(olderProject(), {
       writeBackup: backup,
       chain,
       targetVersion: 2
     })
 
     expect(order).toEqual(["backup", "migrate"])
-    expect(backup).toHaveBeenCalledWith(emptyProject())
+    expect(backup).toHaveBeenCalledWith(olderProject())
     expect(result).toMatchObject({ status: "opened", migrated: true })
     if (result.status === "opened") {
       expect(result.project.name).toBe("Migrated Project")
@@ -92,7 +100,7 @@ describe("openProject", () => {
     const migrate = vi.fn(document => document)
     const chain: Migration[] = [{ from: 1, to: 2, migrate }]
 
-    const result = await openProject(emptyProject(), {
+    const result = await openProject(olderProject(), {
       writeBackup: () => {
         throw new Error("the disk is full")
       },
@@ -108,7 +116,7 @@ describe("openProject", () => {
   })
 
   it("reports a missing migration instead of guessing at the Project", async () => {
-    const result = await openProject(emptyProject(), {
+    const result = await openProject(olderProject(), {
       writeBackup: writeBackup(),
       chain: [],
       targetVersion: 2
@@ -125,7 +133,7 @@ describe("openProject", () => {
       { from: 1, to: 2, migrate: document => ({ ...(document as object), name: "Still at 1" }) }
     ]
 
-    const result = await openProject(emptyProject(), {
+    const result = await openProject(olderProject(), {
       writeBackup: writeBackup(),
       chain,
       targetVersion: 2
@@ -142,7 +150,7 @@ describe("openProject", () => {
       { from: 1, to: 2, migrate: () => ({ schemaVersion: 2, flows: "all of them" }) }
     ]
 
-    const result = await openProject(emptyProject(), {
+    const result = await openProject(olderProject(), {
       writeBackup: writeBackup(),
       chain,
       targetVersion: 2
@@ -166,7 +174,7 @@ describe("openProject", () => {
       }
     ]
 
-    const result = await openProject(emptyProject(), {
+    const result = await openProject(olderProject(), {
       writeBackup: writeBackup(),
       chain,
       targetVersion: 2

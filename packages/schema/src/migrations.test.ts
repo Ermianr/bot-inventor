@@ -44,8 +44,9 @@ describe("readSchemaVersion", () => {
 })
 
 describe("runMigrationChain", () => {
-  it("ships empty, so the mechanism has nothing to do yet", () => {
-    expect(migrations).toEqual([])
+  it("holds one step per format change, in order and without a gap", () => {
+    expect(migrations.map(migration => [migration.from, migration.to])).toEqual([[1, 2]])
+    expect(migrations.at(-1)?.to).toBe(CURRENT_SCHEMA_VERSION)
   })
 
   it("is a no-op for a Project already at the current version", () => {

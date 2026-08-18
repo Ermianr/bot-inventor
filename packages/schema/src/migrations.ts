@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { toSlottedText } from "./migrate-to-slotted-text.js"
 import { CURRENT_SCHEMA_VERSION } from "./project.js"
 
 /**
@@ -14,11 +15,8 @@ export type Migration = {
   migrate: (document: unknown) => unknown
 }
 
-/**
- * The ordered migration chain. It is empty because no format change has
- * happened yet; the mechanism around it is what this ships.
- */
-export const migrations: readonly Migration[] = []
+/** The ordered migration chain, one step per format change. */
+export const migrations: readonly Migration[] = [toSlottedText]
 
 /** Reads the `schemaVersion` of a document without trusting the rest of it. */
 export function readSchemaVersion(document: unknown): number | undefined {

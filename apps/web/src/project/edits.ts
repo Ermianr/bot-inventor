@@ -223,7 +223,8 @@ export function moveNode(flow: Flow, nodeId: string, position: Position): Flow {
  * The value the user typed into one of a Node's inline fields.
  *
  * A field can take Ports with it — renaming or removing a slash command
- * parameter removes the Port it was read from — so the Wires that Port carried
+ * parameter, or typing over the last occurrence of a Slot, removes the Port it
+ * was read from (ADR 0010) — so the Wires that Port carried
  * go at the same time. Leaving them would leave the Project holding Wires
  * pointing at nothing, which the Compiler refuses and the Canvas cannot draw.
  */

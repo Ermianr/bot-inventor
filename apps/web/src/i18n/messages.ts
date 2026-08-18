@@ -219,6 +219,9 @@ const en = {
   // Shown only when a parameter has somehow lost its name: a parameter's Port is
   // normally labelled with what the user called it.
   "ports.commandParameter.label": "What they answered",
+  // A Slot's Port, until the Canvas can draw the Slot as a pill inside the text
+  // it belongs to and name it there.
+  "ports.slot.label": "Goes in the text",
 
   "nodes.discord.trigger.slashCommand.label": "Slash command",
   "nodes.discord.trigger.slashCommand.description": "Starts when someone uses your command.",
@@ -230,8 +233,7 @@ const en = {
   "nodes.discord.interaction.reply.label": "Reply",
   "nodes.discord.interaction.reply.description": "Answers whoever used the command.",
   "nodes.discord.interaction.reply.fields.content.label": "Message",
-  "nodes.discord.interaction.reply.fields.ephemeral.label": "Only they can see it",
-  "nodes.discord.interaction.reply.ports.content.label": "Message"
+  "nodes.discord.interaction.reply.fields.ephemeral.label": "Only they can see it"
 } as const
 
 export type MessageKey = keyof typeof en
@@ -440,6 +442,7 @@ const es: Record<MessageKey, string> = {
   "ports.in.label": "Haz esto",
   "ports.next.label": "Después",
   "ports.commandParameter.label": "Lo que respondieron",
+  "ports.slot.label": "Va en el texto",
 
   "nodes.discord.trigger.slashCommand.label": "Comando",
   "nodes.discord.trigger.slashCommand.description": "Empieza cuando alguien usa tu comando.",
@@ -451,8 +454,7 @@ const es: Record<MessageKey, string> = {
   "nodes.discord.interaction.reply.label": "Responder",
   "nodes.discord.interaction.reply.description": "Contesta a quien usó el comando.",
   "nodes.discord.interaction.reply.fields.content.label": "Mensaje",
-  "nodes.discord.interaction.reply.fields.ephemeral.label": "Solo lo ve esa persona",
-  "nodes.discord.interaction.reply.ports.content.label": "Mensaje"
+  "nodes.discord.interaction.reply.fields.ephemeral.label": "Solo lo ve esa persona"
 }
 
 const messages: Record<Locale, Record<MessageKey, string>> = { en, es }

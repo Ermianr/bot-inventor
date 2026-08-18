@@ -7,7 +7,7 @@ import {
 } from "@bot-inventor/nodes"
 import { registerCommands, type SlashCommandDefinition } from "@bot-inventor/runtime"
 import { createFakeDiscordCommandApi, type RecordedCall } from "@bot-inventor/runtime/testing"
-import type { Project } from "@bot-inventor/schema"
+import { literalText, type Project, type SlottedText } from "@bot-inventor/schema"
 import {
   echoParameterProject,
   emptyProject,
@@ -15,6 +15,7 @@ import {
   helloProject,
   parameterisedCommandProject,
   requireFirst,
+  slottedGreetingProject,
   unreachableNodeProject
 } from "@bot-inventor/schema/fixtures"
 import { describe, expect, it } from "vitest"
@@ -53,6 +54,51 @@ function withDataType(
   }
 }
 
+/** A Node demanding a User, which the catalogue has none of yet. */
+const userSink: NodeDefinition = {
+  id: "test.userSink",
+  labelKey: "test.userSink.label",
+  descriptionKey: "test.userSink.description",
+  isTrigger: false,
+  ports: [
+    { id: "in", kind: "execution", direction: "input", labelKey: "ports.in.label" },
+    {
+      id: "who",
+      kind: "data",
+      direction: "input",
+      dataType: "user",
+      labelKey: "test.userSink.ports.who.label"
+    }
+  ],
+  fields: [],
+  generate: context => `void ${context.input("who")}`
+}
+
+/** A slash command Trigger whose caller is carried into a Node demanding a User. */
+function userSinkProject(): Project {
+  const project = helloProject()
+  const flow = requireFirst(project.flows, "Flow")
+  flow.nodes = [
+    requireFirst(flow.nodes, "Node"),
+    { id: "node-sink", type: "test.userSink", position: { x: 320, y: 0 }, fields: {} }
+  ]
+  flow.wires = [
+    {
+      id: "wire-execution",
+      kind: "execution",
+      from: { node: "node-trigger", port: "next" },
+      to: { node: "node-sink", port: "in" }
+    },
+    {
+      id: "wire-data",
+      kind: "data",
+      from: { node: "node-trigger", port: "user" },
+      to: { node: "node-sink", port: "who" }
+    }
+  ]
+  return project
+}
+
 /** `helloProject` with a second Reply wired after the first. */
 function twoRepliesProject(): Project {
   const project = helloProject()
@@ -61,7 +107,7 @@ function twoRepliesProject(): Project {
     id: "node-second",
     type: "discord.interaction.reply",
     position: { x: 640, y: 0 },
-    fields: { content: "And again", ephemeral: false }
+    fields: { content: literalText("And again"), ephemeral: false }
   })
   flow.wires.push({
     id: "wire-second",
@@ -376,6 +422,149 @@ describe("reading a slash command's parameters", () => {
   })
 })
 
+describe("putting a value inside a Node's text", () => {
+  /**
+   * `echoParameterProject` — a `/echo` whose reply is one Slot fed by a
+   * parameter — with the message written around that Slot instead.
+   */
+  function messageOf(...segments: SlottedText): Project {
+    const project = echoParameterProject()
+    const flow = requireFirst(project.flows, "Flow")
+    const reply = flow.nodes[1]
+    if (reply === undefined) throw new Error("the fixture has no Reply Node")
+    reply.fields.content = segments
+    return project
+  }
+
+  const message = { kind: "slot", slot: "slot-message" } as const
+
+  it("answers with the literal text around the Slot, and the Slot filled in", async () => {
+    const project = messageOf({ kind: "literal", text: "Hello " }, message)
+
+    const result = await runProject(project, [
+      { type: "slashCommand", command: "echo", parameters: { message: "Kevin" } }
+    ])
+
+    expect(replies(result)).toEqual(["Hello Kevin"])
+  })
+
+  it("fills the same Slot in wherever it appears, from the one Wire feeding it", async () => {
+    const project = messageOf(message, { kind: "literal", text: " and again " }, message)
+
+    const result = await runProject(project, [
+      { type: "slashCommand", command: "echo", parameters: { message: "Kevin" } }
+    ])
+
+    expect(replies(result)).toEqual(["Kevin and again Kevin"])
+  })
+
+  it("answers with the text as typed when the message holds no Slot at all", async () => {
+    const project = messageOf({ kind: "literal", text: "Hello everyone" })
+    // Taking the last occurrence of a Slot away takes its Port with it, and the
+    // Wire drawn to it is the editor's to remove as part of that same edit.
+    const flow = requireFirst(project.flows, "Flow")
+    flow.wires = flow.wires.filter(wire => wire.id !== "wire-data")
+
+    const result = await runProject(project, [
+      { type: "slashCommand", command: "echo", parameters: { message: "Kevin" } }
+    ])
+
+    expect(replies(result)).toEqual(["Hello everyone"])
+  })
+
+  it("mentions the caller a Wire carries into the middle of a message", async () => {
+    const result = await runProject(slottedGreetingProject(), [
+      {
+        type: "slashCommand",
+        command: "greet",
+        user: { id: "42", username: "kevin", displayName: "Kevin" }
+      }
+    ])
+
+    expect(replies(result)).toEqual(["Hello <@42>, hello <@42>"])
+  })
+
+  it("puts a Number and a Boolean through their Coercion on the way into the text", async () => {
+    const project = echoParameterProject()
+    const flow = requireFirst(project.flows, "Flow")
+    const trigger = requireFirst(flow.nodes, "Node")
+    const reply = flow.nodes[1]
+    if (reply === undefined) throw new Error("the fixture has no Reply Node")
+
+    trigger.fields.parameters = [
+      { name: "times", description: "How many times", type: "number", required: true },
+      { name: "loudly", description: "Whether to shout", type: "boolean", required: true }
+    ]
+    reply.fields.content = [
+      { kind: "literal", text: "x" },
+      { kind: "slot", slot: "slot-times" },
+      { kind: "literal", text: ", " },
+      { kind: "slot", slot: "slot-loudly" }
+    ]
+    flow.wires = [
+      requireFirst(flow.wires, "Wire"),
+      {
+        id: "wire-times",
+        kind: "data",
+        from: { node: "node-trigger", port: "parameter.times" },
+        to: { node: "node-reply", port: "slot.slot-times" }
+      },
+      {
+        id: "wire-loudly",
+        kind: "data",
+        from: { node: "node-trigger", port: "parameter.loudly" },
+        to: { node: "node-reply", port: "slot.slot-loudly" }
+      }
+    ]
+
+    const result = await runProject(project, [
+      { type: "slashCommand", command: "echo", parameters: { times: 3, loudly: true } }
+    ])
+
+    expect(replies(result)).toEqual(["x3, true"])
+  })
+
+  it("leaves a Slot nobody wired anything to empty, rather than 'undefined'", async () => {
+    const project = messageOf({ kind: "literal", text: "Hello " }, message, {
+      kind: "slot",
+      slot: "slot-nobody"
+    })
+
+    const result = await runProject(project, [
+      { type: "slashCommand", command: "echo", parameters: { message: "Kevin" } }
+    ])
+
+    expect(replies(result)).toEqual(["Hello Kevin"])
+  })
+
+  it("refuses a message that does not read as text with Slots in it", () => {
+    const project = helloProject()
+    const reply = requireFirst(project.flows, "Flow").nodes[1]
+    if (reply === undefined) throw new Error("the fixture has no Reply Node")
+    reply.fields.content = "written by a build this one has never met"
+
+    // Emitting an empty message instead would be the bot answering with
+    // nothing and nowhere for the user to find out why.
+    expect(() => compile(project, { mode: "build" })).toThrowError(/does not read as text/)
+  })
+
+  it("says the same thing in Development Mode as in Build", async () => {
+    const events = [
+      {
+        type: "slashCommand",
+        command: "greet",
+        user: { id: "42", username: "kevin", displayName: "Kevin" }
+      }
+    ] as const
+    const build = await runProject(slottedGreetingProject(), events, { mode: "build" })
+    const development = await runProject(slottedGreetingProject(), events, {
+      mode: "development"
+    })
+
+    expect(development.calls).toEqual(build.calls)
+  })
+})
+
 describe("refusing a Project it cannot emit", () => {
   it("names the Node whose type is not in the catalogue", () => {
     const project = helloProject()
@@ -434,7 +623,7 @@ describe("refusing a Project it cannot emit", () => {
       id: "wire-data-again",
       kind: "data",
       from: { node: "node-trigger", port: "user" },
-      to: { node: "node-reply", port: "content" }
+      to: { node: "node-reply", port: "slot.slot-caller" }
     })
 
     expect(() => compile(project, { mode: "build" })).toThrowError(/exactly one value/)
@@ -443,14 +632,14 @@ describe("refusing a Project it cannot emit", () => {
   it("refuses a Data Wire between Port types with no Coercion between them", () => {
     // The Wire of the greeting fixture, run the wrong way round the Coercion
     // table: text into a User. The editor would never draw it, and the Compiler
-    // must not emit it either.
+    // must not emit it either. A Slot's Port is always text, so the Node
+    // demanding a User is one of this test's own.
     const producesText = withDataType(slashCommandTrigger, "user", "text")
-    const demandsAUser = withDataType(reply, "content", "user")
 
     expect(() =>
-      compile(greetingProject(), {
+      compile(userSinkProject(), {
         mode: "build",
-        catalogue: buildCatalogue([producesText, demandsAUser])
+        catalogue: buildCatalogue([producesText, userSink])
       })
     ).toThrowError(/no Coercion exists/)
   })

@@ -145,7 +145,7 @@ describe("projectSchema", () => {
   })
 
   it("pins the current schemaVersion", () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(1)
+    expect(CURRENT_SCHEMA_VERSION).toBe(2)
     expect(emptyProject().schemaVersion).toBe(CURRENT_SCHEMA_VERSION)
   })
 })

@@ -1,3 +1,4 @@
+export { toSlottedText } from "./migrate-to-slotted-text.js"
 export {
   type Migration,
   MigrationChainError,
@@ -30,3 +31,17 @@ export {
   type WireKind,
   wireSchema
 } from "./project.js"
+export {
+  type LiteralSegment,
+  literalSegmentSchema,
+  literalText,
+  plainTextOf,
+  readSlottedText,
+  type SlotSegment,
+  type SlottedText,
+  slotIdsOf,
+  slotSegmentSchema,
+  slottedTextSchema,
+  type TextSegment,
+  textSegmentSchema
+} from "./slotted-text.js"

@@ -1,4 +1,5 @@
 import { catalogue } from "@bot-inventor/nodes"
+import { literalText } from "@bot-inventor/schema"
 import {
   echoParameterProject,
   helloProject,
@@ -208,7 +209,7 @@ describe("putting a Node on the Canvas", () => {
   it("starts the Node's fields at the defaults its definition declares", () => {
     const added = addNode(flowOf(), definition, { x: 0, y: 0 })
 
-    expect(added.nodes.at(-1)?.fields).toEqual({ content: "", ephemeral: false })
+    expect(added.nodes.at(-1)?.fields).toEqual({ content: [], ephemeral: false })
   })
 
   it("hands out an id that is counted rather than random", () => {
@@ -328,6 +329,36 @@ describe("editing a Project from the Canvas", () => {
     // The Execution Wire is untouched: only the Port that went with the old
     // name took its Wire with it.
     expect(edited.wires.map(wire => wire.id)).toEqual(["wire-execution"])
+  })
+
+  it("takes away the Wire feeding a Slot the user typed over", () => {
+    // `echoParameterProject`'s reply is one Slot, fed by the command's
+    // parameter. Typing plain text over it removes the last occurrence of that
+    // Slot, and the Port and the Wire go with it.
+    const edited = setNodeField(
+      flowOf(echoParameterProject()),
+      catalogue,
+      "node-reply",
+      "content",
+      literalText("Hello everyone")
+    )
+
+    expect(edited.wires.map(wire => wire.id)).toEqual(["wire-execution"])
+  })
+
+  it("keeps the Wire feeding a Slot the user typed around", () => {
+    const edited = setNodeField(
+      flowOf(echoParameterProject()),
+      catalogue,
+      "node-reply",
+      "content",
+      [
+        { kind: "literal", text: "Hello " },
+        { kind: "slot", slot: "slot-message" }
+      ]
+    )
+
+    expect(edited.wires.map(wire => wire.id)).toEqual(["wire-execution", "wire-data"])
   })
 
   it("leaves a Wire dangling for a reason of its own where it is", () => {

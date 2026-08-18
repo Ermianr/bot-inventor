@@ -13,9 +13,10 @@ import {
   joinStatements,
   type NodeCatalogue,
   type NodeDefinition,
+  slotPortId,
   type TraceRequest
 } from "@bot-inventor/nodes"
-import type { FieldValue, Flow, Node } from "@bot-inventor/schema"
+import { type FieldValue, type Flow, type Node, slottedTextSchema } from "@bot-inventor/schema"
 import { CompilerError } from "./errors.js"
 import { assignIdentifierPrefixes, claimIdentifier, literal, sanitise } from "./identifiers.js"
 
@@ -158,6 +159,7 @@ class FlowCompiler {
       literal,
       field: id => this.fieldOf(node, definition, id),
       input: id => this.inputExpression(node, definition, id),
+      slottedField: id => this.slottedExpression(node, definition, id),
       output: id => {
         const port = findPort(definition, id, node.fields)
         if (port === undefined || port.kind !== "data" || port.direction !== "output") {
@@ -207,10 +209,54 @@ class FlowCompiler {
   }
 
   /**
-   * A Data input reads from its Wire when one is connected, through whatever
-   * Coercion the two Port types need, and from the Node's own field otherwise.
+   * A Slotted text field, as the concatenation of its segments: literal text
+   * as it was typed, and each Slot read through the Port it declares.
+   *
+   * A field of one literal segment emits the string it holds, so a message with
+   * no Slots in it reads in the generated code exactly as the user typed it.
+   *
+   * A field that does not read as a sequence at all — a Project from a build
+   * that came after this one, or one edited by hand — is refused rather than
+   * emitted as nothing. The editor draws such a field as empty, but a bot
+   * answering with the wrong text and nothing saying why is the one outcome
+   * that is not allowed (ADR 0008).
    */
-  private inputExpression(node: Node, definition: NodeDefinition, id: string): string {
+  private slottedExpression(node: Node, definition: NodeDefinition, id: string): string {
+    const value = this.fieldOf(node, definition, id)
+    const parsed = slottedTextSchema.safeParse(value)
+    if (!parsed.success) {
+      throw new CompilerError(
+        `the field "${id}" of "${node.id}" does not read as text with Slots in it; open the Node and type its message again`,
+        { flow: this.flow.id, node: node.id }
+      )
+    }
+
+    const segments = parsed.data
+    if (segments.length === 0) return literal("")
+
+    const parts = segments.map(segment =>
+      segment.kind === "literal"
+        ? literal(segment.text)
+        : this.inputExpression(node, definition, slotPortId(segment.slot), literal(""))
+    )
+
+    // Every part is text already — a literal as typed, and a Slot either
+    // coerced into text by its Wire or empty for want of one — so joining them
+    // is concatenation and never arithmetic.
+    return parts.join(" + ")
+  }
+
+  /**
+   * A Data input reads from its Wire when one is connected, through whatever
+   * Coercion the two Port types need, and from `fallback` — the Node's own
+   * field of the same id, unless the caller says otherwise — when nothing is.
+   */
+  private inputExpression(
+    node: Node,
+    definition: NodeDefinition,
+    id: string,
+    fallback?: string
+  ): string {
     const port = findPort(definition, id, node.fields)
     if (port === undefined || port.kind !== "data" || port.direction !== "input") {
       throw new CompilerError(
@@ -225,7 +271,7 @@ class FlowCompiler {
     )
 
     const [wire, extra] = wires
-    if (wire === undefined) return literal(this.fieldOf(node, definition, id))
+    if (wire === undefined) return fallback ?? literal(this.fieldOf(node, definition, id))
     if (extra !== undefined) {
       throw new CompilerError(
         `Data input Port "${id}" of "${node.id}" has ${wires.length} Wires arriving at it, including "${extra.id}"; a Data input reads exactly one value`,

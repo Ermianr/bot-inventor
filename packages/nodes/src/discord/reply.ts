@@ -1,8 +1,9 @@
 import { joinStatements, type NodeDefinition } from "../definition.js"
 
 /**
- * Answers the interaction that started the run. `content` reads from its Wire
- * when one is connected, and from the text typed into the Node otherwise.
+ * Answers the interaction that started the run. Its message is a Slotted text
+ * field: what the user typed, with a value arriving along a Wire wherever they
+ * put a Slot (ADR 0010).
  */
 export const reply: NodeDefinition = {
   id: "discord.interaction.reply",
@@ -11,21 +12,14 @@ export const reply: NodeDefinition = {
   isTrigger: false,
   ports: [
     { id: "in", kind: "execution", direction: "input", labelKey: "ports.in.label" },
-    { id: "next", kind: "execution", direction: "output", labelKey: "ports.next.label" },
-    {
-      id: "content",
-      kind: "data",
-      direction: "input",
-      dataType: "text",
-      labelKey: "nodes.discord.interaction.reply.ports.content.label"
-    }
+    { id: "next", kind: "execution", direction: "output", labelKey: "ports.next.label" }
   ],
   fields: [
     {
       id: "content",
       labelKey: "nodes.discord.interaction.reply.fields.content.label",
-      control: "text",
-      defaultValue: ""
+      control: "slottedText",
+      defaultValue: []
     },
     {
       id: "ephemeral",
@@ -36,7 +30,7 @@ export const reply: NodeDefinition = {
   ],
   generate(context) {
     const options = [
-      `content: ${context.input("content")}`,
+      `content: ${context.slottedField("content")}`,
       `ephemeral: ${context.literal(context.field("ephemeral"))}`
     ].join(", ")
 
