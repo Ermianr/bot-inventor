@@ -218,6 +218,69 @@ export function echoParameterProject(): Project {
 }
 
 /**
+ * A Project whose reply is a rich block: `/card` builds an Embed with a title,
+ * a description and a colour, and wires it into the Reply Node, which answers
+ * with it instead of a line of text.
+ */
+export function embedReplyProject(): Project {
+  return {
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    id: "project-embed",
+    name: "Embed Bot",
+    flows: [
+      {
+        id: "flow-card",
+        name: "Card",
+        nodes: [
+          {
+            id: "node-trigger",
+            type: "discord.trigger.slashCommand",
+            position: { x: 0, y: 0 },
+            fields: { name: "card", description: "Shows a card" }
+          },
+          {
+            id: "node-embed",
+            type: "discord.embed.build",
+            position: { x: 320, y: 0 },
+            fields: {
+              title: literalText("Server rules"),
+              description: literalText("Be kind to one another."),
+              colour: 5793266
+            }
+          },
+          {
+            id: "node-reply",
+            type: "discord.interaction.reply",
+            position: { x: 640, y: 0 },
+            fields: { content: [], ephemeral: false }
+          }
+        ],
+        wires: [
+          {
+            id: "wire-trigger-embed",
+            kind: "execution",
+            from: { node: "node-trigger", port: "next" },
+            to: { node: "node-embed", port: "in" }
+          },
+          {
+            id: "wire-embed-reply",
+            kind: "execution",
+            from: { node: "node-embed", port: "next" },
+            to: { node: "node-reply", port: "in" }
+          },
+          {
+            id: "wire-embed",
+            kind: "data",
+            from: { node: "node-embed", port: "embed" },
+            to: { node: "node-reply", port: "embed" }
+          }
+        ]
+      }
+    ]
+  }
+}
+
+/**
  * `helloProject` with a second Reply Node dropped on the Canvas and wired to
  * nothing: it is part of the Project, but not part of any run.
  */

@@ -1,4 +1,10 @@
-import type { ChatInputCommandInteraction, Client, InteractionReplyOptions, REST } from "discord.js"
+import type {
+  APIEmbed,
+  ChatInputCommandInteraction,
+  Client,
+  InteractionReplyOptions,
+  REST
+} from "discord.js"
 import { coercions } from "./coercions.js"
 import {
   type DiscordCommandApi,
@@ -17,6 +23,7 @@ import type {
   SlashCommandParameters,
   SlashCommandParameterValue
 } from "./discord.js"
+import { type Embed, embeds } from "./embed.js"
 import type { FlowFailure, Runtime, TraceEvent } from "./runtime.js"
 import { createTracing } from "./tracing.js"
 
@@ -116,6 +123,7 @@ export async function createDiscordRuntime(options: DiscordRuntimeOptions): Prom
       const interaction = event.source as ChatInputCommandInteraction
       const message: InteractionReplyOptions = { content: replyOptions.content }
       if (replyOptions.ephemeral) message.flags = MessageFlags.Ephemeral
+      if (replyOptions.embed !== undefined) message.embeds = [toDiscordEmbed(replyOptions.embed)]
 
       // An interaction is answered once; every Reply Node after the first in a
       // Flow sends a follow-up instead.
@@ -132,6 +140,7 @@ export async function createDiscordRuntime(options: DiscordRuntimeOptions): Prom
   return {
     discord,
     coerce: coercions,
+    embed: embeds,
     ...createTracing(trace),
     reportFailure(failure) {
       options.onFailure?.(failure)
@@ -188,6 +197,19 @@ function createDiscordJsCommandApi(rest: REST, applicationId: string): DiscordCo
       })) as RegisteredCommand[]
     }
   }
+}
+
+/**
+ * One Embed in the shape Discord's API takes.
+ *
+ * Our word is `colour` and Discord's is `color`; this is the boundary where the
+ * two meet, and the only place the API's spelling is written. It is exported so
+ * that the rename is provable without a client to log in with: nothing else in
+ * a reply is as easy to get silently wrong.
+ */
+export function toDiscordEmbed(embed: Embed): APIEmbed {
+  const { colour, ...rest } = embed
+  return colour === undefined ? rest : { ...rest, color: colour }
 }
 
 function toSlashCommandEvent(interaction: ChatInputCommandInteraction): SlashCommandEvent {

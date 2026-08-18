@@ -10,6 +10,7 @@ import { createFakeDiscordCommandApi, type RecordedCall } from "@bot-inventor/ru
 import { literalText, type Project, type SlottedText } from "@bot-inventor/schema"
 import {
   echoParameterProject,
+  embedReplyProject,
   emptyProject,
   greetingProject,
   helloProject,
@@ -118,6 +119,13 @@ function twoRepliesProject(): Project {
   return project
 }
 
+/** The Embed one reply carried, for a test that asserts on part of it. */
+function embedOf(result: RunProjectResult) {
+  const call = result.calls.find(candidate => candidate.method === "reply")
+  if (call === undefined) throw new Error("the run made no reply")
+  return call.embed
+}
+
 describe("running a compiled Project", () => {
   it("answers /hello with the text typed into the Reply Node", async () => {
     const result = await runProject(helloProject(), [{ type: "slashCommand", command: "hello" }])
@@ -207,6 +215,121 @@ describe("running a compiled Project", () => {
 
     expect(result.calls).toEqual([])
     expect(result.commands).toEqual([])
+  })
+})
+
+describe("answering with an Embed", () => {
+  const useCard = [{ type: "slashCommand", command: "card" }] as const
+
+  it("reaches Discord with its title, its text and its colour", async () => {
+    const result = await runProject(embedReplyProject(), useCard)
+
+    expect(result.failures).toEqual([])
+    expect(result.calls.filter(call => call.method === "reply")).toEqual([
+      {
+        method: "reply",
+        commandName: "card",
+        content: "",
+        ephemeral: false,
+        embed: {
+          title: "Server rules",
+          description: "Be kind to one another.",
+          colour: 5793266
+        }
+      }
+    ])
+  })
+
+  it("normalises the colour a hand-edited Project holds", async () => {
+    const project = embedReplyProject()
+    const flow = requireFirst(project.flows, "Flow")
+    const node = flow.nodes.find(candidate => candidate.type === "discord.embed.build")
+    if (node === undefined) throw new Error("the fixture has no Embed Node")
+    node.fields = { ...node.fields, colour: 0xffffff + 1 }
+
+    const result = await runProject(project, useCard)
+
+    expect(embedOf(result)).toMatchObject({ colour: 0xffffff })
+  })
+
+  it("puts a value from a Wire inside the Embed's text, through its Slot", async () => {
+    const project = embedReplyProject()
+    const flow = requireFirst(project.flows, "Flow")
+    const node = flow.nodes.find(candidate => candidate.type === "discord.embed.build")
+    if (node === undefined) throw new Error("the fixture has no Embed Node")
+    node.fields = {
+      ...node.fields,
+      description: [
+        { kind: "literal", text: "Asked for by " },
+        { kind: "slot", slot: "slot-caller" }
+      ]
+    }
+    flow.wires.push({
+      id: "wire-caller",
+      kind: "data",
+      from: { node: "node-trigger", port: "user" },
+      to: { node: "node-embed", port: "slot.slot-caller" }
+    })
+
+    const result = await runProject(project, [
+      { type: "slashCommand", command: "card", user: { id: "42" } }
+    ])
+
+    expect(embedOf(result)).toMatchObject({ description: "Asked for by <@42>" })
+  })
+
+  it("keeps the ephemeral switch, so a rich reply can be private too", async () => {
+    const project = embedReplyProject()
+    const flow = requireFirst(project.flows, "Flow")
+    const node = flow.nodes.find(candidate => candidate.id === "node-reply")
+    if (node === undefined) throw new Error("the fixture has no Reply Node")
+    node.fields = { ...node.fields, ephemeral: true }
+
+    const result = await runProject(project, useCard)
+
+    expect(result.calls).toContainEqual(
+      expect.objectContaining({ method: "reply", ephemeral: true })
+    )
+  })
+
+  it("answers with plain text and no Embed when none is wired", async () => {
+    const result = await runProject(helloProject(), [{ type: "slashCommand", command: "hello" }])
+
+    expect(result.calls).toContainEqual(
+      expect.objectContaining({ method: "reply", content: "Hello!", embed: undefined })
+    )
+  })
+
+  it("lights the Embed Node up in Development Mode like every other Node", async () => {
+    const result = await runProject(embedReplyProject(), useCard, { mode: "development" })
+
+    expect(result.traces).toContainEqual({
+      kind: "node-entered",
+      run: 1,
+      flow: "flow-card",
+      node: "node-embed"
+    })
+    expect(result.traces).toContainEqual({
+      kind: "node-completed",
+      run: 1,
+      flow: "flow-card",
+      node: "node-embed"
+    })
+  })
+
+  it("says on the Wire what the Embed carried", async () => {
+    const result = await runProject(embedReplyProject(), useCard, { mode: "development" })
+
+    expect(
+      result.traces.find(event => event.kind === "wire-carried" && event.wire === "wire-embed")
+    ).toMatchObject({ value: expect.stringContaining("Server rules") })
+  })
+
+  it("produces the same Discord calls in Development Mode as in Build", async () => {
+    const build = await runProject(embedReplyProject(), useCard, { mode: "build" })
+    const development = await runProject(embedReplyProject(), useCard, { mode: "development" })
+
+    expect(development.calls).toEqual(build.calls)
   })
 })
 

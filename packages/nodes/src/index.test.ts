@@ -9,6 +9,7 @@ import {
   joinStatements,
   portsOf
 } from "./definition.js"
+import { embed } from "./discord/embed.js"
 import { reply } from "./discord/reply.js"
 import { slashCommandTrigger } from "./discord/slash-command-trigger.js"
 
@@ -16,6 +17,7 @@ describe("the Node catalogue", () => {
   it("offers the slash command Trigger and the Reply Node under their stable ids", () => {
     expect([...catalogue.keys()]).toEqual([
       "discord.trigger.slashCommand",
+      "discord.embed.build",
       "discord.interaction.reply"
     ])
   })
@@ -166,6 +168,48 @@ describe("the Reply Node", () => {
   it("carries on to a next Execution Port", () => {
     expect(findPort(reply, "next")).toMatchObject({ kind: "execution", direction: "output" })
   })
+
+  it("takes an Embed on a Data input Port with no field behind it", () => {
+    expect(findPort(reply, "embed")).toMatchObject({
+      kind: "data",
+      direction: "input",
+      dataType: "embed"
+    })
+    // An Embed is built by a Node; there is nothing about one a user could type
+    // into the Reply, so the Port is the only way in.
+    expect(findField(reply, "embed")).toBeUndefined()
+  })
+})
+
+describe("the Embed Node", () => {
+  it("hands its Embed out on a Data output Port", () => {
+    expect(findPort(embed, "embed")).toMatchObject({
+      kind: "data",
+      direction: "output",
+      dataType: "embed"
+    })
+  })
+
+  it("runs in the Flow like any other Node, so a run reaches it", () => {
+    expect(embed.isTrigger).toBe(false)
+    expect(findPort(embed, "in")).toMatchObject({ kind: "execution", direction: "input" })
+    expect(findPort(embed, "next")).toMatchObject({ kind: "execution", direction: "output" })
+  })
+
+  it("holds its title and its text as Slotted fields, so a value can go inside them", () => {
+    expect(findField(embed, "title")).toMatchObject({ control: "slottedText" })
+    expect(findField(embed, "description")).toMatchObject({ control: "slottedText" })
+    expect(
+      portsOf(embed, { title: [{ kind: "slot", slot: "who" }] }).map(port => port.id)
+    ).toContain("slot.who")
+  })
+
+  it("stores its colour as the number Discord takes, edited with a colour control", () => {
+    const colour = findField(embed, "colour")
+
+    expect(colour).toMatchObject({ control: "colour" })
+    expect(typeof colour?.defaultValue).toBe("number")
+  })
 })
 
 describe("the Coercion table", () => {
@@ -198,6 +242,10 @@ describe("the Coercion table", () => {
     // there is no answer to that a user would predict.
     expect(findCoercion("text", "number")).toBeUndefined()
     expect(findCoercion("number", "boolean")).toBeUndefined()
+    // An Embed is a rich block Discord draws, never a line of text: there is
+    // nothing to turn one into, in either direction.
+    expect(findCoercion("embed", "text")).toBeUndefined()
+    expect(findCoercion("text", "embed")).toBeUndefined()
   })
 })
 

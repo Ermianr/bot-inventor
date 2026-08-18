@@ -13,6 +13,7 @@ import type {
   SlashCommandHandler,
   SlashCommandParameters
 } from "./discord.js"
+import { type Embed, embeds } from "./embed.js"
 import type { FlowFailure, Runtime, TraceEvent } from "./runtime.js"
 import { createTracing } from "./tracing.js"
 
@@ -22,7 +23,18 @@ import { createTracing } from "./tracing.js"
  */
 export type RecordedCall =
   | { method: "registerSlashCommand"; definition: SlashCommandDefinition }
-  | { method: "reply"; commandName: string; content: string; ephemeral: boolean }
+  | {
+      method: "reply"
+      commandName: string
+      content: string
+      ephemeral: boolean
+      /**
+       * The rich block the reply carried, or `undefined` when it answered with
+       * plain text. A test asserting on what reached Discord has to be able to
+       * see it: an Embed is most of what the reply said.
+       */
+      embed: Embed | undefined
+    }
 
 /** One simulated use of a slash command. */
 export type SlashCommandInput = {
@@ -148,11 +160,13 @@ export function createFakeRuntime(options: FakeRuntimeOptions = {}): FakeRuntime
           method: "reply",
           commandName: event.commandName,
           content: replyOptions.content,
-          ephemeral: replyOptions.ephemeral
+          ephemeral: replyOptions.ephemeral,
+          embed: replyOptions.embed
         })
       }
     },
     coerce: coercions,
+    embed: embeds,
     ...createTracing(trace),
     reportFailure(failure) {
       failures.push(failure)

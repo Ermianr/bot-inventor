@@ -8,6 +8,7 @@ import {
   pruneDanglingWires
 } from "./connections.js"
 import type { NodeDefinition } from "./definition.js"
+import { embed } from "./discord/embed.js"
 import { reply } from "./discord/reply.js"
 import { slashCommandTrigger } from "./discord/slash-command-trigger.js"
 
@@ -57,7 +58,7 @@ const userSink: NodeDefinition = {
   generate: () => ""
 }
 
-const catalogue = buildCatalogue([slashCommandTrigger, reply, textSource, userSink])
+const catalogue = buildCatalogue([slashCommandTrigger, embed, reply, textSource, userSink])
 
 /**
  * A Flow with the two Nodes of the catalogue on it and nothing wired, so each
@@ -88,6 +89,12 @@ function bareFlow(): Flow {
         type: "discord.interaction.reply",
         position: { x: 640, y: 0 },
         fields: { content: [{ kind: "slot", slot: "message" }] }
+      },
+      {
+        id: "node-embed",
+        type: "discord.embed.build",
+        position: { x: 0, y: 480 },
+        fields: {}
       },
       {
         id: "node-text-source",
@@ -159,6 +166,20 @@ describe("checking whether a Wire is legal", () => {
       legal: false,
       reasonKey: "connections.rejected.dataType"
     })
+  })
+
+  it("accepts an Embed into the Reply's Embed Port, with nothing to coerce", () => {
+    expect(check(bareFlow(), port("node-embed", "embed"), port("node-reply", "embed"))).toEqual({
+      legal: true,
+      kind: "data",
+      coercion: undefined
+    })
+  })
+
+  it("rejects an Embed drawn into a text Slot, because an Embed is not text", () => {
+    expect(
+      check(bareFlow(), port("node-embed", "embed"), port("node-reply", "slot.message"))
+    ).toMatchObject({ legal: false, reasonKey: "connections.rejected.dataType" })
   })
 
   it("rejects a Wire onto a Port the Node does not declare", () => {

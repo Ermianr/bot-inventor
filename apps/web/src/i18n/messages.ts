@@ -233,7 +233,15 @@ const en = {
   "nodes.discord.interaction.reply.label": "Reply",
   "nodes.discord.interaction.reply.description": "Answers whoever used the command.",
   "nodes.discord.interaction.reply.fields.content.label": "Message",
-  "nodes.discord.interaction.reply.fields.ephemeral.label": "Only they can see it"
+  "nodes.discord.interaction.reply.fields.ephemeral.label": "Only they can see it",
+  "nodes.discord.interaction.reply.ports.embed.label": "Embed",
+
+  "nodes.discord.embed.build.label": "Embed",
+  "nodes.discord.embed.build.description": "Builds a rich block to reply with.",
+  "nodes.discord.embed.build.fields.title.label": "Title",
+  "nodes.discord.embed.build.fields.description.label": "Text",
+  "nodes.discord.embed.build.fields.colour.label": "Colour",
+  "nodes.discord.embed.build.ports.embed.label": "Embed"
 } as const
 
 export type MessageKey = keyof typeof en
@@ -454,7 +462,15 @@ const es: Record<MessageKey, string> = {
   "nodes.discord.interaction.reply.label": "Responder",
   "nodes.discord.interaction.reply.description": "Contesta a quien usó el comando.",
   "nodes.discord.interaction.reply.fields.content.label": "Mensaje",
-  "nodes.discord.interaction.reply.fields.ephemeral.label": "Solo lo ve esa persona"
+  "nodes.discord.interaction.reply.fields.ephemeral.label": "Solo lo ve esa persona",
+  "nodes.discord.interaction.reply.ports.embed.label": "Bloque",
+
+  "nodes.discord.embed.build.label": "Bloque",
+  "nodes.discord.embed.build.description": "Crea un bloque con formato para responder.",
+  "nodes.discord.embed.build.fields.title.label": "Título",
+  "nodes.discord.embed.build.fields.description.label": "Texto",
+  "nodes.discord.embed.build.fields.colour.label": "Color",
+  "nodes.discord.embed.build.ports.embed.label": "Bloque"
 }
 
 const messages: Record<Locale, Record<MessageKey, string>> = { en, es }

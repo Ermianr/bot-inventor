@@ -1,11 +1,12 @@
 import type { NodeDefinition } from "./definition.js"
+import { embed } from "./discord/embed.js"
 import { reply } from "./discord/reply.js"
 import { slashCommandTrigger } from "./discord/slash-command-trigger.js"
 
 /** Every Node the editor offers and the Compiler knows how to emit. */
 export type NodeCatalogue = ReadonlyMap<string, NodeDefinition>
 
-const definitions: readonly NodeDefinition[] = [slashCommandTrigger, reply]
+const definitions: readonly NodeDefinition[] = [slashCommandTrigger, embed, reply]
 
 export const catalogue: NodeCatalogue = buildCatalogue(definitions)
 

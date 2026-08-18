@@ -1,5 +1,6 @@
 import type { Coercions } from "./coercions.js"
 import type { DiscordRuntime } from "./discord.js"
+import type { Embeds } from "./embed.js"
 import type { Tracing } from "./tracing.js"
 
 /**
@@ -43,6 +44,8 @@ export type TraceSink = (event: TraceEvent) => void
 export type Runtime = Tracing & {
   readonly discord: DiscordRuntime
   readonly coerce: Coercions
+  /** Builds the Embeds Nodes send, normalised into what Discord accepts. */
+  readonly embed: Embeds
   /** Records a stopped Flow. Called by generated code, never thrown past. */
   reportFailure(failure: FlowFailure): void
   /**

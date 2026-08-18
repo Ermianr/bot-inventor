@@ -16,7 +16,13 @@ import {
   slotPortId,
   type TraceRequest
 } from "@bot-inventor/nodes"
-import { type FieldValue, type Flow, type Node, slottedTextSchema } from "@bot-inventor/schema"
+import {
+  type FieldValue,
+  type Flow,
+  type Node,
+  slottedTextSchema,
+  type Wire
+} from "@bot-inventor/schema"
 import { CompilerError } from "./errors.js"
 import { assignIdentifierPrefixes, claimIdentifier, literal, sanitise } from "./identifiers.js"
 
@@ -159,6 +165,7 @@ class FlowCompiler {
       literal,
       field: id => this.fieldOf(node, definition, id),
       input: id => this.inputExpression(node, definition, id),
+      isWired: id => this.wiresInto(node, id).length > 0,
       slottedField: id => this.slottedExpression(node, definition, id),
       output: id => {
         const port = findPort(definition, id, node.fields)
@@ -265,10 +272,7 @@ class FlowCompiler {
       )
     }
 
-    const wires = this.flow.wires.filter(
-      candidate =>
-        candidate.kind === "data" && candidate.to.node === node.id && candidate.to.port === id
-    )
+    const wires = this.wiresInto(node, id)
 
     const [wire, extra] = wires
     if (wire === undefined) return fallback ?? literal(this.fieldOf(node, definition, id))
@@ -304,6 +308,14 @@ class FlowCompiler {
     const expression = this.coerced(bound, wire.id, sourcePort.dataType, port.dataType, node)
 
     return this.traceWire(wire.id, expression)
+  }
+
+  /** The Data Wires arriving at one of a Node's input Ports. */
+  private wiresInto(node: Node, portId: string): readonly Wire[] {
+    return this.flow.wires.filter(
+      candidate =>
+        candidate.kind === "data" && candidate.to.node === node.id && candidate.to.port === portId
+    )
   }
 
   /** Puts a Wire's value through the Coercion the two Ports need, if any. */

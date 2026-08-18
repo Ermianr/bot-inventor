@@ -10,16 +10,23 @@ import type { DataPortDefinition, DataType } from "./definition.js"
  * what a command's answers may be used for.
  */
 
+/**
+ * The Data Port types a slash command can ask its caller for. It is the Port
+ * types minus the ones Discord has no option for: an Embed is built by a Node,
+ * never something a caller types alongside a command.
+ */
+export type ParameterType = Exclude<DataType, "embed">
+
 /** One value the person using a slash command supplies alongside it. */
 export type CommandParameter = {
   name: string
   description: string
-  type: DataType
+  type: ParameterType
   /** Discord refuses a command whose required parameters follow optional ones. */
   required: boolean
 }
 
-const PARAMETER_TYPES: readonly DataType[] = ["text", "number", "boolean", "user"]
+const PARAMETER_TYPES: readonly ParameterType[] = ["text", "number", "boolean", "user"]
 
 /**
  * The prefix a parameter's Port id carries. It keeps the ids the user's
@@ -78,12 +85,12 @@ function readParameter(entry: FieldValue): CommandParameter | undefined {
 
   const { name, description, type, required } = entry
   if (typeof name !== "string" || name.length === 0) return undefined
-  if (typeof type !== "string" || !PARAMETER_TYPES.includes(type as DataType)) return undefined
+  if (typeof type !== "string" || !PARAMETER_TYPES.includes(type as ParameterType)) return undefined
 
   return {
     name,
     description: typeof description === "string" ? description : "",
-    type: type as DataType,
+    type: type as ParameterType,
     required: required === true
   }
 }
