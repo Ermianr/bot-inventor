@@ -123,7 +123,10 @@ describe("drawing a Node the run reached", () => {
 })
 
 describe("typing into a Slotted text field", () => {
-  function drawReply(content: FieldValue, setField: (id: string, value: FieldValue) => void) {
+  function drawReply(
+    content: FieldValue,
+    setField: (id: string, value: FieldValue) => void = () => {}
+  ) {
     const data: FlowNodeData = {
       node: {
         id: "node-reply",
@@ -145,46 +148,31 @@ describe("typing into a Slotted text field", () => {
         <FlowNode {...props} />
       </ReactFlowProvider>
     )
+    return container
+  }
+
+  /** The plain text box a Slotted field is still edited in. */
+  function messageBox(container: HTMLElement): HTMLInputElement {
     const box = container.querySelector<HTMLInputElement>("#reply-content")
     if (box === null) throw new Error("the Reply Node drew no text box for its message")
     return box
   }
 
   it("shows the text of the field in a plain text box", () => {
-    expect(drawReply(literalText("Hello!"), () => {}).value).toBe("Hello!")
+    expect(messageBox(drawReply(literalText("Hello!"))).value).toBe("Hello!")
   })
 
   it("writes what was typed back as one literal segment", () => {
     const written: FieldValue[] = []
-    const box = drawReply(literalText("Hello!"), (_id, value) => written.push(value))
+    const container = drawReply(literalText("Hello!"), (_id, value) => written.push(value))
 
-    fireEvent.change(box, { target: { value: "Goodbye!" } })
+    fireEvent.change(messageBox(container), { target: { value: "Goodbye!" } })
 
     expect(written).toEqual([literalText("Goodbye!")])
   })
 
   it("draws a Port for the Slot the message holds", () => {
-    const data: FlowNodeData = {
-      node: {
-        id: "node-reply",
-        type: definition.id,
-        position: { x: 0, y: 0 },
-        fields: { content: [{ kind: "slot", slot: "caller" }] }
-      },
-      definition,
-      runState: undefined,
-      setField: () => {},
-      remove: () => {}
-    }
-    const props = { data, id: "reply", type: "flowNode" } as unknown as ComponentProps<
-      typeof FlowNode
-    >
-
-    const { container } = render(
-      <ReactFlowProvider>
-        <FlowNode {...props} />
-      </ReactFlowProvider>
-    )
+    const container = drawReply([{ kind: "slot", slot: "caller" }])
 
     expect(within(container).getByTestId("port-reply-slot.caller")).toBeDefined()
   })

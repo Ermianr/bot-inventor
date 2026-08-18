@@ -340,7 +340,7 @@ describe("editing a Project from the Canvas", () => {
       catalogue,
       "node-reply",
       "content",
-      literalText("Hola a todos")
+      literalText("Hello everyone")
     )
 
     expect(edited.wires.map(wire => wire.id)).toEqual(["wire-execution"])
@@ -353,7 +353,7 @@ describe("editing a Project from the Canvas", () => {
       "node-reply",
       "content",
       [
-        { kind: "literal", text: "Hola " },
+        { kind: "literal", text: "Hello " },
         { kind: "slot", slot: "slot-message" }
       ]
     )

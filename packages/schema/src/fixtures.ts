@@ -123,7 +123,7 @@ export function helloProject(): Project {
 
 /**
  * A Project whose reply is text with a Slot inside it: `/greet` answers
- * `Hola <caller>, hola <caller>` — the same Slot twice, fed by one Wire from
+ * `Hello <caller>, hello <caller>` — the same Slot twice, fed by one Wire from
  * the Trigger's caller through the Coercion into text.
  */
 export function slottedGreetingProject(): Project {
@@ -134,9 +134,9 @@ export function slottedGreetingProject(): Project {
 
   reply.fields = {
     content: [
-      { kind: "literal", text: "Hola " },
+      { kind: "literal", text: "Hello " },
       { kind: "slot", slot: "slot-caller" },
-      { kind: "literal", text: ", hola " },
+      { kind: "literal", text: ", hello " },
       { kind: "slot", slot: "slot-caller" }
     ],
     ephemeral: false

@@ -139,9 +139,9 @@ describe("the Reply Node", () => {
   it("declares one Data input Port per Slot typed into its message", () => {
     const ports = portsOf(reply, {
       content: [
-        { kind: "literal", text: "Hola " },
+        { kind: "literal", text: "Hello " },
         { kind: "slot", slot: "caller" },
-        { kind: "literal", text: ", hola " },
+        { kind: "literal", text: ", hello " },
         { kind: "slot", slot: "caller" }
       ]
     })

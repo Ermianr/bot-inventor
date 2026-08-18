@@ -8,9 +8,9 @@ import {
 } from "./slotted-text.js"
 
 const greeting: SlottedText = [
-  { kind: "literal", text: "Hola " },
+  { kind: "literal", text: "Hello " },
   { kind: "slot", slot: "slot-caller" },
-  { kind: "literal", text: ", hola " },
+  { kind: "literal", text: ", hello " },
   { kind: "slot", slot: "slot-caller" }
 ]
 
@@ -20,7 +20,7 @@ describe("readSlottedText", () => {
   })
 
   it("reads what is not a sequence of segments as empty", () => {
-    expect(readSlottedText("Hola")).toEqual([])
+    expect(readSlottedText("Hello")).toEqual([])
     expect(readSlottedText(undefined)).toEqual([])
     expect(readSlottedText([{ kind: "slot" }])).toEqual([])
     expect(readSlottedText([{ kind: "slot", slot: "" }])).toEqual([])
@@ -39,7 +39,7 @@ describe("literalText", () => {
 
 describe("plainTextOf", () => {
   it("reads the literals and leaves the Slots out", () => {
-    expect(plainTextOf(greeting)).toBe("Hola , hola ")
+    expect(plainTextOf(greeting)).toBe("Hello , hello ")
   })
 })
 

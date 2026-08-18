@@ -439,27 +439,27 @@ describe("putting a value inside a Node's text", () => {
   const message = { kind: "slot", slot: "slot-message" } as const
 
   it("answers with the literal text around the Slot, and the Slot filled in", async () => {
-    const project = messageOf({ kind: "literal", text: "Hola " }, message)
+    const project = messageOf({ kind: "literal", text: "Hello " }, message)
 
     const result = await runProject(project, [
       { type: "slashCommand", command: "echo", parameters: { message: "Kevin" } }
     ])
 
-    expect(replies(result)).toEqual(["Hola Kevin"])
+    expect(replies(result)).toEqual(["Hello Kevin"])
   })
 
   it("fills the same Slot in wherever it appears, from the one Wire feeding it", async () => {
-    const project = messageOf(message, { kind: "literal", text: " y otra vez " }, message)
+    const project = messageOf(message, { kind: "literal", text: " and again " }, message)
 
     const result = await runProject(project, [
       { type: "slashCommand", command: "echo", parameters: { message: "Kevin" } }
     ])
 
-    expect(replies(result)).toEqual(["Kevin y otra vez Kevin"])
+    expect(replies(result)).toEqual(["Kevin and again Kevin"])
   })
 
   it("answers with the text as typed when the message holds no Slot at all", async () => {
-    const project = messageOf({ kind: "literal", text: "Hola a todos" })
+    const project = messageOf({ kind: "literal", text: "Hello everyone" })
     // Taking the last occurrence of a Slot away takes its Port with it, and the
     // Wire drawn to it is the editor's to remove as part of that same edit.
     const flow = requireFirst(project.flows, "Flow")
@@ -469,7 +469,7 @@ describe("putting a value inside a Node's text", () => {
       { type: "slashCommand", command: "echo", parameters: { message: "Kevin" } }
     ])
 
-    expect(replies(result)).toEqual(["Hola a todos"])
+    expect(replies(result)).toEqual(["Hello everyone"])
   })
 
   it("mentions the caller a Wire carries into the middle of a message", async () => {
@@ -481,7 +481,7 @@ describe("putting a value inside a Node's text", () => {
       }
     ])
 
-    expect(replies(result)).toEqual(["Hola <@42>, hola <@42>"])
+    expect(replies(result)).toEqual(["Hello <@42>, hello <@42>"])
   })
 
   it("puts a Number and a Boolean through their Coercion on the way into the text", async () => {
@@ -525,7 +525,7 @@ describe("putting a value inside a Node's text", () => {
   })
 
   it("leaves a Slot nobody wired anything to empty, rather than 'undefined'", async () => {
-    const project = messageOf({ kind: "literal", text: "Hola " }, message, {
+    const project = messageOf({ kind: "literal", text: "Hello " }, message, {
       kind: "slot",
       slot: "slot-nobody"
     })
@@ -534,7 +534,18 @@ describe("putting a value inside a Node's text", () => {
       { type: "slashCommand", command: "echo", parameters: { message: "Kevin" } }
     ])
 
-    expect(replies(result)).toEqual(["Hola Kevin"])
+    expect(replies(result)).toEqual(["Hello Kevin"])
+  })
+
+  it("refuses a message that does not read as text with Slots in it", () => {
+    const project = helloProject()
+    const reply = requireFirst(project.flows, "Flow").nodes[1]
+    if (reply === undefined) throw new Error("the fixture has no Reply Node")
+    reply.fields.content = "written by a build this one has never met"
+
+    // Emitting an empty message instead would be the bot answering with
+    // nothing and nowhere for the user to find out why.
+    expect(() => compile(project, { mode: "build" })).toThrowError(/does not read as text/)
   })
 
   it("says the same thing in Development Mode as in Build", async () => {

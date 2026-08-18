@@ -16,7 +16,7 @@ import {
   slotPortId,
   type TraceRequest
 } from "@bot-inventor/nodes"
-import { type FieldValue, type Flow, type Node, readSlottedText } from "@bot-inventor/schema"
+import { type FieldValue, type Flow, type Node, slottedTextSchema } from "@bot-inventor/schema"
 import { CompilerError } from "./errors.js"
 import { assignIdentifierPrefixes, claimIdentifier, literal, sanitise } from "./identifiers.js"
 
@@ -214,9 +214,24 @@ class FlowCompiler {
    *
    * A field of one literal segment emits the string it holds, so a message with
    * no Slots in it reads in the generated code exactly as the user typed it.
+   *
+   * A field that does not read as a sequence at all — a Project from a build
+   * that came after this one, or one edited by hand — is refused rather than
+   * emitted as nothing. The editor draws such a field as empty, but a bot
+   * answering with the wrong text and nothing saying why is the one outcome
+   * that is not allowed (ADR 0008).
    */
   private slottedExpression(node: Node, definition: NodeDefinition, id: string): string {
-    const segments = readSlottedText(this.fieldOf(node, definition, id))
+    const value = this.fieldOf(node, definition, id)
+    const parsed = slottedTextSchema.safeParse(value)
+    if (!parsed.success) {
+      throw new CompilerError(
+        `the field "${id}" of "${node.id}" does not read as text with Slots in it; open the Node and type its message again`,
+        { flow: this.flow.id, node: node.id }
+      )
+    }
+
+    const segments = parsed.data
     if (segments.length === 0) return literal("")
 
     const parts = segments.map(segment =>
