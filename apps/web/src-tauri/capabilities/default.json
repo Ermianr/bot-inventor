@@ -1,7 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The default permissions, plus the dialogs an Export asks its destination through — where the folder goes, and whether an Export already there may be replaced — the save dialog Share names a Project File with, and the open dialog an Import picks one through. Opening a Project of the user's own needs none of them: the application owns where Projects live.",
+  "description": "The default permissions, plus the dialogs an Export asks its destination through — where the folder goes, and whether an Export already there may be replaced — the save dialog Share names a Project File with, and the open dialog an Import picks one through. Opening a Project of the user's own needs none of them: the application owns where Projects live. Setting the window's title is here too: the title bar carries the name of the Project that is open.",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:allow-open", "dialog:allow-confirm", "dialog:allow-save"]
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "dialog:allow-confirm",
+    "dialog:allow-save",
+    "core:window:allow-set-title"
+  ]
 }
