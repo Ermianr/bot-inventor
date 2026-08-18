@@ -86,7 +86,6 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
     // every pixel of it back.
     <div className="grid h-full grid-rows-[auto_1fr_auto] overflow-hidden">
       <MenuBar
-        name={editor.project.name}
         onDashboard={() => void navigate({ to: "/" })}
         onOptions={() => setOptionsOpen(true)}
         saved={autosave.saved}

@@ -99,10 +99,10 @@ describe("the Run controls", () => {
   it("shows which of the four things the bot is doing", () => {
     renderControls("connecting")
 
-    const light = screen.getByTestId("run-status")
+    const status = screen.getByTestId("run-status")
 
-    expect(light.getAttribute("data-status")).toBe("connecting")
-    expect(light.getAttribute("aria-label")).toBe(translate("run.status.connecting"))
+    expect(status.getAttribute("data-status")).toBe("connecting")
+    expect(status.textContent).toBe(translate("run.status.connecting"))
   })
 })
 

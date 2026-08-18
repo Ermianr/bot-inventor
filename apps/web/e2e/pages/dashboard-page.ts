@@ -136,6 +136,6 @@ export class DashboardPage {
     await this.name().fill(name)
     await this.token().fill("a-token")
     await this.confirm().click()
-    await this.page.getByTestId("project-name").waitFor()
+    await this.page.getByTestId("menu-bar").waitFor()
   }
 }

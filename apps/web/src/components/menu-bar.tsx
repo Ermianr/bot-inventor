@@ -34,12 +34,12 @@ import type { Sharing } from "@/project/use-share"
  * Projects live (ADR 0009): work saves itself, and another Project is reached
  * by going back to the Dashboard rather than through a file dialog.
  *
- * The Project's name is read here and not written: a Project is named where it
- * is created and renamed on its Dashboard card, beside every other one, rather
- * than from inside the one that happens to be open.
+ * The Project's name is not on the row at all: it is chosen once and read
+ * never, and the window title says which bot is open. The space it took now
+ * says what the bot is doing, which is the thing that changes while the user
+ * works.
  */
 export function MenuBar({
-  name,
   onDashboard,
   onOptions,
   saved,
@@ -48,7 +48,6 @@ export function MenuBar({
   sharing,
   run
 }: {
-  name: string
   /** Takes the user back to the Dashboard. The route knows where that is. */
   onDashboard: () => void
   /**
@@ -231,10 +230,6 @@ export function MenuBar({
         distance the pointer travels to it is the distance travelled all day.
       */}
       {run}
-
-      <span className="font-medium text-sm" data-testid="project-name">
-        {name}
-      </span>
     </div>
   )
 }

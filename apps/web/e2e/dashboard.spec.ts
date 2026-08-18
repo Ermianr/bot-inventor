@@ -34,7 +34,7 @@ test.describe("the Dashboard", () => {
     await dashboard.confirm().click()
 
     // In the editor, on a Canvas of their own, at a route carrying the Project.
-    await expect(new MenuBarPage(page).name()).toHaveText("Moderation bot")
+    await expect(page).toHaveTitle(/Moderation bot/)
     expect(page.url()).toContain("/projects/")
   })
 
@@ -61,7 +61,7 @@ test.describe("the Dashboard", () => {
     await expect(dashboard.cards()).toHaveCount(2)
 
     await dashboard.cardNames().filter({ hasText: "Moderation bot" }).click()
-    await expect(new MenuBarPage(page).name()).toHaveText("Moderation bot")
+    await expect(page).toHaveTitle(/Moderation bot/)
   })
 })
 

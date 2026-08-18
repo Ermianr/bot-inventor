@@ -3,7 +3,7 @@ import { expect, type Locator, type Page } from "@playwright/test"
 import { DashboardPage } from "./dashboard-page"
 
 /**
- * The Menu Bar: what the Project is called, and the way back to the Dashboard.
+ * The Menu Bar: the menus, the run controls and the way back to the Dashboard.
  *
  * Everything is found by test id rather than by its words, because the words
  * are translated and the test would otherwise only pass in English.
@@ -13,12 +13,7 @@ export class MenuBarPage {
 
   async open() {
     await new DashboardPage(this.page).openExample()
-    await this.name().waitFor()
-  }
-
-  /** The Project name, which the editor shows and never edits. */
-  name(): Locator {
-    return this.page.getByTestId("project-name")
+    await this.row().waitFor()
   }
 
   /**
