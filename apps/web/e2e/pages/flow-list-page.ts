@@ -83,6 +83,15 @@ export class FlowListPage {
     return this.openRow().locator('[data-testid$="-never-runs"]')
   }
 
+  /**
+   * The row of the Flow that never runs, whose id a test may not know. A Flow
+   * the test just made is found this way: it carries the mark because nothing
+   * starts it, and its id is a UUID.
+   */
+  neverRunsRow(): Locator {
+    return this.page.locator('li:has([data-testid$="-never-runs"])')
+  }
+
   /** Every Flow's name, in the order the list holds them. */
   names(): Locator {
     return this.page.locator(

@@ -12,6 +12,7 @@ import {
 import { embed } from "./discord/embed.js"
 import { reply } from "./discord/reply.js"
 import { slashCommandTrigger } from "./discord/slash-command-trigger.js"
+import { isSlotted } from "./slots.js"
 
 describe("the Node catalogue", () => {
   it("offers the slash command Trigger and the Reply Node under their stable ids", () => {
@@ -196,12 +197,38 @@ describe("the Embed Node", () => {
     expect(findPort(embed, "next")).toMatchObject({ kind: "execution", direction: "output" })
   })
 
-  it("holds its title and its text as Slotted fields, so a value can go inside them", () => {
-    expect(findField(embed, "title")).toMatchObject({ control: "slottedText" })
-    expect(findField(embed, "description")).toMatchObject({ control: "slottedText" })
+  it("holds every text part as a Slotted field, so a value can go inside any of them", () => {
+    const text = [
+      "title",
+      "url",
+      "description",
+      "authorName",
+      "authorUrl",
+      "authorIcon",
+      "image",
+      "thumbnail",
+      "footerText",
+      "footerIcon"
+    ]
+
+    for (const id of text) {
+      const field = findField(embed, id)
+      expect(field, `the Embed has no ${id} field`).toBeDefined()
+      expect(field && isSlotted(field.control), `${id} is not Slotted`).toBe(true)
+    }
+
     expect(
-      portsOf(embed, { title: [{ kind: "slot", slot: "who" }] }).map(port => port.id)
+      portsOf(embed, { footerText: [{ kind: "slot", slot: "who" }] }).map(port => port.id)
     ).toContain("slot.who")
+  })
+
+  it("writes its description over several lines, and nothing else", () => {
+    expect(findField(embed, "description")).toMatchObject({ control: "slottedParagraph" })
+    expect(findField(embed, "title")).toMatchObject({ control: "slottedText" })
+  })
+
+  it("stamps the time it was sent with a switch, never with a date", () => {
+    expect(findField(embed, "timestamp")).toMatchObject({ control: "switch", defaultValue: false })
   })
 
   it("stores its colour as the number Discord takes, edited with a colour control", () => {

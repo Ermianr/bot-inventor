@@ -21,6 +21,14 @@ import {
 } from "@/project/editable-text"
 
 /**
+ * The element one gap between two pills is typed into. It is a textarea whether
+ * or not the field is a paragraph, so that both kinds of field grow, wrap and
+ * carry the caret in exactly the same way; what a one-line field does instead
+ * is refuse the Enter that would open a second line.
+ */
+type SlotBox = HTMLTextAreaElement
+
+/**
  * A text field a value can be dropped into: one text box, with the Slots drawn
  * as pills inside the sentence (ADR 0010).
  *
@@ -40,6 +48,7 @@ import {
 export function SlottedField({
   fieldId,
   label,
+  multiline = false,
   nodeId,
   onChange,
   slotIsWired,
@@ -48,6 +57,12 @@ export function SlottedField({
 }: {
   fieldId: string
   label: string
+  /**
+   * Whether the field is written over several lines. A paragraph is typed into
+   * boxes that take a newline; a one-line field is not, because Enter inside a
+   * Node's title is a keystroke nobody meant.
+   */
+  multiline?: boolean
   nodeId: string
   onChange: (value: SlottedText) => void
   /** Whether a Wire feeds this Slot, which is what makes removing it a question. */
@@ -57,7 +72,7 @@ export function SlottedField({
   value: SlottedText
 }) {
   const editable = editableText(value)
-  const boxes = useRef<(HTMLInputElement | null)[]>([])
+  const boxes = useRef<(SlotBox | null)[]>([])
 
   /** Where the caret goes once React has drawn the field an edit left behind. */
   const [caret, setCaret] = useState<Caret | undefined>(undefined)
@@ -103,8 +118,16 @@ export function SlottedField({
     setCaret({ literal, offset: offset === -1 ? box.value.length : offset })
   }
 
-  const onKeyDown = (index: number) => (event: KeyboardEvent<HTMLInputElement>) => {
+  const onKeyDown = (index: number) => (event: KeyboardEvent<SlotBox>) => {
     const box = event.currentTarget
+
+    // Every box takes newlines, because every box is the same element; a field
+    // that is not a paragraph is the one that turns them down.
+    if (event.key === "Enter" && !multiline) {
+      event.preventDefault()
+      return
+    }
+
     const atStart = box.selectionStart === 0 && box.selectionEnd === 0
     const atEnd = box.selectionStart === box.value.length && box.selectionEnd === box.value.length
 
@@ -165,12 +188,27 @@ export function SlottedField({
               text underneath is what gives the grid cell its width, and the box
               is stretched over the same cell.
             */}
-            <span className="grid min-w-[2ch] [&>*]:col-start-1 [&>*]:row-start-1">
-              <span aria-hidden className="invisible whitespace-pre">
-                {text}
+            <span
+              className={[
+                "grid min-w-[2ch] [&>*]:col-start-1 [&>*]:row-start-1",
+                // A paragraph's box takes the whole width, so its text wraps
+                // where the field ends rather than growing past it.
+                multiline ? "w-full" : ""
+              ].join(" ")}
+            >
+              <span
+                aria-hidden
+                className={`invisible ${multiline ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}
+              >
+                {/*
+                  A line the user has only just opened has nothing in it to
+                  give the cell its height, so the mirror carries a zero-width
+                  space at the end and is one line taller than the text is.
+                */}
+                {multiline ? text + "​" : text}
               </span>
-              <input
-                className="w-full min-w-0 bg-transparent outline-none"
+              <textarea
+                className="w-full min-w-0 resize-none bg-transparent outline-none"
                 data-slot-field={fieldId}
                 data-slot-literal={index}
                 data-slot-node={nodeId}
@@ -193,7 +231,7 @@ export function SlottedField({
                 ref={box => {
                   boxes.current[index] = box
                 }}
-                type="text"
+                rows={1}
                 value={text}
               />
             </span>

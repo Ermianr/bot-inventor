@@ -202,14 +202,33 @@ function createDiscordJsCommandApi(rest: REST, applicationId: string): DiscordCo
 /**
  * One Embed in the shape Discord's API takes.
  *
- * Our word is `colour` and Discord's is `color`; this is the boundary where the
- * two meet, and the only place the API's spelling is written. It is exported so
- * that the rename is provable without a client to log in with: nothing else in
- * a reply is as easy to get silently wrong.
+ * Our word is `colour` and Discord's is `color`, our author's picture is an
+ * `icon` and theirs an `icon_url`, and our pictures are URLs where theirs are
+ * objects holding one. This is the boundary where the two vocabularies meet,
+ * and the only place the API's spelling is written. It is exported so that the
+ * renames are provable without a client to log in with: nothing else in a reply
+ * is as easy to get silently wrong.
  */
 export function toDiscordEmbed(embed: Embed): APIEmbed {
-  const { colour, ...rest } = embed
-  return colour === undefined ? rest : { ...rest, color: colour }
+  const { colour, author, image, thumbnail, footer, ...rest } = embed
+  const sent: APIEmbed = { ...rest }
+
+  if (colour !== undefined) sent.color = colour
+  if (author !== undefined) {
+    sent.author = { name: author.name }
+    if (author.url !== undefined) sent.author.url = author.url
+    if (author.icon !== undefined) sent.author.icon_url = author.icon
+  }
+  // A picture is one URL to us and an object to Discord, on both sides of the
+  // Embed: the large one under the text and the small one in the corner.
+  if (image !== undefined) sent.image = { url: image }
+  if (thumbnail !== undefined) sent.thumbnail = { url: thumbnail }
+  if (footer !== undefined) {
+    sent.footer = { text: footer.text }
+    if (footer.icon !== undefined) sent.footer.icon_url = footer.icon
+  }
+
+  return sent
 }
 
 function toSlashCommandEvent(interaction: ChatInputCommandInteraction): SlashCommandEvent {

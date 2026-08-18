@@ -234,6 +234,17 @@ describe("picking an Embed's colour", () => {
     return box
   }
 
+  it("draws the description as a paragraph and the title as one line", () => {
+    const container = drawEmbed(0)
+    const description = within(container).getByTestId("field-box-embed-description-0")
+    const title = within(container).getByTestId("field-box-embed-title-0")
+
+    // Enter opens a second line in the description and nothing in the title,
+    // which is the whole of the difference between the two controls.
+    expect(fireEvent.keyDown(description, { key: "Enter" })).toBe(true)
+    expect(fireEvent.keyDown(title, { key: "Enter" })).toBe(false)
+  })
+
   it("shows the stored number as a colour, never as the integer itself", () => {
     const control = swatch(drawEmbed(5793266))
 

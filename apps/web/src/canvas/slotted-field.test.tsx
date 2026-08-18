@@ -22,6 +22,7 @@ afterEach(cleanup)
 function draw(
   value: SlottedText,
   options: {
+    multiline?: boolean
     onChange?: (value: SlottedText) => void
     slotIsWired?: (slot: string) => boolean
   } = {}
@@ -30,6 +31,7 @@ function draw(
     <SlottedField
       fieldId="content"
       label="Message"
+      multiline={options.multiline ?? false}
       nodeId="reply"
       onChange={options.onChange ?? (() => {})}
       slotIsWired={options.slotIsWired ?? (() => false)}
@@ -40,8 +42,8 @@ function draw(
   return container
 }
 
-function box(container: HTMLElement, index: number): HTMLInputElement {
-  return within(container).getByTestId(`field-box-reply-content-${index}`) as HTMLInputElement
+function box(container: HTMLElement, index: number): HTMLTextAreaElement {
+  return within(container).getByTestId(`field-box-reply-content-${index}`) as HTMLTextAreaElement
 }
 
 describe("drawing a field with a value in it", () => {
@@ -242,5 +244,39 @@ describe("a pill whose Wire would go with it", () => {
         { kind: "slot", slot: "caller" }
       ]
     ])
+  })
+})
+
+/**
+ * A field written over several lines. It is the same field either way — the
+ * same boxes, the same pills — and what a paragraph adds is the Enter that
+ * opens a second line, which a one-line field has to turn down.
+ */
+describe("writing a field over several lines", () => {
+  it("keeps a newline the user typed into a paragraph", () => {
+    // A real line break, written as one: a paragraph is the field that keeps it.
+    const twoLines = `First
+Second`
+    const written: SlottedText[] = []
+    const container = draw([{ kind: "literal", text: "" }], {
+      multiline: true,
+      onChange: value => written.push(value)
+    })
+
+    fireEvent.change(box(container, 0), { target: { value: twoLines } })
+
+    expect(written).toEqual([[{ kind: "literal", text: twoLines }]])
+  })
+
+  it("refuses the Enter that would open a second line in a one-line field", () => {
+    const container = draw([{ kind: "literal", text: "Hello" }])
+
+    expect(fireEvent.keyDown(box(container, 0), { key: "Enter" })).toBe(false)
+  })
+
+  it("lets Enter through in a paragraph, so a second line can be opened", () => {
+    const container = draw([{ kind: "literal", text: "Hello" }], { multiline: true })
+
+    expect(fireEvent.keyDown(box(container, 0), { key: "Enter" })).toBe(true)
   })
 })

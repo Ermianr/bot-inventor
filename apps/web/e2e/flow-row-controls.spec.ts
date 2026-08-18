@@ -89,14 +89,22 @@ test.describe("the controls on a Flow row", () => {
   })
 
   test("shows the hover of a control on a Flow that is not open", async () => {
-    const row = flows.row("flow-goodbye")
+    // A Flow made here has no Trigger, so it carries all three controls;
+    // opening another Flow afterwards is what leaves it standing and closed.
+    await flows.create().click()
+    await flows.openField().press("Enter")
+    await flows.name("flow-goodbye").click()
+
+    const row = flows.neverRunsRow()
     // The row colours itself under the pointer too, and that is the colour a
     // control on it has to stand out from.
     await row.hover()
     const background = await row.evaluate(element => getComputedStyle(element).backgroundColor)
 
-    expect(await hoveredBackground(flows.editName("flow-goodbye"))).not.toBe(background)
-    expect(await hoveredBackground(flows.remove("flow-goodbye"))).not.toBe(background)
-    expect(await hoveredBackground(flows.neverRuns("flow-goodbye"))).not.toBe(background)
+    expect(await hoveredBackground(row.locator('[data-testid$="-edit"]'))).not.toBe(background)
+    expect(await hoveredBackground(row.locator('[data-testid$="-remove"]'))).not.toBe(background)
+    expect(await hoveredBackground(row.locator('[data-testid$="-never-runs"]'))).not.toBe(
+      background
+    )
   })
 })
