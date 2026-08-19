@@ -16,9 +16,10 @@ import { type RunTrace, watchFailure, watchTrace } from "@/session/trace"
  * is a pure function of the Project; the gateway is handed the result and owns
  * everything after that — the process, its lifetime and its output.
  *
- * The Project is watched while the bot runs, and an edit that changes the bot
- * puts a new one in its place. That is the whole of hot reload, and it is here
- * rather than on a button because the user is meant to never think about it.
+ * The Project and its Test Server are watched while the bot runs, and a change
+ * that changes the bot puts a new one in its place. That is the whole of hot
+ * reload, and it is here rather than on a button because the user is meant to
+ * never think about it.
  */
 
 /**
@@ -55,10 +56,9 @@ const CONNECTING_LIMIT = 30_000
  */
 export const RELOAD_DELAY = 400
 
-/** What a bot needs to be started, kept so the next one can be started the same. */
+/** The bot that is meant to be running, and what an edit is compared to. */
 type Running = {
-  testServerId: string
-  /** The entry point the running bot was started on: what an edit is compared to. */
+  /** The entry point the running bot was started on. */
   entry: string
 }
 
@@ -77,11 +77,17 @@ export type Session = {
    * No token is asked for. It is in the operating system keychain under the
    * Project, and the shell that starts the bot is the only thing that reads it.
    */
-  start(options: { testServerId: string }): Promise<void>
+  start(): Promise<void>
   stop(): Promise<void>
 }
 
-export function useSession(project: Project, shell: SessionGateway): Session {
+/**
+ * The Test Server is a parameter rather than something a Run captures, because
+ * a Project tried on another server is another bot: picking one mid-run has to
+ * reach the machinery that already notices a Project change, instead of being
+ * frozen into the Session that happened to start first.
+ */
+export function useSession(project: Project, shell: SessionGateway, testServerId: string): Session {
   const [status, setStatus] = useState<SessionStatus>("stopped")
   const [entries, setEntries] = useState<readonly SessionEntry[]>([])
   const [problem, setProblem] = useState<string | undefined>(undefined)
@@ -192,12 +198,12 @@ export function useSession(project: Project, shell: SessionGateway): Session {
    * be something the user reads straight through.
    */
   const launch = useCallback(
-    async (entry: string, options: { testServerId: string }) => {
+    async (entry: string) => {
       // Taking the number first is what closes the gap: from here on the bot
       // being replaced is already somebody the editor does not listen to.
       const session = nextSession.current++
       current.current = session
-      running.current = { ...options, entry }
+      running.current = { entry }
 
       setProblem(undefined)
       // The Canvas belongs to the bot that is running: runs are numbered from
@@ -246,33 +252,30 @@ export function useSession(project: Project, shell: SessionGateway): Session {
     }
   }, [settled, shell])
 
-  const start = useCallback(
-    async (options: { testServerId: string }) => {
-      setEntries([])
+  const start = useCallback(async () => {
+    setEntries([])
 
-      // A Node that already knows Discord would refuse it stops the Run here,
-      // before the Session, so the user reads the reason on the Canvas instead
-      // of watching a bot fail on Discord for something the editor knew.
-      const invalid = describeProjectProblem(project)
-      if (invalid !== undefined) {
-        setStatus("failed")
-        setProblem(translate("run.failure.node", { message: invalid }))
-        return
-      }
+    // A Node that already knows Discord would refuse it stops the Run here,
+    // before the Session, so the user reads the reason on the Canvas instead
+    // of watching a bot fail on Discord for something the editor knew.
+    const invalid = describeProjectProblem(project)
+    if (invalid !== undefined) {
+      setStatus("failed")
+      setProblem(translate("run.failure.node", { message: invalid }))
+      return
+    }
 
-      let entry: string
-      try {
-        entry = renderDevelopmentSession(project, { testServerId: options.testServerId })
-      } catch (error) {
-        setStatus("failed")
-        setProblem(translate("run.failure.build", { message: describeError(error) }))
-        return
-      }
+    let entry: string
+    try {
+      entry = renderDevelopmentSession(project, { testServerId })
+    } catch (error) {
+      setStatus("failed")
+      setProblem(translate("run.failure.build", { message: describeError(error) }))
+      return
+    }
 
-      await launch(entry, options)
-    },
-    [launch, project]
-  )
+    await launch(entry)
+  }, [launch, project, testServerId])
 
   /**
    * Hot reload: an edit made while the bot runs puts a new bot in its place.
@@ -303,7 +306,7 @@ export function useSession(project: Project, shell: SessionGateway): Session {
 
       let entry: string
       try {
-        entry = renderDevelopmentSession(project, { testServerId: bot.testServerId })
+        entry = renderDevelopmentSession(project, { testServerId })
       } catch (error) {
         // The bot on the sidecar is the last version that compiled, and it is
         // left running: taking away a working bot because of a half-finished
@@ -324,11 +327,11 @@ export function useSession(project: Project, shell: SessionGateway): Session {
       }
 
       note("run.reloading")
-      void launch(entry, { testServerId: bot.testServerId })
+      void launch(entry)
     }, RELOAD_DELAY)
 
     return () => clearTimeout(reload)
-  }, [project, launch, note])
+  }, [project, testServerId, launch, note])
 
   return { status, entries, problem, trace, start, stop }
 }

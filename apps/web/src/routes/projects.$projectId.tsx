@@ -76,7 +76,7 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
 
   // The Session is held here rather than in the panel that starts it, because
   // watching the bot think happens on the Canvas: both sides read one run.
-  const session = useSession(editor.project, shell)
+  const session = useSession(editor.project, shell, testServer.testServerId)
   const exporting = useExport(editor.project, desktopExports)
   const sharing = useShare(editor.project, desktopShare)
 
@@ -92,7 +92,7 @@ function Editor({ loaded, migrated }: { loaded: Project; migrated: boolean }) {
         problem={autosave.problem}
         exporting={exporting}
         sharing={sharing}
-        run={<RunControls session={session} testServerId={testServer.testServerId} />}
+        run={<RunControls session={session} />}
       />
 
       <ProjectOptionsDialog

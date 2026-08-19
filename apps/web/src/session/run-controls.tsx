@@ -28,10 +28,10 @@ const STOP_SHORTCUT = "Shift+F5"
  * Project, and the only thing that reads it is the shell that starts the bot —
  * this side never sees one.
  */
-export function RunControls({ session, testServerId }: { session: Session; testServerId: string }) {
+export function RunControls({ session }: { session: Session }) {
   const running = session.status === "connecting" || session.status === "ready"
 
-  const start = () => void session.start({ testServerId })
+  const start = () => void session.start()
   const stop = () => void session.stop()
 
   // The shortcut is dead exactly while its button is, so neither way of asking

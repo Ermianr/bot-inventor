@@ -100,8 +100,8 @@ function withGreeting(project: Project, greeting: string): Project {
   }
 }
 
-/** What starting a bot takes. The token is not part of it: the shell reads it. */
-const RUNNING = { testServerId: "1" }
+/** The Test Server a Project is tried on, unless a test picks another one. */
+const TEST_SERVER = "1"
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
@@ -114,11 +114,12 @@ afterEach(() => {
 /** Runs a bot and waits for it to report that it connected. */
 async function run(shell: ReturnType<typeof fakeGateway>, project: Project) {
   const session = renderHook(
-    ({ current }: { current: Project }) => useSession(current, shell.gateway),
-    { initialProps: { current: project } }
+    ({ current, testServerId }: { current: Project; testServerId: string }) =>
+      useSession(current, shell.gateway, testServerId),
+    { initialProps: { current: project, testServerId: TEST_SERVER } }
   )
 
-  await act(() => session.result.current.start(RUNNING))
+  await act(() => session.result.current.start())
   shell.send(shell.latest(), { kind: "status", status: "ready" })
   expect(session.result.current.status).toBe("ready")
 
@@ -138,8 +139,8 @@ describe("running a bot", () => {
     const shell = fakeGateway()
     shell.refuseNextStart({ kind: "missing-secret" })
 
-    const session = renderHook(() => useSession(helloProject(), shell.gateway))
-    await act(() => session.result.current.start(RUNNING))
+    const session = renderHook(() => useSession(helloProject(), shell.gateway, TEST_SERVER))
+    await act(() => session.result.current.start())
 
     expect(session.result.current.status).toBe("failed")
     expect(session.result.current.problem).toContain("token")
@@ -164,7 +165,10 @@ describe("hot reload", () => {
     const project = helloProject()
     const session = await run(shell, project)
 
-    session.rerender({ current: withGreeting(project, "a new description") })
+    session.rerender({
+      testServerId: TEST_SERVER,
+      current: withGreeting(project, "a new description")
+    })
     await act(async () => {
       vi.advanceTimersByTime(RELOAD_DELAY)
     })
@@ -180,7 +184,7 @@ describe("hot reload", () => {
     const session = await run(shell, project)
     shell.say(shell.latest(), "something the bot said before the edit")
 
-    session.rerender({ current: withGreeting(project, "edited") })
+    session.rerender({ testServerId: TEST_SERVER, current: withGreeting(project, "edited") })
     await act(async () => {
       vi.advanceTimersByTime(RELOAD_DELAY)
     })
@@ -197,7 +201,7 @@ describe("hot reload", () => {
     const session = await run(shell, project)
 
     for (const greeting of ["a", "ab", "abc", "abcd"]) {
-      session.rerender({ current: withGreeting(project, greeting) })
+      session.rerender({ testServerId: TEST_SERVER, current: withGreeting(project, greeting) })
       await act(async () => {
         vi.advanceTimersByTime(RELOAD_DELAY / 3)
       })
@@ -215,7 +219,10 @@ describe("hot reload", () => {
     const project = helloProject()
     const session = await run(shell, project)
 
-    session.rerender({ current: { ...project, name: "A different name" } })
+    session.rerender({
+      testServerId: TEST_SERVER,
+      current: { ...project, name: "A different name" }
+    })
     await act(async () => {
       vi.advanceTimersByTime(RELOAD_DELAY * 2)
     })
@@ -227,11 +234,15 @@ describe("hot reload", () => {
     const shell = fakeGateway()
     const project = helloProject()
     const session = renderHook(
-      ({ current }: { current: Project }) => useSession(current, shell.gateway),
-      { initialProps: { current: project } }
+      ({ current, testServerId }: { current: Project; testServerId: string }) =>
+        useSession(current, shell.gateway, testServerId),
+      { initialProps: { current: project, testServerId: TEST_SERVER } }
     )
 
-    session.rerender({ current: withGreeting(project, "edited while stopped") })
+    session.rerender({
+      testServerId: TEST_SERVER,
+      current: withGreeting(project, "edited while stopped")
+    })
     await act(async () => {
       vi.advanceTimersByTime(RELOAD_DELAY * 2)
     })
@@ -245,7 +256,10 @@ describe("hot reload", () => {
     const session = await run(shell, project)
 
     await act(() => session.result.current.stop())
-    session.rerender({ current: withGreeting(project, "edited after Stop") })
+    session.rerender({
+      testServerId: TEST_SERVER,
+      current: withGreeting(project, "edited after Stop")
+    })
     await act(async () => {
       vi.advanceTimersByTime(RELOAD_DELAY * 2)
     })
@@ -267,7 +281,7 @@ describe("hot reload", () => {
     })
     expect(session.result.current.trace).toBeDefined()
 
-    session.rerender({ current: withGreeting(project, "edited") })
+    session.rerender({ testServerId: TEST_SERVER, current: withGreeting(project, "edited") })
     await act(async () => {
       vi.advanceTimersByTime(RELOAD_DELAY)
     })
@@ -276,13 +290,28 @@ describe("hot reload", () => {
     expect(session.result.current.trace).toBeUndefined()
   })
 
+  it("rebuilds the bot around the Test Server the user has just picked", async () => {
+    const shell = fakeGateway()
+    const project = helloProject()
+    const session = await run(shell, project)
+
+    session.rerender({ current: project, testServerId: "999" })
+    await act(async () => {
+      vi.advanceTimersByTime(RELOAD_DELAY)
+    })
+
+    await waitFor(() => expect(shell.started).toHaveLength(2))
+    expect(shell.started.at(-1)?.entry).toContain("999")
+    expect(shell.started.at(-1)?.entry).not.toContain(`"${TEST_SERVER}"`)
+  })
+
   it("does not read the death of the old bot as the new one stopping", async () => {
     const shell = fakeGateway()
     const project = helloProject()
     const session = await run(shell, project)
     const replaced = shell.latest()
 
-    session.rerender({ current: withGreeting(project, "edited") })
+    session.rerender({ testServerId: TEST_SERVER, current: withGreeting(project, "edited") })
     await act(async () => {
       vi.advanceTimersByTime(RELOAD_DELAY)
     })
@@ -308,8 +337,8 @@ describe("a Run a Node refuses", () => {
     const node = requireEmbedNode(project)
     node.fields = { ...node.fields, title: [], description: [] }
 
-    const session = renderHook(() => useSession(project, shell.gateway))
-    await act(() => session.result.current.start(RUNNING))
+    const session = renderHook(() => useSession(project, shell.gateway, TEST_SERVER))
+    await act(() => session.result.current.start())
 
     expect(shell.started).toEqual([])
     expect(session.result.current.status).toBe("failed")
@@ -340,7 +369,7 @@ describe("an edit that does not compile", () => {
     const project = helloProject()
     const session = await run(shell, project)
 
-    session.rerender({ current: withoutTheCatalogue(project) })
+    session.rerender({ testServerId: TEST_SERVER, current: withoutTheCatalogue(project) })
     await act(async () => {
       vi.advanceTimersByTime(RELOAD_DELAY * 2)
     })
@@ -356,13 +385,16 @@ describe("an edit that does not compile", () => {
     const project = helloProject()
     const session = await run(shell, project)
 
-    session.rerender({ current: withoutTheCatalogue(project) })
+    session.rerender({ testServerId: TEST_SERVER, current: withoutTheCatalogue(project) })
     await act(async () => {
       vi.advanceTimersByTime(RELOAD_DELAY * 2)
     })
     expect(session.result.current.problem).toBeDefined()
 
-    session.rerender({ current: withGreeting(project, "put right again") })
+    session.rerender({
+      testServerId: TEST_SERVER,
+      current: withGreeting(project, "put right again")
+    })
     await act(async () => {
       vi.advanceTimersByTime(RELOAD_DELAY)
     })
