@@ -167,6 +167,7 @@ class FlowCompiler {
       input: id => this.inputExpression(node, definition, id),
       isWired: id => this.wiresInto(node, id).length > 0,
       slottedField: id => this.slottedExpression(node, definition, id),
+      slottedText: (value, where) => this.slottedValueExpression(node, definition, value, where),
       output: id => {
         const port = findPort(definition, id, node.fields)
         if (port === undefined || port.kind !== "data" || port.direction !== "output") {
@@ -229,11 +230,30 @@ class FlowCompiler {
    * that is not allowed (ADR 0008).
    */
   private slottedExpression(node: Node, definition: NodeDefinition, id: string): string {
-    const value = this.fieldOf(node, definition, id)
+    return this.slottedValueExpression(
+      node,
+      definition,
+      this.fieldOf(node, definition, id),
+      `the field "${id}"`
+    )
+  }
+
+  /**
+   * One piece of Slotted text as an expression, wherever the Node keeps it: a
+   * field of its own, or the name or the value of one of its Embed Fields.
+   * Both are refused the same way, because a Node answering with the wrong
+   * text is the same bug wherever the text was typed.
+   */
+  private slottedValueExpression(
+    node: Node,
+    definition: NodeDefinition,
+    value: FieldValue,
+    where: string
+  ): string {
     const parsed = slottedTextSchema.safeParse(value)
     if (!parsed.success) {
       throw new CompilerError(
-        `the field "${id}" of "${node.id}" does not read as text with Slots in it; open the Node and type its message again`,
+        `${where} of "${node.id}" does not read as text with Slots in it; open the Node and type its message again`,
         { flow: this.flow.id, node: node.id }
       )
     }

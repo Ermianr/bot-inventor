@@ -21,6 +21,7 @@ import {
   type NodeProps,
   type Node as ReactFlowNode
 } from "@xyflow/react"
+import { EmbedFieldsField } from "@/canvas/embed-fields-field"
 import { SlottedField } from "@/canvas/slotted-field"
 import { translate, translateDefinitionKey } from "@/i18n/messages"
 import type { NodeRunState } from "@/session/trace"
@@ -68,9 +69,10 @@ export type FlowNodeType = ReactFlowNode<FlowNodeData, "flowNode">
 
 /**
  * `commandParameters` is not drawn yet: it is a list of declarations rather
- * than one value, and it needs a control of its own. A Flow can already read
- * what the caller answered — the Ports are there as soon as the field holds
- * parameters — so what is left is the editing surface.
+ * than one value, and it needs a control of its own — the one an Embed's pairs
+ * are edited with is what that will look like. A Flow can already read what the
+ * caller answered — the Ports are there as soon as the field holds parameters —
+ * so what is left is the editing surface.
  */
 const DRAWN_CONTROLS = new Set<FieldDefinition["control"]>([
   "text",
@@ -78,6 +80,7 @@ const DRAWN_CONTROLS = new Set<FieldDefinition["control"]>([
   "slottedParagraph",
   "number",
   "switch",
+  "embedFields",
   "colour"
 ])
 
@@ -221,6 +224,22 @@ function FieldRow({
         slotIsWired={slotIsWired}
         slotLabel={slotLabel}
         value={readSlottedText(value)}
+      />
+    )
+  }
+
+  // The pairs inside an Embed are a list rather than one value: how many there
+  // are is the user's to decide, and the order they are in is the layout.
+  if (field.control === "embedFields") {
+    return (
+      <EmbedFieldsField
+        fieldId={field.id}
+        label={label}
+        nodeId={nodeId}
+        onChange={embedFields => setField(field.id, embedFields)}
+        slotIsWired={slotIsWired}
+        slotLabel={slotLabel}
+        value={value}
       />
     )
   }

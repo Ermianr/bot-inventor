@@ -210,7 +210,7 @@ function createDiscordJsCommandApi(rest: REST, applicationId: string): DiscordCo
  * is as easy to get silently wrong.
  */
 export function toDiscordEmbed(embed: Embed): APIEmbed {
-  const { colour, author, image, thumbnail, footer, ...rest } = embed
+  const { colour, author, image, thumbnail, footer, embedFields, ...rest } = embed
   const sent: APIEmbed = { ...rest }
 
   if (colour !== undefined) sent.color = colour
@@ -227,6 +227,11 @@ export function toDiscordEmbed(embed: Embed): APIEmbed {
     sent.footer = { text: footer.text }
     if (footer.icon !== undefined) sent.footer.icon_url = footer.icon
   }
+
+  // An Embed Field is what we call one of them and `fields` is what Discord's
+  // API calls the list of them; the pair itself is spelled the same on both
+  // sides.
+  if (embedFields !== undefined) sent.fields = embedFields.map(embedField => ({ ...embedField }))
 
   return sent
 }

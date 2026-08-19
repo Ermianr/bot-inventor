@@ -6,17 +6,17 @@ import {
   pruneDanglingWires,
   slotPortId
 } from "@bot-inventor/nodes"
-import {
-  type FieldValue,
-  type Flow,
-  type Node,
-  type PortReference,
-  type Position,
-  type Project,
-  readSlottedText,
-  type WireKind
+import type {
+  FieldValue,
+  Flow,
+  Node,
+  PortReference,
+  Position,
+  Project,
+  WireKind
 } from "@bot-inventor/schema"
 import { type Caret, editableText, slottedTextOf, withSlotInserted } from "@/project/editable-text"
+import { fieldWithSlottedTextAt, readFieldPath, slottedTextAt } from "@/project/field-path"
 
 /**
  * Every change the Canvas makes to a Project, as pure functions.
@@ -276,6 +276,10 @@ export type SlotInsertion = { inserted: true; flow: Flow } | { inserted: false; 
  * The Slot's id is the caller's, for the same reason a Flow's is: it is opaque
  * and it outlives the session, and a function that invents its own is one no
  * test can pin down.
+ *
+ * `at.field` is where the text lives rather than a field id: the name and the
+ * value of an Embed Field are text a Wire drops into just as much as a field of
+ * its own is, and they are addressed by `readFieldPath`.
  */
 export function insertSlot(
   flow: Flow,
@@ -287,9 +291,14 @@ export function insertSlot(
   const node = flow.nodes.find(candidate => candidate.id === at.node)
   if (node === undefined) return { inserted: false, reasonKey: "connections.rejected.unknownPort" }
 
-  const editable = editableText(readSlottedText(node.fields[at.field]))
-  const value = slottedTextOf(withSlotInserted(editable, at.caret, slot))
-  const slotted = setNodeField(flow, catalogue, at.node, at.field, value)
+  // `at.field` addresses a piece of Slotted text, which is a field of its own
+  // or one half of an Embed Field. Either way what is written back is the whole
+  // field, because a field is what a Project stores.
+  const path = readFieldPath(at.field)
+  const editable = editableText(slottedTextAt(node.fields, path))
+  const segments = slottedTextOf(withSlotInserted(editable, at.caret, slot))
+  const value = fieldWithSlottedTextAt(node.fields, path, segments)
+  const slotted = setNodeField(flow, catalogue, at.node, path.field, value)
 
   const to: PortReference = { node: at.node, port: slotPortId(slot) }
   const check = checkConnection({ flow: slotted, catalogue, from, to })

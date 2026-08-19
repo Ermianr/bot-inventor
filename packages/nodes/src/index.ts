@@ -45,5 +45,13 @@ export {
 export { embed } from "./discord/embed.js"
 export { reply } from "./discord/reply.js"
 export { slashCommandTrigger } from "./discord/slash-command-trigger.js"
-export { isSlotted, slotPortId, slotPorts } from "./slots.js"
+export {
+  type EmbedField,
+  embedFieldValue,
+  MAX_EMBED_FIELDS,
+  readEmbedFields,
+  type WrittenEmbedField,
+  writtenEmbedFields
+} from "./embed-fields.js"
+export { isSlotted, slotPortId, slotPorts, slottedTextsOf } from "./slots.js"
 export { addableNodes, hasTrigger, type NodeChoice } from "./triggers.js"

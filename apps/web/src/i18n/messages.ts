@@ -208,6 +208,21 @@ const en = {
   "canvas.slot.removeWire.cancel": "Keep it",
   "canvas.slot.removeWire.confirm": "Remove both",
 
+  // The name-and-value pairs inside an Embed, edited as a list on the Node.
+  "canvas.embedField.name": "Name",
+  "canvas.embedField.value": "Value",
+  "canvas.embedField.inline": "Side by side",
+  "canvas.embedField.add": "Add a pair",
+  "canvas.embedField.remove": "Remove this pair",
+  "canvas.embedField.moveUp": "Move this pair up",
+  "canvas.embedField.moveDown": "Move this pair down",
+  "canvas.embedField.full": "Discord allows {count} pairs on one embed, and you have them all.",
+  "canvas.embedField.removeWire.title": "This will remove a wire too",
+  "canvas.embedField.removeWire.body":
+    "This pair holds a value that is not used anywhere else in it, so the wire that feeds it goes with the pair.",
+  "canvas.embedField.removeWire.cancel": "Keep the pair",
+  "canvas.embedField.removeWire.confirm": "Remove it anyway",
+
   "connections.rejected.direction":
     "Wires run from an output on the right of a node to an input on the left.",
   "connections.rejected.kind":
@@ -254,6 +269,7 @@ const en = {
   "nodes.discord.embed.build.fields.title.label": "Title",
   "nodes.discord.embed.build.fields.url.label": "Title link",
   "nodes.discord.embed.build.fields.description.label": "Text",
+  "nodes.discord.embed.build.fields.embedFields.label": "Pairs",
   "nodes.discord.embed.build.fields.colour.label": "Colour",
   "nodes.discord.embed.build.fields.authorName.label": "Author",
   "nodes.discord.embed.build.fields.authorUrl.label": "Author link",
@@ -459,6 +475,20 @@ const es: Record<MessageKey, string> = {
   "canvas.slot.removeWire.cancel": "Conservarlo",
   "canvas.slot.removeWire.confirm": "Quitar los dos",
 
+  "canvas.embedField.name": "Nombre",
+  "canvas.embedField.value": "Valor",
+  "canvas.embedField.inline": "Uno al lado del otro",
+  "canvas.embedField.add": "Añadir un par",
+  "canvas.embedField.remove": "Quitar este par",
+  "canvas.embedField.moveUp": "Subir este par",
+  "canvas.embedField.moveDown": "Bajar este par",
+  "canvas.embedField.full": "Discord permite {count} pares en un bloque, y ya los tienes todos.",
+  "canvas.embedField.removeWire.title": "Esto también quitará un cable",
+  "canvas.embedField.removeWire.body":
+    "Este par usa un valor que no se usa en ningún otro sitio del par, así que el cable que lo alimenta se va con él.",
+  "canvas.embedField.removeWire.cancel": "Conservar el par",
+  "canvas.embedField.removeWire.confirm": "Quitarlo de todas formas",
+
   "connections.rejected.direction":
     "Los cables van de una salida a la derecha de un nodo a una entrada a la izquierda.",
   "connections.rejected.kind":
@@ -500,6 +530,7 @@ const es: Record<MessageKey, string> = {
   "nodes.discord.embed.build.fields.title.label": "Título",
   "nodes.discord.embed.build.fields.url.label": "Enlace del título",
   "nodes.discord.embed.build.fields.description.label": "Texto",
+  "nodes.discord.embed.build.fields.embedFields.label": "Pares",
   "nodes.discord.embed.build.fields.colour.label": "Color",
   "nodes.discord.embed.build.fields.authorName.label": "Autor",
   "nodes.discord.embed.build.fields.authorUrl.label": "Enlace del autor",

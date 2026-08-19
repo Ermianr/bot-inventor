@@ -54,7 +54,8 @@ export type PortDefinition = ExecutionPortDefinition | DataPortDefinition
  * `slottedParagraph` is the same value written over several lines — an Embed's
  * description is one, a Node's title is not.
  * `commandParameters` is the list of values a slash command asks its caller
- * for, edited as a list rather than as one control. `colour` is a colour the
+ * for, and `embedFields` the name-and-value pairs inside an Embed: both are
+ * edited as a list rather than as one control. `colour` is a colour the
  * user picks and the Project stores as the integer Discord takes: the number
  * is never shown to them.
  */
@@ -65,6 +66,7 @@ export type FieldControl =
   | "number"
   | "switch"
   | "commandParameters"
+  | "embedFields"
   | "colour"
 
 /** The values typed into one Node's fields, as the Project stores them. */
@@ -124,6 +126,13 @@ export type GenerationContext = {
    * empty text (ADR 0010).
    */
   slottedField(id: string): string
+  /**
+   * The same for a piece of Slotted text a Node holds somewhere other than in a
+   * field of its own — the name and the value of an Embed Field, which live
+   * inside the list their field holds. `where` names it in the words the user
+   * would recognise, for the refusal a value that does not read as text earns.
+   */
+  slottedText(value: FieldValue, where: string): string
   /** The identifier this Node must bind a Data output Port's value to. */
   output(id: string): string
   /** The statements of everything reachable from an Execution output Port. */

@@ -13,6 +13,11 @@ const TITLE_LIMIT = 256
 const DESCRIPTION_LIMIT = 4096
 const AUTHOR_NAME_LIMIT = 256
 const FOOTER_TEXT_LIMIT = 2048
+const EMBED_FIELD_NAME_LIMIT = 256
+const EMBED_FIELD_VALUE_LIMIT = 1024
+
+/** How many Embed Fields Discord accepts on one Embed. */
+const EMBED_FIELD_LIMIT = 25
 
 /** The widest colour Discord understands: a 24-bit RGB integer. */
 const MAX_COLOUR = 0xffffff
@@ -33,6 +38,16 @@ export type EmbedFooter = {
   icon?: string
 }
 
+/**
+ * One name-and-value pair inside the Embed, drawn on a line of its own or
+ * beside its neighbours.
+ */
+export type EmbedField = {
+  name: string
+  value: string
+  inline: boolean
+}
+
 /** A rich block, as the Runtime hands it to Discord. */
 export type Embed = {
   title?: string
@@ -46,6 +61,8 @@ export type Embed = {
   /** The small picture in the Embed's corner, by public URL. */
   thumbnail?: string
   footer?: EmbedFooter
+  /** The name-and-value pairs laid out inside it, in the order they were written. */
+  embedFields?: readonly EmbedField[]
   /** The instant the Embed was stamped with, in ISO-8601, as Discord takes it. */
   timestamp?: string
 }
@@ -72,6 +89,8 @@ export type EmbedInput = {
   thumbnail?: unknown
   footerText?: unknown
   footerIcon?: unknown
+  /** The Embed Fields, as the Node's list field holds them. */
+  embedFields?: unknown
   /** Whether to stamp the Embed with the time it was sent. */
   timestamp?: unknown
 }
@@ -111,6 +130,9 @@ export const embeds: Embeds = {
     const footer = footerOf(input)
     if (footer !== undefined) embed.footer = footer
 
+    const embedFields = embedFieldsOf(input.embedFields)
+    if (embedFields.length > 0) embed.embedFields = embedFields
+
     // The switch means "the time it was sent", so the instant is read here
     // rather than typed anywhere: an arbitrary date is not something the Embed
     // can be given.
@@ -146,6 +168,32 @@ function footerOf(input: EmbedInput): EmbedFooter | undefined {
   const icon = link(input.footerIcon)
   if (icon !== undefined) footer.icon = icon
   return footer
+}
+
+/**
+ * The Embed Fields that can be sent, at most as many as Discord accepts.
+ *
+ * Discord refuses the whole message over an Embed Field missing its name or
+ * its value, so a pair the user only half wrote is left out and the ones
+ * around it still reach the channel. What is left keeps the order it was
+ * written in: that order is the layout.
+ */
+function embedFieldsOf(value: unknown): readonly EmbedField[] {
+  if (!Array.isArray(value)) return []
+
+  const embedFields: EmbedField[] = []
+  for (const entry of value) {
+    if (entry === null || typeof entry !== "object") continue
+
+    const written = entry as { name?: unknown; value?: unknown; inline?: unknown }
+    const name = text(written.name, EMBED_FIELD_NAME_LIMIT)
+    const fieldValue = text(written.value, EMBED_FIELD_VALUE_LIMIT)
+    if (name === undefined || fieldValue === undefined) continue
+
+    embedFields.push({ name, value: fieldValue, inline: written.inline === true })
+    if (embedFields.length === EMBED_FIELD_LIMIT) break
+  }
+  return embedFields
 }
 
 /**

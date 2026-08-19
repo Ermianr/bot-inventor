@@ -1,4 +1,10 @@
-import { type FieldDefinition, joinStatements, type NodeDefinition } from "../definition.js"
+import {
+  type FieldDefinition,
+  type GenerationContext,
+  joinStatements,
+  type NodeDefinition
+} from "../definition.js"
+import { writtenEmbedFields } from "../embed-fields.js"
 import { isSlotted } from "../slots.js"
 
 /** Discord's own blurple, so an Embed dropped on the Canvas already has a bar. */
@@ -26,6 +32,12 @@ const FIELDS: readonly FieldDefinition[] = [
     id: "description",
     labelKey: "nodes.discord.embed.build.fields.description.label",
     control: "slottedParagraph",
+    defaultValue: []
+  },
+  {
+    id: "embedFields",
+    labelKey: "nodes.discord.embed.build.fields.embedFields.label",
+    control: "embedFields",
     defaultValue: []
   },
   {
@@ -92,7 +104,8 @@ const FIELDS: readonly FieldDefinition[] = [
  * Every text part of it is a Slotted field, which is what lets an Embed say
  * `Who: @someone` without a Node whose only job is gluing two strings together
  * (ADR 0010). Its description is edited over several lines, because that is the
- * one part of an Embed people write paragraphs in.
+ * one part of an Embed people write paragraphs in, and its Embed Fields are
+ * edited as a list, because how many of them there are is the user's to decide.
  *
  * The time it was sent is a switch rather than a date field: what people want
  * is the Embed stamped with when it went out, and the Runtime is what reads
@@ -125,6 +138,7 @@ export const embed: NodeDefinition = {
         field => `${field.id}: ${context.slottedField(field.id)}`
       ),
       `colour: ${context.literal(context.field("colour"))}`,
+      `embedFields: [${embedFieldsCode(context)}]`,
       `timestamp: ${context.literal(context.field("timestamp"))}`
     ].join(", ")
 
@@ -138,4 +152,27 @@ export const embed: NodeDefinition = {
       context.continuation("next")
     ])
   }
+}
+
+/**
+ * The Embed Fields as the list the builder takes, in the order they were
+ * written: that order is the layout the user laid out on the Canvas.
+ *
+ * A name and a value are Slotted text like the rest of the Embed, so each of
+ * them is emitted as its own expression rather than as a string. Every pair the
+ * Project holds is emitted, the ones past Discord's limit included: the editor
+ * is what stops the user at twenty-five, and the Runtime is what decides what
+ * Discord ends up seeing.
+ */
+function embedFieldsCode(context: GenerationContext): string {
+  return writtenEmbedFields(context.field("embedFields"))
+    .map((embedField, index) => {
+      // A pair is refused for its name or its value not reading as text, the
+      // same way a field of its own is: an Embed Field quietly emptied is a row
+      // Discord draws nothing for and nothing saying why (ADR 0008).
+      const name = context.slottedText(embedField.name, `the name of pair ${index + 1}`)
+      const value = context.slottedText(embedField.value, `the value of pair ${index + 1}`)
+      return `{ name: ${name}, value: ${value}, inline: ${context.literal(embedField.inline)} }`
+    })
+    .join(", ")
 }

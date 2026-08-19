@@ -321,6 +321,68 @@ describe("answering with an Embed", () => {
     })
   })
 
+  it("carries the Embed Fields in the order they were written, inline honoured", async () => {
+    const project = embedReplyProject()
+    const node = embedNode(project)
+    node.fields = {
+      ...node.fields,
+      embedFields: [
+        { name: literalText("Rule 1"), value: literalText("Be kind"), inline: true },
+        { name: literalText("Rule 2"), value: literalText("Be brief"), inline: false }
+      ]
+    }
+
+    const result = await runProject(project, useCard)
+
+    expect(result.failures).toEqual([])
+    expect(embedOf(result)?.embedFields).toEqual([
+      { name: "Rule 1", value: "Be kind", inline: true },
+      { name: "Rule 2", value: "Be brief", inline: false }
+    ])
+  })
+
+  it("puts a value from a Wire inside an Embed Field, through its Slot", async () => {
+    const project = embedReplyProject()
+    const flow = requireFirst(project.flows, "Flow")
+    const node = embedNode(project)
+    node.fields = {
+      ...node.fields,
+      embedFields: [
+        {
+          name: literalText("Asked by"),
+          value: [{ kind: "slot", slot: "slot-caller" }],
+          inline: false
+        }
+      ]
+    }
+    flow.wires.push({
+      id: "wire-caller",
+      kind: "data",
+      from: { node: "node-trigger", port: "user" },
+      to: { node: "node-embed", port: "slot.slot-caller" }
+    })
+
+    const result = await runProject(project, [
+      { type: "slashCommand", command: "card", user: { id: "42" } }
+    ])
+
+    expect(result.failures).toEqual([])
+    expect(embedOf(result)?.embedFields).toEqual([
+      { name: "Asked by", value: "<@42>", inline: false }
+    ])
+  })
+
+  it("refuses an Embed Field whose name does not read as text with Slots in it", () => {
+    const project = embedReplyProject()
+    const node = embedNode(project)
+    node.fields = {
+      ...node.fields,
+      embedFields: [{ name: "Rule 1", value: literalText("Be kind"), inline: false }]
+    }
+
+    expect(() => compile(project, { mode: "build" })).toThrowError(/does not read as text/)
+  })
+
   it("hands every part to Discord under the name its API knows it by", async () => {
     const project = embedReplyProject()
     const node = embedNode(project)
