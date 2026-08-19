@@ -16,7 +16,7 @@ export const EXIT_EVENT = "session://exited"
 /**
  * Which bot an event came from.
  *
- * The Tauri side numbers every bot it starts, and a hot reload starts a new one
+ * The Tauri side numbers every bot it starts, and a Reload starts a new one
  * while the old one is still dying. Without this the old bot's exit reads as the
  * new one stopping and its last lines read as the new one's output, which is the
  * difference between a reload the user does not notice and a panel that keeps

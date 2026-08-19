@@ -8,7 +8,7 @@ import { RunControls } from "@/session/run-controls"
 import type { Session, SessionStatus } from "@/session/use-session"
 
 /**
- * The two buttons that run the bot, and the light that says whether it is
+ * The three buttons that run the bot, and the light that says whether it is
  * running.
  *
  * They show no words, so what a screen reader is given is the whole of what
@@ -17,14 +17,15 @@ import type { Session, SessionStatus } from "@/session/use-session"
  * something the hook underneath can be held to.
  */
 
-/** How many starts and stops were asked for. */
-type Asked = { starts: number; stops: number }
+/** How many starts, reloads and stops were asked for. */
+type Asked = { starts: number; stops: number; reloads: number }
 
-function fakeSession(status: SessionStatus) {
-  const asked: Asked = { starts: 0, stops: 0 }
+function fakeSession(status: SessionStatus, outdated: boolean) {
+  const asked: Asked = { starts: 0, stops: 0, reloads: 0 }
 
   const session: Session = {
     status,
+    outdated,
     entries: [],
     trace: undefined,
     problem: undefined,
@@ -33,14 +34,17 @@ function fakeSession(status: SessionStatus) {
     },
     stop: async () => {
       asked.stops += 1
+    },
+    reload: async () => {
+      asked.reloads += 1
     }
   }
 
   return { asked, session }
 }
 
-function renderControls(status: SessionStatus) {
-  const { asked, session } = fakeSession(status)
+function renderControls(status: SessionStatus, outdated = false) {
+  const { asked, session } = fakeSession(status, outdated)
   render(<RunControls session={session} />)
   return asked
 }
@@ -52,6 +56,10 @@ function play() {
 
 function stopButton() {
   return screen.getByRole("button", { name: translate("run.stop") })
+}
+
+function reloadButton() {
+  return screen.getByRole("button", { name: translate("run.reload") })
 }
 
 afterEach(cleanup)
@@ -95,6 +103,54 @@ describe("the Run controls", () => {
       expect(stopButton().hasAttribute("disabled")).toBe(true)
     })
   }
+
+  /**
+   * Reload is the third thing that can be done to a bot, and it is on offer
+   * exactly while there is a bot to replace and a Project it has fallen behind.
+   */
+  it("reloads the bot the user has left behind", () => {
+    const asked = renderControls("ready", true)
+
+    fireEvent.click(reloadButton())
+
+    expect(asked.reloads).toBe(1)
+  })
+
+  it("offers no Reload while the running bot is still the Project", () => {
+    renderControls("ready")
+
+    expect(reloadButton().hasAttribute("disabled")).toBe(true)
+  })
+
+  /**
+   * An arriving connection is never killed to start another, and after a
+   * failure there is no bot to replace: what is offered there is Run.
+   */
+  for (const status of ["stopped", "connecting", "failed"] as const) {
+    it(`offers no Reload while the bot is ${status}`, () => {
+      renderControls(status, true)
+
+      expect(reloadButton().hasAttribute("disabled")).toBe(true)
+    })
+  }
+
+  /**
+   * Being outdated is not being broken: the bot is alive and answering, and the
+   * editor says both things at once rather than one instead of the other. It is
+   * said in words, so nobody has to have learnt a colour to read it.
+   */
+  it("says the Session is outdated beside the light, and not instead of it", () => {
+    renderControls("ready", true)
+
+    expect(screen.getByTestId("run-status").getAttribute("data-status")).toBe("ready")
+    expect(screen.getByTestId("run-outdated").textContent).toBe(translate("run.outdated"))
+  })
+
+  it("says nothing about being outdated while the bot is the Project", () => {
+    renderControls("ready")
+
+    expect(screen.queryByTestId("run-outdated")).toBeNull()
+  })
 
   it("shows which of the four things the bot is doing", () => {
     renderControls("connecting")
@@ -141,7 +197,41 @@ describe("running the bot from the keyboard", () => {
     const notSwallowed = fireEvent.keyDown(window, { key: "F5" })
 
     expect(asked.starts).toBe(0)
+    expect(asked.reloads).toBe(0)
     expect(notSwallowed).toBe(false)
+  })
+
+  /**
+   * F5 is one gesture at two moments: it starts a bot when there is none, and
+   * asks for the bot to catch up when there is one to catch up. It is dead in
+   * both directions while the Reload button is.
+   */
+  it("reloads on F5 while a Session runs behind the Project", () => {
+    const asked = renderControls("ready", true)
+
+    const notSwallowed = fireEvent.keyDown(window, { key: "F5" })
+
+    expect(asked.reloads).toBe(1)
+    expect(asked.starts).toBe(0)
+    expect(notSwallowed).toBe(false)
+  })
+
+  it("does not reload on F5 while nothing is running", () => {
+    const asked = renderControls("stopped", true)
+
+    fireEvent.keyDown(window, { key: "F5" })
+
+    expect(asked.reloads).toBe(0)
+    expect(asked.starts).toBe(1)
+  })
+
+  it("still stops the bot on Shift+F5 while the Session is outdated", () => {
+    const asked = renderControls("ready", true)
+
+    fireEvent.keyDown(window, { key: "F5", shiftKey: true })
+
+    expect(asked.stops).toBe(1)
+    expect(asked.reloads).toBe(0)
   })
 
   it("does not stop a bot that is not running", () => {

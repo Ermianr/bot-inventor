@@ -26,8 +26,8 @@ test.describe("running the bot", () => {
     await run.open()
   })
 
-  test("puts Play and Stop on the Menu Bar, with the light beside them", async () => {
-    for (const control of [run.start(), run.stop(), run.status()]) {
+  test("puts Play, Reload and Stop on the Menu Bar, with the light beside them", async () => {
+    for (const control of [run.start(), run.reload(), run.stop(), run.status()]) {
       await expect(menuBar.row().filter({ has: control })).toBeVisible()
     }
   })
@@ -36,15 +36,38 @@ test.describe("running the bot", () => {
    * The buttons show no words at all, so their accessible names are the whole
    * of what anybody not looking at the icons is given.
    */
-  test("names both buttons for whoever cannot see the icons", async () => {
+  test("names every button for whoever cannot see the icons", async () => {
     await expect(run.start()).toHaveAttribute("aria-label", /.+/)
+    await expect(run.reload()).toHaveAttribute("aria-label", /.+/)
     await expect(run.stop()).toHaveAttribute("aria-label", /.+/)
   })
 
   test("offers only Play while nothing is running", async () => {
     await expect(run.status()).toHaveAttribute("data-status", "stopped")
     await expect(run.start()).toBeEnabled()
+    await expect(run.reload()).toBeDisabled()
     await expect(run.stop()).toBeDisabled()
+  })
+
+  /**
+   * Nothing is running, so nothing has fallen behind: the word that says a
+   * Session is outdated belongs to a bot that is alive.
+   */
+  test("says nothing about being outdated while nothing is running", async () => {
+    await expect(run.outdated()).toBeHidden()
+  })
+
+  /**
+   * F5 is the browser's own reload. The editor claims it whether or not it has
+   * anything to do with it — letting it through would reload the window, and
+   * with the bot running that is the one press that costs the user everything.
+   */
+  test("never lets F5 reload the editor window, however often it is pressed", async () => {
+    await run.pressReload()
+    await run.pressReload()
+
+    await expect(menuBar.row()).toBeVisible()
+    await expect(run.reload()).toBeDisabled()
   })
 
   test("says why a Session could not start, in the Console", async () => {
