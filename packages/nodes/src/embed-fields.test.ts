@@ -1,6 +1,7 @@
+import { EMBED_LIMITS } from "@bot-inventor/runtime/embed"
 import { literalText } from "@bot-inventor/schema"
 import { describe, expect, it } from "vitest"
-import { MAX_EMBED_FIELDS, readEmbedFields, writtenEmbedFields } from "./embed-fields.js"
+import { readEmbedFields, writtenEmbedFields } from "./embed-fields.js"
 
 describe("the Embed Fields a field holds", () => {
   it("reads a name, a value and the inline switch of each one, in order", () => {
@@ -28,13 +29,13 @@ describe("the Embed Fields a field holds", () => {
   })
 
   it("keeps the pairs past the twenty-five Discord accepts, for the user to delete", () => {
-    const written = Array.from({ length: MAX_EMBED_FIELDS + 3 }, (_, index) => ({
+    const written = Array.from({ length: EMBED_LIMITS.embedFields + 3 }, (_, index) => ({
       name: literalText(`Rule ${index}`),
       value: literalText("Be kind"),
       inline: false
     }))
 
-    expect(readEmbedFields(written)).toHaveLength(MAX_EMBED_FIELDS + 3)
+    expect(readEmbedFields(written)).toHaveLength(EMBED_LIMITS.embedFields + 3)
   })
 
   it("hands the Compiler a name that does not read as text, rather than emptying it", () => {

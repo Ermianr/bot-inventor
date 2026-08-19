@@ -25,5 +25,5 @@ export function projectProblems(project: Project): readonly NodeProblem[] {
 export function describeProjectProblem(project: Project): string | undefined {
   const [problem] = projectProblems(project)
   if (problem === undefined) return undefined
-  return translateDefinitionKey(problem.messageKey, undefined, problem.values)
+  return translateDefinitionKey(problem.messageKey, problem.values)
 }

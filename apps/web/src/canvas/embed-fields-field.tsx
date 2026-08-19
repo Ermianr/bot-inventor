@@ -1,9 +1,4 @@
-import {
-  type EmbedField,
-  embedFieldValue,
-  MAX_EMBED_FIELDS,
-  readEmbedFields
-} from "@bot-inventor/nodes"
+import { type EmbedField, embedFieldValue, readEmbedFields } from "@bot-inventor/nodes"
 import { EMBED_LIMITS } from "@bot-inventor/runtime/embed"
 import { type FieldValue, type SlottedText, slotIdsOf } from "@bot-inventor/schema"
 import { Button } from "@bot-inventor/ui/components/button"
@@ -66,7 +61,7 @@ export function EmbedFieldsField({
   value: FieldValue
 }) {
   const embedFields = readEmbedFields(value)
-  const full = embedFields.length >= MAX_EMBED_FIELDS
+  const full = embedFields.length >= EMBED_LIMITS.embedFields
 
   /** The pair the user is being asked about, when they are being asked. */
   const [asking, setAsking] = useState<number | undefined>(undefined)
@@ -154,7 +149,7 @@ export function EmbedFieldsField({
 
       {full && (
         <p className="text-muted-foreground text-xs">
-          {translate("canvas.embedField.full", { count: String(MAX_EMBED_FIELDS) })}
+          {translate("canvas.embedField.full", { count: String(EMBED_LIMITS.embedFields) })}
         </p>
       )}
 

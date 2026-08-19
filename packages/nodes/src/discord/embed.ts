@@ -204,11 +204,13 @@ function embedFieldsCode(context: GenerationContext): string {
 /**
  * What a Slot stands in for while the Embed is being looked at rather than run.
  *
- * One character, because that is all that can honestly be said: the value that
- * lands there is whatever the Wire carries when the bot runs, and only the
- * Runtime ever sees it. So an Embed whose title is nothing but a Slot is not an
- * empty Embed, and a field that is already over the limit without counting its
- * Slots is over it whatever they turn out to hold.
+ * One character, because that is the least the value that lands there can be:
+ * what the Wire actually carries is only known when the bot runs, and the
+ * Runtime is what checks it then. So an Embed whose title is nothing but a Slot
+ * is not an empty Embed, and a field the editor already counts as full is full
+ * here too — the count the user types against and this measurement are the same
+ * arithmetic, so the Node never says a field is too long that the count says is
+ * not.
  */
 const SLOT_PLACEHOLDER = "\u2026"
 

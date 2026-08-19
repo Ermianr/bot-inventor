@@ -140,7 +140,7 @@ export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
             >
               {problems.map(problem => (
                 <p key={problem.messageKey}>
-                  {translateDefinitionKey(problem.messageKey, undefined, problem.values)}
+                  {translateDefinitionKey(problem.messageKey, problem.values)}
                 </p>
               ))}
             </div>

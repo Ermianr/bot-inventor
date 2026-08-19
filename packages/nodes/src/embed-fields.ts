@@ -1,4 +1,3 @@
-import { EMBED_LIMITS } from "@bot-inventor/runtime/embed"
 import { type FieldValue, readSlottedText, type SlottedText } from "@bot-inventor/schema"
 
 /**
@@ -29,17 +28,6 @@ export type WrittenEmbedField = {
   value: FieldValue
   inline: boolean
 }
-
-/**
- * How many Embed Fields Discord accepts on one Embed. It is what the editor
- * stops the user at; nothing throws the ones past it away, because a Project
- * that arrived holding them is a Project whose pairs are the user's to delete —
- * the Embed says it is over the limit until they do.
- *
- * It is the Runtime's limit and not a second reading of it: the editor and the
- * generated code cannot disagree about a number neither of them owns.
- */
-export const MAX_EMBED_FIELDS = EMBED_LIMITS.embedFields
 
 /**
  * The Embed Fields an `embedFields` field holds, as they were written.

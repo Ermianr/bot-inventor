@@ -49,7 +49,6 @@ export { slashCommandTrigger } from "./discord/slash-command-trigger.js"
 export {
   type EmbedField,
   embedFieldValue,
-  MAX_EMBED_FIELDS,
   readEmbedFields,
   type WrittenEmbedField,
   writtenEmbedFields

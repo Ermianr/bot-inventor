@@ -18,7 +18,7 @@ describe("the words a Node is named by", () => {
         for (const key of [definition.labelKey, definition.descriptionKey]) {
           // A key that resolves to itself is a key nobody translated: that is
           // what `translateDefinitionKey` shows when it has nothing to show.
-          expect(translateDefinitionKey(key, locale)).not.toBe(key)
+          expect(translateDefinitionKey(key, {}, locale)).not.toBe(key)
         }
       }
     })
@@ -38,7 +38,9 @@ describe("the reason a Node cannot be added", () => {
 
       expect(refused.length).toBeGreaterThan(0)
       for (const choice of refused) {
-        expect(translateDefinitionKey(choice.refusalKey ?? "", locale)).not.toBe(choice.refusalKey)
+        expect(translateDefinitionKey(choice.refusalKey ?? "", {}, locale)).not.toBe(
+          choice.refusalKey
+        )
       }
     })
   }

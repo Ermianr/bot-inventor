@@ -63,8 +63,11 @@ export function SlottedField({
    * longer one. Typing stops there and the count is shown beside the label, so
    * the limit is met while writing rather than when the bot runs.
    *
-   * Only what was typed is counted: what a pill will carry is not known until
-   * the Flow runs, and the Runtime is what checks the whole of it then.
+   * A pill counts as one character, which is the least it can carry: what it
+   * will actually carry is not known until the Flow runs, and the Runtime is
+   * what checks the whole of it then. Counting it as nothing would let the user
+   * fill the field to the limit and then be told by the Node that it is one
+   * character too long, with nothing the count says to take out.
    */
   limit?: number
   /**
@@ -84,7 +87,8 @@ export function SlottedField({
   const editable = editableText(value)
   const boxes = useRef<(SlotBox | null)[]>([])
 
-  const typed = editable.literals.reduce((total, text) => total + text.length, 0)
+  const typed =
+    editable.literals.reduce((total, text) => total + text.length, 0) + editable.slots.length
 
   /**
    * What one box is allowed to hold after an edit: everything the limit leaves

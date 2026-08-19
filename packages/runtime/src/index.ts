@@ -37,7 +37,6 @@ export {
   type EmbedPart,
   type EmbedProblem,
   type Embeds,
-  embedLength,
   embeds
 } from "./embed.js"
 export type { FlowFailure, Runtime, TraceEvent, TraceSink } from "./runtime.js"

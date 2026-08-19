@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { MAX_EMBED_FIELDS } from "@bot-inventor/nodes"
+import { EMBED_LIMITS } from "@bot-inventor/runtime/embed"
 import { type FieldValue, literalText } from "@bot-inventor/schema"
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
@@ -72,14 +72,14 @@ describe("editing the Embed Fields of an Embed", () => {
   })
 
   it("stops the user at the twenty-five pairs Discord accepts", () => {
-    const full = Array.from({ length: MAX_EMBED_FIELDS }, (_, index) => ({
+    const full = Array.from({ length: EMBED_LIMITS.embedFields }, (_, index) => ({
       name: literalText(`Rule ${index}`),
       value: literalText("Be kind"),
       inline: false
     }))
     const { container, rows } = draw(full)
 
-    expect(rows()).toHaveLength(MAX_EMBED_FIELDS)
+    expect(rows()).toHaveLength(EMBED_LIMITS.embedFields)
     expect(button(container, "embed-field-add-embed-embedFields").disabled).toBe(true)
   })
 

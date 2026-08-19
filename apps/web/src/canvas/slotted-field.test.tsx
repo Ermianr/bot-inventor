@@ -310,6 +310,21 @@ describe("a field with a limit on it", () => {
     expect(edits).toEqual([[{ kind: "literal", text: "Hello" }]])
   })
 
+  it("counts a pill as the one character it is worth at the very least", () => {
+    const container = draw(
+      [
+        { kind: "literal", text: "Hola" },
+        { kind: "slot", slot: "caller" }
+      ],
+      { limit: 256 }
+    )
+
+    // Four typed and one pill. Counting the pill as nothing would let the field
+    // be filled to 256 and then be called too long by the Node, with nothing
+    // the count says to take out.
+    expect(within(container).getByTestId("field-count-reply-content").textContent).toBe("5/256")
+  })
+
   it("counts every box of the sentence against the one limit", () => {
     const edits: SlottedText[] = []
     const container = draw(
@@ -320,16 +335,14 @@ describe("a field with a limit on it", () => {
       { limit: 5, onChange: value => edits.push(value) }
     )
 
-    // Four characters are already spent in the box before the pill, so only one
-    // is left for the box after it. The pill itself counts for nothing: what it
-    // will carry is not known until the Flow runs.
+    // Four characters and a pill are already spent, so nothing is left for the
+    // box after it.
     fireEvent.change(box(container, 1), { target: { value: "!!!" } })
 
     expect(edits).toEqual([
       [
         { kind: "literal", text: "Hola" },
-        { kind: "slot", slot: "caller" },
-        { kind: "literal", text: "!" }
+        { kind: "slot", slot: "caller" }
       ]
     ])
   })

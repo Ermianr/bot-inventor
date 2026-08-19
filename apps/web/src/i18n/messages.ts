@@ -611,8 +611,8 @@ export function currentLocale(): Locale {
  */
 export function translateDefinitionKey(
   key: string,
-  locale: Locale = currentLocale(),
-  values: Readonly<Record<string, string>> = {}
+  values: Readonly<Record<string, string>> = {},
+  locale: Locale = currentLocale()
 ): string {
   return fill(messages[locale][key as MessageKey] ?? key, values)
 }

@@ -155,8 +155,9 @@ export type Embeds = {
  * along a Wire and turned out too long stops the run with a sentence a person
  * can read rather than reaching Discord and coming back as a `400`.
  *
- * A run that is stopped this way leaves the Node by its Failure Port; a Failure
- * Port nobody connected ends the Flow and records the reason.
+ * A run stopped this way ends the Flow and records the reason, which is what a
+ * Failure Port nobody connected does. No Node declares one to divert execution
+ * to yet.
  */
 export const embeds: Embeds = {
   build(input) {
