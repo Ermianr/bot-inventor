@@ -250,6 +250,21 @@ const en = {
   "canvas.embed.problem.total.tooLong":
     "This embed holds {length} characters all together, and Discord allows {limit}.",
 
+  // The panel beside the Canvas where a node too big to draw on it is typed
+  // into, and the preview of the message it builds above those fields.
+  "canvas.inspector.label": "What this node builds",
+  "canvas.summary.untitled": "No title yet",
+  "canvas.preview.label": "Preview",
+  "canvas.preview.empty":
+    "Nothing to show yet. Give the embed a title, some text, a picture or a pair.",
+  // The editor is not connected to Discord, so it cannot say whose name, which
+  // picture or what hour these stand for. It says only that one is there.
+  "canvas.preview.mention": "Mention",
+  "canvas.preview.emoji": "Emoji",
+  "canvas.preview.timestamp": "Date",
+  "canvas.preview.sentAt": "The time it is sent",
+  "canvas.preview.spoiler": "Hidden until your readers click it",
+
   "connections.rejected.direction":
     "Wires run from an output on the right of a node to an input on the left.",
   "connections.rejected.kind":
@@ -538,6 +553,17 @@ const es: Record<MessageKey, string> = {
     "El valor del par {index} tiene {length} caracteres y Discord permite {limit}.",
   "canvas.embed.problem.total.tooLong":
     "Este bloque tiene {length} caracteres en total y Discord permite {limit}.",
+
+  "canvas.inspector.label": "Lo que construye este nodo",
+  "canvas.summary.untitled": "Todavía sin título",
+  "canvas.preview.label": "Vista previa",
+  "canvas.preview.empty":
+    "Todavía no hay nada que mostrar. Dale al embed un título, un texto, una imagen o un par.",
+  "canvas.preview.mention": "Mención",
+  "canvas.preview.emoji": "Emoji",
+  "canvas.preview.timestamp": "Fecha",
+  "canvas.preview.sentAt": "La hora a la que se envía",
+  "canvas.preview.spoiler": "Oculto hasta que quien lo lea haga clic",
 
   "connections.rejected.direction":
     "Los cables van de una salida a la derecha de un nodo a una entrada a la izquierda.",

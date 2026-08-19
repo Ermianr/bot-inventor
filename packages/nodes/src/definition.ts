@@ -166,6 +166,25 @@ export type GenerationContext = {
   trace(request: TraceRequest): string
 }
 
+/**
+ * How a Node is drawn on the Canvas when there is too much typed into it to
+ * draw there: a bar in the colour one of its fields holds, and the one line of
+ * text that says which of several Nodes of the same type this one is.
+ *
+ * It names fields rather than carrying values, because what it draws is what
+ * the user typed a moment ago, and the Canvas reads it off the Node it is
+ * already holding.
+ */
+export type NodeSummary = {
+  /** The field holding the colour of the bar, when the Node has such a field. */
+  colourField?: string
+  /** The Slotted field whose text is drawn beside the bar. */
+  titleField: string
+}
+
+/** What a Node builds, when the editor can draw it before the bot runs. */
+export type PreviewKind = "embed"
+
 export type NodeDefinition = {
   /** Stable and English. Renaming it breaks saved Projects. */
   id: string
@@ -176,6 +195,21 @@ export type NodeDefinition = {
   /** The Ports every Node of this type has, whatever is typed into it. */
   ports: readonly PortDefinition[]
   fields: readonly FieldDefinition[]
+  /**
+   * How the Node is drawn when it is not the Node its fields are typed into.
+   *
+   * A Node that declares a summary is edited in the Inspector beside the
+   * Canvas: an Embed holds thirteen fields and a list of pairs, and a Canvas of
+   * Nodes that big is a Canvas nobody can see the Flow in.
+   */
+  summary?: NodeSummary
+  /**
+   * What this Node builds, when the Inspector can draw it as the user will see
+   * it. A preview is the honest answer to "what will this message look like",
+   * and it is declared here so that the Inspector never asks which Node it is
+   * looking at.
+   */
+  preview?: PreviewKind
   /**
    * The Ports this Node has because of what the user typed into it — one per
    * slash command parameter, and one per whatever the Nodes after it declare.
