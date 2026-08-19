@@ -38,8 +38,10 @@ export {
   type NodeDefinition,
   type NodeFields,
   type NodeProblem,
+  type NodeSummary,
   type PortDefinition,
   type PortDirection,
+  type PreviewKind,
   portsOf,
   type TraceRequest
 } from "./definition.js"

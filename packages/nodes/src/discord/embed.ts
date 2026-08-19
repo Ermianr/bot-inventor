@@ -143,6 +143,11 @@ export const embed: NodeDefinition = {
     }
   ],
   fields: FIELDS,
+  // There is too much of an Embed to type into a Node on the Canvas, so it is
+  // typed into the Inspector and the Canvas keeps the bar and the title: that
+  // is what tells one Embed of a Flow from another at a glance.
+  summary: { colourField: "colour", titleField: "title" },
+  preview: "embed",
   problems: embedProblems,
   generate(context) {
     // What the editor already refused is refused here too, so that a Project

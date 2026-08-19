@@ -195,24 +195,20 @@ describe("a Slotted text field on a Node", () => {
   })
 })
 
-describe("picking an Embed's colour", () => {
+/**
+ * A Node with too much typed into it to draw on the Canvas. It is drawn as the
+ * bar and the title, and the fields themselves are the Inspector's.
+ */
+describe("a Node the Canvas only summarises", () => {
   const embedDefinition = requireDefinition("discord.embed.build")
 
-  function drawEmbed(
-    colour: FieldValue,
-    setField: (id: string, value: FieldValue) => void = () => {}
-  ) {
+  function drawEmbed(fields: Record<string, FieldValue>) {
     const data: FlowNodeData = {
-      node: {
-        id: "node-embed",
-        type: embedDefinition.id,
-        position: { x: 0, y: 0 },
-        fields: { title: literalText("Rules"), description: [], colour }
-      },
+      node: { id: "node-embed", type: embedDefinition.id, position: { x: 0, y: 0 }, fields },
       definition: embedDefinition,
       runState: undefined,
-      setField,
-      slotLabel: () => "",
+      setField: () => {},
+      slotLabel: () => "Slash command · Who used it",
       slotIsWired: () => false,
       remove: () => {}
     }
@@ -228,41 +224,37 @@ describe("picking an Embed's colour", () => {
     return container
   }
 
-  function swatch(container: HTMLElement): HTMLInputElement {
-    const box = container.querySelector<HTMLInputElement>("#embed-colour")
-    if (box === null) throw new Error("the Embed Node drew no colour control")
-    return box
-  }
+  it("draws the colour it holds as the bar down its side", () => {
+    const container = drawEmbed({ title: literalText("Rules"), colour: 5793266 })
+    const bar = within(container).getByTestId("node-summary-colour-embed")
 
-  it("draws the description as a paragraph and the title as one line", () => {
-    const container = drawEmbed(0)
-    const description = within(container).getByTestId("field-box-embed-description-0")
-    const title = within(container).getByTestId("field-box-embed-title-0")
-
-    // Enter opens a second line in the description and nothing in the title,
-    // which is the whole of the difference between the two controls.
-    expect(fireEvent.keyDown(description, { key: "Enter" })).toBe(true)
-    expect(fireEvent.keyDown(title, { key: "Enter" })).toBe(false)
+    expect(bar.style.backgroundColor).toBe("rgb(88, 101, 242)")
   })
 
-  it("shows the stored number as a colour, never as the integer itself", () => {
-    const control = swatch(drawEmbed(5793266))
+  it("draws the title beside it, with no formatting in it at all", () => {
+    const container = drawEmbed({ title: literalText("**Rules**"), colour: 0 })
 
-    expect(control.type).toBe("color")
-    expect(control.value).toBe("#5865f2")
+    expect(within(container).getByTestId("node-summary-embed").textContent).toContain("**Rules**")
   })
 
-  it("writes back the number Discord takes when a colour is picked", () => {
-    const written: FieldValue[] = []
-    const container = drawEmbed(5793266, (_id, value) => written.push(value))
+  it("says an Embed nobody has titled is untitled rather than blank", () => {
+    const container = drawEmbed({ colour: 0 })
 
-    fireEvent.change(swatch(container), { target: { value: "#ff0000" } })
-
-    expect(written).toEqual([0xff0000])
+    expect(within(container).getByTestId("node-summary-embed").textContent).toContain("No title")
   })
 
-  it("falls back to black for a colour a hand-edited Project holds", () => {
-    expect(swatch(drawEmbed("blurple")).value).toBe("#000000")
+  it("draws a Slot in the title as the pill it is", () => {
+    const container = drawEmbed({ title: [{ kind: "slot", slot: "slot-who" }], colour: 0 })
+
+    expect(within(container).getByTestId("preview-slot").textContent).toBe(
+      "Slash command · Who used it"
+    )
+  })
+
+  it("draws none of its fields, because they are typed into the Inspector", () => {
+    const container = drawEmbed({ title: literalText("Rules"), colour: 0 })
+
+    expect(within(container).queryByTestId("field-box-embed-title-0")).toBeNull()
   })
 })
 

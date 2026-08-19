@@ -24,6 +24,7 @@ import {
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AddNodeMenu, type ScreenPoint } from "@/canvas/add-node"
 import { FlowNode, type FlowNodeData, type FlowNodeType } from "@/canvas/flow-node"
+import { Inspector } from "@/canvas/inspector"
 import { FlowMinimap } from "@/canvas/minimap"
 import { Wire, type WireData, type WireType } from "@/canvas/wire"
 import { translate, translateDefinitionKey } from "@/i18n/messages"
@@ -89,6 +90,13 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
   const { flow } = editor
   const { screenToFlowPosition } = useReactFlow()
   const [refusal, setRefusal] = useState<string | undefined>(undefined)
+
+  /**
+   * The Node the Inspector is showing, which is the one the user last clicked.
+   * A Node that is not on this Flow any more is nobody's selection, so the
+   * lookup below is what decides whether the panel is there at all.
+   */
+  const [selected, setSelected] = useState<string | undefined>(undefined)
 
   // Whether the whole Flow is drawn in the corner as well. The Canvas reads the
   // preference itself rather than being handed it: the menu that changes it is
@@ -190,6 +198,9 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
           editor.moveNode(change.id, change.position)
         }
         if (change.type === "remove") editor.removeNode(change.id)
+        // The Inspector follows the selection React Flow already keeps, so
+        // clicking a Node is the one gesture that opens it.
+        if (change.type === "select" && change.selected) setSelected(change.id)
       }
     },
     [applyNodeChanges, editor.moveNode, editor.removeNode]
@@ -293,28 +304,45 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
     [editor.addNode, screenToFlowPosition]
   )
 
+  /**
+   * The Node the Inspector is open for: the selected one, when it is a Node
+   * that is typed into the Inspector rather than on the Canvas.
+   */
+  const inspected = useMemo(() => {
+    const node = flow.nodes.find(candidate => candidate.id === selected)
+    const definition = node === undefined ? undefined : catalogue.get(node.type)
+    if (node === undefined || definition?.summary === undefined) return undefined
+    return { node, definition }
+  }, [flow, selected])
+
   return (
-    <section aria-label={translate("canvas.label")} className="relative h-full w-full">
-      <AddNodeMenu choices={choices} landsOnNode={landsOnNode} place={placeNode}>
-        <ReactFlow
-          edgeTypes={wireTypes}
-          edges={wires}
-          fitView
-          isValidConnection={isValidConnection}
-          nodeTypes={nodeTypes}
-          nodes={drawn}
-          onConnect={onConnect}
-          onConnectEnd={onConnectEnd}
-          onConnectStart={onConnectStart}
-          onEdgesChange={onWiresChange}
-          onNodesChange={onNodesChange}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background />
-          <Controls showInteractive={false} style={controlTokens} />
-          {minimap.shown && <FlowMinimap />}
-        </ReactFlow>
-      </AddNodeMenu>
+    <section aria-label={translate("canvas.label")} className="relative flex h-full w-full">
+      {/*
+        The Canvas takes whatever the Inspector leaves, and gives it back the
+        moment the panel closes: the Flow is what the user is looking at.
+      */}
+      <div className="relative min-w-0 flex-1">
+        <AddNodeMenu choices={choices} landsOnNode={landsOnNode} place={placeNode}>
+          <ReactFlow
+            edgeTypes={wireTypes}
+            edges={wires}
+            fitView
+            isValidConnection={isValidConnection}
+            nodeTypes={nodeTypes}
+            nodes={drawn}
+            onConnect={onConnect}
+            onConnectEnd={onConnectEnd}
+            onConnectStart={onConnectStart}
+            onEdgesChange={onWiresChange}
+            onNodesChange={onNodesChange}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background />
+            <Controls showInteractive={false} style={controlTokens} />
+            {minimap.shown && <FlowMinimap />}
+          </ReactFlow>
+        </AddNodeMenu>
+      </div>
 
       {refusal !== undefined && (
         <p
@@ -324,6 +352,17 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
         >
           {translateDefinitionKey(refusal)}
         </p>
+      )}
+
+      {inspected !== undefined && (
+        <Inspector
+          definition={inspected.definition}
+          node={inspected.node}
+          setField={(fieldId, value) => editor.setNodeField(inspected.node.id, fieldId, value)}
+          slotIsWired={slot => slotWireOf(flow, inspected.node.id, slot) !== undefined}
+          slotLabel={slot => slotLabelOf(flow, inspected.node.id, slot)}
+          slotValue={slot => slotValueOf(flow, inspected.node.id, slot, watching)}
+        />
       )}
     </section>
   )
@@ -371,6 +410,24 @@ function slotDropTarget(event: MouseEvent | TouchEvent): SlotDrop | undefined {
 function slotWireOf(flow: Flow, nodeId: string, slot: string): ProjectWire | undefined {
   const port = slotPortId(slot)
   return flow.wires.find(wire => wire.to.node === nodeId && wire.to.port === port)
+}
+
+/**
+ * What the run being watched carried into a Slot, if it carried anything.
+ *
+ * The Tracing writes what a Wire carried onto the Wire, and a Slot is fed
+ * through a Port like every other value, so this is the same lookup the Wire
+ * label does — which is what makes the preview show the last Run's values
+ * rather than a second story about them.
+ */
+function slotValueOf(
+  flow: Flow,
+  nodeId: string,
+  slot: string,
+  trace: RunTrace | undefined
+): string | undefined {
+  const wire = slotWireOf(flow, nodeId, slot)
+  return wire === undefined ? undefined : trace?.wires[wire.id]
 }
 
 /**
