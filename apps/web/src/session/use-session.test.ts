@@ -7,16 +7,17 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { SessionExitEvent, SessionId, SessionOutputEvent } from "@/session/events"
 import type { SessionGateway } from "@/session/session-gateway"
-import { RELOAD_DELAY, useSession } from "@/session/use-session"
+import { OUTDATED_DELAY, useSession } from "@/session/use-session"
 
 /**
  * A Session driven the way the panel and the Canvas drive it, with the one
  * thing only a desktop shell can do — actually running a bot — done by the test
  * instead.
  *
- * Hot reload is most of what is checked here, because it is the part with a
- * race in it: a reload kills a bot and starts another, and everything the dying
- * one still has to say arrives after the new one has already begun.
+ * Reloading is most of what is checked here, because it is the part with a race
+ * in it: a Reload kills a bot and starts another, and everything the dying one
+ * still has to say arrives after the new one has already begun. Nothing here
+ * ever starts a bot on its own — that is what this whole block is about.
  */
 
 type Started = { projectId: string; entry: string; session: SessionId }
@@ -171,8 +172,20 @@ describe("running a bot", () => {
   })
 })
 
-describe("hot reload", () => {
-  it("restarts the bot when a field is edited while it runs", async () => {
+/** Lets the editor notice that the Project and the running bot have parted. */
+async function settle(times = 1) {
+  await act(async () => {
+    vi.advanceTimersByTime(OUTDATED_DELAY * times)
+  })
+}
+
+/**
+ * An Outdated Session: a bot that is alive and answering, on code the user has
+ * moved on from. Nothing about it starts a bot — that only happens when the
+ * user asks for a Reload.
+ */
+describe("an Outdated Session", () => {
+  it("marks the Session outdated when a field is edited, without starting anything", async () => {
     const shell = fakeGateway()
     const project = helloProject()
     const session = await run(shell, project)
@@ -181,52 +194,20 @@ describe("hot reload", () => {
       testServerId: TEST_SERVER,
       current: withGreeting(project, "a new description")
     })
-    await act(async () => {
-      vi.advanceTimersByTime(RELOAD_DELAY)
-    })
+    await settle()
 
-    await waitFor(() => expect(shell.started).toHaveLength(2))
-    expect(shell.started[1]?.entry).toContain("a new description")
-    expect(shell.started[1]?.session).not.toBe(shell.started[0]?.session)
+    await waitFor(() => expect(session.result.current.outdated).toBe(true))
+    expect(shell.started).toHaveLength(1)
+    // Outdated is beside the status and never instead of it: the bot is still
+    // running, and saying only one of the two would be a lie.
+    expect(session.result.current.status).toBe("ready")
   })
 
-  it("keeps the panel through a reload, so the user does not lose their place", async () => {
-    const shell = fakeGateway()
-    const project = helloProject()
-    const session = await run(shell, project)
-    shell.say(shell.latest(), "something the bot said before the edit")
-
-    session.rerender({ testServerId: TEST_SERVER, current: withGreeting(project, "edited") })
-    await act(async () => {
-      vi.advanceTimersByTime(RELOAD_DELAY)
-    })
-    await waitFor(() => expect(shell.started).toHaveLength(2))
-
-    expect(session.result.current.entries.map(entry => entry.text)).toContain(
-      "something the bot said before the edit"
-    )
-  })
-
-  it("starts one bot for a burst of edits rather than one per keystroke", async () => {
-    const shell = fakeGateway()
-    const project = helloProject()
-    const session = await run(shell, project)
-
-    for (const greeting of ["a", "ab", "abc", "abcd"]) {
-      session.rerender({ testServerId: TEST_SERVER, current: withGreeting(project, greeting) })
-      await act(async () => {
-        vi.advanceTimersByTime(RELOAD_DELAY / 3)
-      })
-    }
-    await act(async () => {
-      vi.advanceTimersByTime(RELOAD_DELAY)
-    })
-
-    await waitFor(() => expect(shell.started).toHaveLength(2))
-    expect(shell.started[1]?.entry).toContain("abcd")
-  })
-
-  it("does not restart for an edit the bot cannot tell apart", async () => {
+  /**
+   * What is compared is the generated entry point and not the Project, which is
+   * what makes dragging a Node across the Canvas free.
+   */
+  it("leaves the Session current after an edit the bot cannot tell apart", async () => {
     const shell = fakeGateway()
     const project = helloProject()
     const session = await run(shell, project)
@@ -235,14 +216,40 @@ describe("hot reload", () => {
       testServerId: TEST_SERVER,
       current: { ...project, name: "A different name" }
     })
-    await act(async () => {
-      vi.advanceTimersByTime(RELOAD_DELAY * 2)
-    })
+    await settle(2)
 
+    expect(session.result.current.outdated).toBe(false)
     expect(shell.started).toHaveLength(1)
   })
 
-  it("does not restart a bot that is not running", async () => {
+  it("is over once the edit is undone", async () => {
+    const shell = fakeGateway()
+    const project = helloProject()
+    const session = await run(shell, project)
+
+    session.rerender({ testServerId: TEST_SERVER, current: withGreeting(project, "edited") })
+    await settle()
+    await waitFor(() => expect(session.result.current.outdated).toBe(true))
+
+    session.rerender({ testServerId: TEST_SERVER, current: project })
+    await settle()
+
+    await waitFor(() => expect(session.result.current.outdated).toBe(false))
+    expect(shell.started).toHaveLength(1)
+  })
+
+  it("notices the Test Server the user has just picked", async () => {
+    const shell = fakeGateway()
+    const project = helloProject()
+    const session = await run(shell, project)
+
+    session.rerender({ current: project, testServerId: "999" })
+    await settle()
+
+    await waitFor(() => expect(session.result.current.outdated).toBe(true))
+  })
+
+  it("says nothing about a bot that is not running", async () => {
     const shell = fakeGateway()
     const project = helloProject()
     const session = renderHook(
@@ -255,29 +262,74 @@ describe("hot reload", () => {
       testServerId: TEST_SERVER,
       current: withGreeting(project, "edited while stopped")
     })
-    await act(async () => {
-      vi.advanceTimersByTime(RELOAD_DELAY * 2)
-    })
+    await settle(2)
 
+    expect(session.result.current.outdated).toBe(false)
     expect(shell.started).toHaveLength(0)
   })
 
-  it("stops reloading once the user stops the bot", async () => {
+  it("ends when the user stops the bot", async () => {
     const shell = fakeGateway()
     const project = helloProject()
     const session = await run(shell, project)
 
+    session.rerender({ testServerId: TEST_SERVER, current: withGreeting(project, "edited") })
+    await settle()
+    await waitFor(() => expect(session.result.current.outdated).toBe(true))
+
     await act(() => session.result.current.stop())
+
+    expect(session.result.current.outdated).toBe(false)
+    expect(session.result.current.status).toBe("stopped")
+    expect(shell.started).toHaveLength(1)
+  })
+})
+
+describe("a Reload", () => {
+  it("puts one bot built from the current Project in place of the one running", async () => {
+    const shell = fakeGateway()
+    const project = helloProject()
+    const session = await run(shell, project)
+
     session.rerender({
       testServerId: TEST_SERVER,
-      current: withGreeting(project, "edited after Stop")
+      current: withGreeting(project, "a new description")
     })
-    await act(async () => {
-      vi.advanceTimersByTime(RELOAD_DELAY * 2)
-    })
+    await settle()
+    await act(() => session.result.current.reload())
 
-    expect(shell.started).toHaveLength(1)
-    expect(session.result.current.status).toBe("stopped")
+    expect(shell.started).toHaveLength(2)
+    expect(shell.started[1]?.entry).toContain("a new description")
+    expect(shell.started[1]?.session).not.toBe(shell.started[0]?.session)
+    expect(session.result.current.outdated).toBe(false)
+  })
+
+  it("builds the bot around the Test Server the user has just picked", async () => {
+    const shell = fakeGateway()
+    const project = helloProject()
+    const session = await run(shell, project)
+
+    session.rerender({ current: project, testServerId: "999" })
+    await settle()
+    await act(() => session.result.current.reload())
+
+    expect(shell.started.at(-1)?.entry).toContain(onTestServer("999"))
+    expect(shell.started.at(-1)?.entry).not.toContain(onTestServer(TEST_SERVER))
+  })
+
+  it("keeps the Console through a Reload, so the user does not lose their place", async () => {
+    const shell = fakeGateway()
+    const project = helloProject()
+    const session = await run(shell, project)
+    shell.say(shell.latest(), "something the bot said before the edit")
+
+    session.rerender({ testServerId: TEST_SERVER, current: withGreeting(project, "edited") })
+    await settle()
+    await act(() => session.result.current.reload())
+
+    expect(session.result.current.entries.map(entry => entry.text)).toContain(
+      "something the bot said before the edit"
+    )
   })
 
   it("drops the trace of the bot that has been replaced", async () => {
@@ -294,27 +346,20 @@ describe("hot reload", () => {
     expect(session.result.current.trace).toBeDefined()
 
     session.rerender({ testServerId: TEST_SERVER, current: withGreeting(project, "edited") })
-    await act(async () => {
-      vi.advanceTimersByTime(RELOAD_DELAY)
-    })
+    await settle()
+    await act(() => session.result.current.reload())
 
-    await waitFor(() => expect(shell.started).toHaveLength(2))
     expect(session.result.current.trace).toBeUndefined()
   })
 
-  it("rebuilds the bot around the Test Server the user has just picked", async () => {
+  it("does nothing when there is no bot to replace", async () => {
     const shell = fakeGateway()
-    const project = helloProject()
-    const session = await run(shell, project)
+    const session = renderHook(() => useSession(helloProject(), shell.gateway, TEST_SERVER))
 
-    session.rerender({ current: project, testServerId: "999" })
-    await act(async () => {
-      vi.advanceTimersByTime(RELOAD_DELAY)
-    })
+    await act(() => session.result.current.reload())
 
-    await waitFor(() => expect(shell.started).toHaveLength(2))
-    expect(shell.started.at(-1)?.entry).toContain(onTestServer("999"))
-    expect(shell.started.at(-1)?.entry).not.toContain(onTestServer(TEST_SERVER))
+    expect(shell.started).toHaveLength(0)
+    expect(session.result.current.status).toBe("stopped")
   })
 
   it("does not read the death of the old bot as the new one stopping", async () => {
@@ -324,10 +369,8 @@ describe("hot reload", () => {
     const replaced = shell.latest()
 
     session.rerender({ testServerId: TEST_SERVER, current: withGreeting(project, "edited") })
-    await act(async () => {
-      vi.advanceTimersByTime(RELOAD_DELAY)
-    })
-    await waitFor(() => expect(shell.started).toHaveLength(2))
+    await settle()
+    await act(() => session.result.current.reload())
 
     // The bot that was killed reports its own end after the new one is up.
     shell.ended(replaced)
@@ -382,37 +425,60 @@ describe("an edit that does not compile", () => {
     const session = await run(shell, project)
 
     session.rerender({ testServerId: TEST_SERVER, current: withoutTheCatalogue(project) })
-    await act(async () => {
-      vi.advanceTimersByTime(RELOAD_DELAY * 2)
-    })
+    await settle(2)
 
     expect(shell.started).toHaveLength(1)
     expect(shell.stops()).toBe(0)
     expect(session.result.current.status).toBe("ready")
     expect(session.result.current.problem).toBeDefined()
+    // The bot is behind the Canvas and the editor says so; what the problem
+    // beside it takes away is the Reload, not the fact of being behind.
+    expect(session.result.current.outdated).toBe(true)
   })
 
-  it("reloads again once the edit compiles", async () => {
+  it("refuses a Reload asked for anyway", async () => {
     const shell = fakeGateway()
     const project = helloProject()
     const session = await run(shell, project)
 
     session.rerender({ testServerId: TEST_SERVER, current: withoutTheCatalogue(project) })
-    await act(async () => {
-      vi.advanceTimersByTime(RELOAD_DELAY * 2)
-    })
+    await settle(2)
+    await act(() => session.result.current.reload())
+
+    expect(shell.started).toHaveLength(1)
+    expect(session.result.current.status).toBe("ready")
+  })
+
+  it("keeps the Session outdated while the edit is broken", async () => {
+    const shell = fakeGateway()
+    const project = helloProject()
+    const session = await run(shell, project)
+
+    session.rerender({ testServerId: TEST_SERVER, current: withoutTheCatalogue(project) })
+    await settle(2)
+
+    await waitFor(() => expect(session.result.current.outdated).toBe(true))
+    expect(session.result.current.status).toBe("ready")
+  })
+
+  it("clears the warning and offers a Reload once the edit compiles", async () => {
+    const shell = fakeGateway()
+    const project = helloProject()
+    const session = await run(shell, project)
+
+    session.rerender({ testServerId: TEST_SERVER, current: withoutTheCatalogue(project) })
+    await settle(2)
     expect(session.result.current.problem).toBeDefined()
 
     session.rerender({
       testServerId: TEST_SERVER,
       current: withGreeting(project, "put right again")
     })
-    await act(async () => {
-      vi.advanceTimersByTime(RELOAD_DELAY)
-    })
+    await settle()
 
-    await waitFor(() => expect(shell.started).toHaveLength(2))
+    await waitFor(() => expect(session.result.current.outdated).toBe(true))
     expect(session.result.current.problem).toBeUndefined()
+    expect(shell.started).toHaveLength(1)
   })
 })
 

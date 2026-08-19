@@ -1,18 +1,25 @@
 import { Button } from "@bot-inventor/ui/components/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@bot-inventor/ui/components/tooltip"
-import { PlayIcon, SquareIcon } from "lucide-react"
+import { PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { useShortcut } from "@/components/use-shortcut"
 import { translate } from "@/i18n/messages"
 import type { Session, SessionStatus } from "@/session/use-session"
 
-/** F5 runs the bot and Shift+F5 stops it, as they do in a code editor. */
+/**
+ * F5 runs the bot and Shift+F5 stops it, as they do in a code editor. F5 asks
+ * for a Reload while a bot is running, where it would otherwise do nothing:
+ * running and reloading are the same gesture at two moments, and a third key
+ * for the second one is a key the user has to be told about.
+ */
 const START_SHORTCUT = "F5"
+const RELOAD_SHORTCUT = "F5"
 const STOP_SHORTCUT = "Shift+F5"
 
 /**
- * Starting and stopping the bot, and the light saying which of those is true.
+ * Starting, reloading and stopping the bot, and the light saying which of those
+ * is true.
  *
  * It lives in the Menu Bar, where every code editor puts it: running the bot is
  * the gesture the user makes most, and it belongs to the Project as a whole
@@ -30,13 +37,23 @@ const STOP_SHORTCUT = "Shift+F5"
  */
 export function RunControls({ session }: { session: Session }) {
   const running = session.status === "connecting" || session.status === "ready"
+  /**
+   * A Reload replaces a bot that is answering with another one. A bot still
+   * connecting is never killed to start a second, and a Project the editor
+   * cannot build has nothing to be reloaded to — the Session is still shown as
+   * outdated there, because it is, and the reason it cannot be put right yet is
+   * the problem the Console is already carrying.
+   */
+  const reloadable = session.status === "ready" && session.outdated && session.problem === undefined
 
   const start = () => void session.start()
   const stop = () => void session.stop()
+  const reload = () => void session.reload()
 
   // The shortcut is dead exactly while its button is, so neither way of asking
   // for a thing does something the other one refuses.
   useShortcut(START_SHORTCUT, start, !running)
+  useShortcut(RELOAD_SHORTCUT, reload, reloadable)
   useShortcut(STOP_SHORTCUT, stop, running)
 
   return (
@@ -51,6 +68,15 @@ export function RunControls({ session }: { session: Session }) {
       />
 
       <RunButton
+        icon={<RotateCwIcon />}
+        label={translate("run.reload")}
+        shortcut={RELOAD_SHORTCUT}
+        testId="run-reload"
+        onClick={reload}
+        disabled={!reloadable}
+      />
+
+      <RunButton
         icon={<SquareIcon />}
         label={translate("run.stop")}
         shortcut={STOP_SHORTCUT}
@@ -60,6 +86,7 @@ export function RunControls({ session }: { session: Session }) {
       />
 
       <Status status={session.status} />
+      {session.outdated && <Outdated />}
     </div>
   )
 }
@@ -100,6 +127,26 @@ function RunButton({
       </TooltipTrigger>
       <TooltipContent>{translate("run.shortcut", { action: label, shortcut })}</TooltipContent>
     </Tooltip>
+  )
+}
+
+/**
+ * That the bot on Discord is behind the Project on the Canvas: an Outdated
+ * Session.
+ *
+ * It sits beside the light and never in place of it, because being outdated is
+ * not being broken — the bot is alive and answering, on code the user has moved
+ * on from — and either half on its own is a lie. It says so in words, so that
+ * nobody has to have noticed a colour to know it.
+ */
+function Outdated() {
+  return (
+    <span
+      className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-700 text-xs dark:text-amber-400"
+      data-testid="run-outdated"
+    >
+      {translate("run.outdated")}
+    </span>
   )
 }
 

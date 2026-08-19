@@ -26,8 +26,8 @@ test.describe("running the bot", () => {
     await run.open()
   })
 
-  test("puts Play and Stop on the Menu Bar, with the light beside them", async () => {
-    for (const control of [run.start(), run.stop(), run.status()]) {
+  test("puts Play, Reload and Stop on the Menu Bar, with the light beside them", async () => {
+    for (const control of [run.start(), run.reload(), run.stop(), run.status()]) {
       await expect(menuBar.row().filter({ has: control })).toBeVisible()
     }
   })
@@ -36,15 +36,49 @@ test.describe("running the bot", () => {
    * The buttons show no words at all, so their accessible names are the whole
    * of what anybody not looking at the icons is given.
    */
-  test("names both buttons for whoever cannot see the icons", async () => {
+  test("names every button for whoever cannot see the icons", async () => {
     await expect(run.start()).toHaveAttribute("aria-label", /.+/)
+    await expect(run.reload()).toHaveAttribute("aria-label", /.+/)
     await expect(run.stop()).toHaveAttribute("aria-label", /.+/)
   })
 
   test("offers only Play while nothing is running", async () => {
     await expect(run.status()).toHaveAttribute("data-status", "stopped")
     await expect(run.start()).toBeEnabled()
+    await expect(run.reload()).toBeDisabled()
     await expect(run.stop()).toBeDisabled()
+  })
+
+  /**
+   * Nothing is running, so nothing has fallen behind: the word that says a
+   * Session is outdated belongs to a bot that is alive.
+   */
+  test("says nothing about being outdated while nothing is running", async () => {
+    await expect(run.outdated()).toBeHidden()
+  })
+
+  /**
+   * F5 is the browser's own reload, and letting it through would take the
+   * Session with it. Whether the browser acts on the key is beyond what a
+   * driven browser can be asked — Playwright's F5 never reaches the browser's
+   * own chrome — so what the key is swallowed with is pinned where it can be:
+   * `run-controls.test.tsx` holds `preventDefault`. What is held here is the
+   * other half, and the half a user would notice: the editor is the same
+   * window afterwards, still on the same Project, however often F5 is pressed.
+   */
+  test("stays in the same window, on the same Project, however often F5 is pressed", async ({
+    page
+  }) => {
+    await page.evaluate(() => {
+      Object.assign(window, { theWindowTheTestStartedIn: true })
+    })
+
+    await run.pressStart()
+    await run.pressReload()
+
+    await expect(menuBar.row()).toBeVisible()
+    // A reloaded window is a new one, and would not carry the mark.
+    expect(await page.evaluate(() => "theWindowTheTestStartedIn" in window)).toBe(true)
   })
 
   test("says why a Session could not start, in the Console", async () => {

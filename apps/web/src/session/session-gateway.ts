@@ -12,7 +12,7 @@ export type SessionGateway = {
   /**
    * Runs the entry point the Compiler rendered, under the number the caller
    * gives it. Starting again stops whatever was running first — which is what a
-   * hot reload relies on — so the previous number goes dead here.
+   * Reload relies on — so the previous number goes dead here.
    */
   start(request: { projectId: string; entry: string; session: SessionId }): Promise<void>
   stop(): Promise<void>

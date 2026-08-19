@@ -17,7 +17,8 @@ import { type RunTrace, watchFailure, watchTrace } from "@/session/trace"
  * everything after that — the process, its lifetime and its output.
  *
  * The Project and its Test Server are watched while the bot runs, and a change
- * that changes the bot puts a new one in its place.
+ * that changes the bot makes the Session an Outdated Session — nothing is
+ * replaced until the user asks for a Reload (see ADR 0012).
  */
 
 /**
@@ -45,14 +46,14 @@ export type SessionEntry = {
 const CONNECTING_LIMIT = 30_000
 
 /**
- * How long an edit waits before the bot is rebuilt around it.
+ * How long an edit waits before the Project is compared to the running bot.
  *
  * It is a pause, not a throttle: every edit pushes it back, so typing a command
- * name restarts the bot once, when the typing stops, rather than once per
- * letter. Short enough that the user is still looking at the screen when the
- * bot comes back, long enough that a normal burst of typing is one restart.
+ * name runs the Project through the Compiler once, when the typing stops,
+ * rather than once per letter. Nothing is restarted by it any more — what it
+ * defers is the comparison that decides whether the Session is outdated.
  */
-export const RELOAD_DELAY = 400
+export const OUTDATED_DELAY = 400
 
 /** The bot that is meant to be running, and what an edit is compared to. */
 type Running = {
@@ -62,6 +63,19 @@ type Running = {
 
 export type Session = {
   status: SessionStatus
+  /**
+   * Whether the running bot is behind the Project on the Canvas: an Outdated
+   * Session. It sits beside the status rather than inside it, because a bot can
+   * be running perfectly well *and* be running code the user has moved on from,
+   * and saying only one of those is a lie.
+   *
+   * It stays true while the Project will not build: a bot running code that
+   * compiles is certainly not the Project on the Canvas, and hiding that half
+   * because the other half is also true would be the same lie. What a broken
+   * Project takes away is the Reload, not the fact of being behind, and the
+   * `problem` beside it is the reason.
+   */
+  outdated: boolean
   entries: readonly SessionEntry[]
   /** The run the Canvas is showing, or nothing when the bot has not run yet. */
   trace: RunTrace | undefined
@@ -77,6 +91,38 @@ export type Session = {
    */
   start(): Promise<void>
   stop(): Promise<void>
+  /**
+   * Puts the Project as it stands in place of the bot that is running. It does
+   * nothing when no bot is running, and keeps everything the Console has said.
+   */
+  reload(): Promise<void>
+}
+
+/**
+ * The entry point a Project would run as, or the reason it would not run.
+ *
+ * Run, Reload and the comparison behind the Outdated Session all need the same
+ * two answers and treat them differently — a Run that cannot build has failed,
+ * an edit that cannot build leaves the last working bot alone — so what is
+ * shared is the question and not what is done with it.
+ */
+function describeEntry(
+  project: Project,
+  testServerId: string
+): { entry: string } | { problem: string } {
+  // A Node that already knows Discord would refuse stops this here, so the user
+  // reads the reason on the Canvas instead of watching a bot fail on Discord
+  // for something the editor knew.
+  const invalid = describeProjectProblem(project)
+  if (invalid !== undefined) {
+    return { problem: translate("run.failure.node", { message: invalid }) }
+  }
+
+  try {
+    return { entry: renderDevelopmentSession(project, { testServerId }) }
+  } catch (error) {
+    return { problem: translate("run.failure.build", { message: describeError(error) }) }
+  }
 }
 
 /**
@@ -89,6 +135,7 @@ export function useSession(project: Project, shell: SessionGateway, testServerId
   const [status, setStatus] = useState<SessionStatus>("stopped")
   const [entries, setEntries] = useState<readonly SessionEntry[]>([])
   const [problem, setProblem] = useState<string | undefined>(undefined)
+  const [outdated, setOutdated] = useState(false)
   const [trace, setTrace] = useState<RunTrace | undefined>(undefined)
 
   const nextId = useRef(0)
@@ -146,6 +193,7 @@ export function useSession(project: Project, shell: SessionGateway, testServerId
             }
             setStatus("failed")
             running.current = undefined
+            setOutdated(false)
             setProblem(
               message.reason === "token"
                 ? translate("run.failure.token")
@@ -191,8 +239,8 @@ export function useSession(project: Project, shell: SessionGateway, testServerId
   }, [shell, say, note, settled])
 
   /**
-   * Puts a bot on the sidecar, whether it is the first one or the one an edit
-   * asked for. The Console is only emptied for a first Run: a reload is meant to
+   * Puts a bot on the sidecar, whether it is the first one or the one a Reload
+   * asked for. The Console is only emptied for a first Run: a Reload is meant to
    * be something the user reads straight through.
    */
   const launch = useCallback(
@@ -204,6 +252,8 @@ export function useSession(project: Project, shell: SessionGateway, testServerId
       running.current = { entry }
 
       setProblem(undefined)
+      // Whatever the bot is about to be, it is the Project as it stands.
+      setOutdated(false)
       // The Canvas belongs to the bot that is running: runs are numbered from
       // one again, and what the last bot did is not this one's doing.
       setTrace(undefined)
@@ -240,6 +290,8 @@ export function useSession(project: Project, shell: SessionGateway, testServerId
     // brings the bot back on its own.
     running.current = undefined
     current.current = 0
+    // There is no bot left to be behind the Project.
+    setOutdated(false)
     try {
       await shell.stop()
     } finally {
@@ -253,83 +305,71 @@ export function useSession(project: Project, shell: SessionGateway, testServerId
   const start = useCallback(async () => {
     setEntries([])
 
-    // A Node that already knows Discord would refuse it stops the Run here,
-    // before the Session, so the user reads the reason on the Canvas instead
-    // of watching a bot fail on Discord for something the editor knew.
-    const invalid = describeProjectProblem(project)
-    if (invalid !== undefined) {
+    const built = describeEntry(project, testServerId)
+    if ("problem" in built) {
+      // Nothing was running, so there is no bot to protect: the Run itself is
+      // what failed, and the light has to say so.
       setStatus("failed")
-      setProblem(translate("run.failure.node", { message: invalid }))
+      setProblem(built.problem)
       return
     }
 
-    let entry: string
-    try {
-      entry = renderDevelopmentSession(project, { testServerId })
-    } catch (error) {
-      setStatus("failed")
-      setProblem(translate("run.failure.build", { message: describeError(error) }))
-      return
-    }
-
-    await launch(entry)
+    await launch(built.entry)
   }, [launch, project, testServerId])
 
+  const reload = useCallback(async () => {
+    // A Reload replaces a bot; with nothing running there is only Run, and the
+    // control that asks for this is dead for exactly the same reason.
+    if (running.current === undefined) return
+
+    const built = describeEntry(project, testServerId)
+    if ("problem" in built) {
+      // The control that asks for this is already dead here; a Reload arriving
+      // anyway still leaves the bot that works alone and says why.
+      setProblem(built.problem)
+      setOutdated(true)
+      return
+    }
+
+    note("run.reloading")
+    await launch(built.entry)
+  }, [launch, note, project, testServerId])
+
   /**
-   * Hot reload: an edit made while the bot runs puts a new bot in its place.
+   * Whether the running bot is still the Project the user is looking at.
    *
-   * The restart is a whole process, deliberately — no code is swapped under a
-   * bot that is mid-run, because half-replaced code with live state produces
-   * bugs nobody can explain, and a Discord bot reconnects on its own in about a
-   * second. What is compared is the generated entry point rather than the
-   * Project, so moving a Node on the Canvas costs nothing and changing a field
-   * or a Wire costs exactly one restart.
+   * What is compared is the generated entry point rather than the Project, so
+   * dragging a Node across the Canvas costs nothing and an edit that is undone
+   * puts the Session back to matching on its own. The delay is here so that a
+   * burst of typing runs the whole Project through the Compiler once, when the
+   * typing stops, rather than once per letter.
    */
   useEffect(() => {
-    const bot = running.current
-    if (bot === undefined) return
+    const compare = setTimeout(() => {
+      const bot = running.current
+      // Nothing is running, so there is nothing to be behind.
+      if (bot === undefined) return
 
-    const reload = setTimeout(() => {
-      // It can have been stopped in the meantime, and a bot nobody asked for is
-      // worse than an edit that did not take.
-      if (running.current === undefined) return
-
-      const invalid = describeProjectProblem(project)
-      if (invalid !== undefined) {
-        // The bot on the sidecar is the last version that was valid, and it is
+      const built = describeEntry(project, testServerId)
+      if ("problem" in built) {
+        // The bot on the sidecar is the last version that worked, and it is
         // left running while the user finishes the edit that broke this one.
-        setProblem(translate("run.failure.node", { message: invalid }))
+        // It is behind the Canvas — a Project that will not build cannot be the
+        // code a running bot is on — and there is nothing to reload it to,
+        // which is what the reason beside it says.
+        setProblem(built.problem)
+        setOutdated(true)
         return
       }
 
-      let entry: string
-      try {
-        entry = renderDevelopmentSession(project, { testServerId })
-      } catch (error) {
-        // The bot on the sidecar is the last version that compiled, and it is
-        // left running: taking away a working bot because of a half-finished
-        // edit is the opposite of keeping the user's train of thought.
-        setProblem(translate("run.failure.build", { message: describeError(error) }))
-        return
-      }
-
-      // It compiles, so whatever the last edit could not build is no longer
-      // true. Leaving that banner up over a bot that is fine is its own kind of
-      // wrong answer.
+      // It builds, so whatever the last edit could not build is no longer true.
+      // Leaving that banner up over a bot that is fine is its own wrong answer.
       setProblem(undefined)
+      setOutdated(built.entry !== bot.entry)
+    }, OUTDATED_DELAY)
 
-      if (entry === bot.entry) {
-        // The edit changed the Canvas but not the bot. Restarting for it would
-        // drop the user's connection for nothing.
-        return
-      }
+    return () => clearTimeout(compare)
+  }, [project, testServerId])
 
-      note("run.reloading")
-      void launch(entry)
-    }, RELOAD_DELAY)
-
-    return () => clearTimeout(reload)
-  }, [project, testServerId, launch, note])
-
-  return { status, entries, problem, trace, start, stop }
+  return { status, outdated, entries, problem, trace, start, stop, reload }
 }

@@ -34,7 +34,7 @@ pub const EXIT_EVENT: &str = "session://exited";
 /// Which bot an event came from: the number the editor gave when it asked for
 /// this one, carried back on everything the process says.
 ///
-/// Hot reload is why it exists. Restarting kills the running bot and spawns
+/// A Reload is why it exists. Restarting kills the running bot and spawns
 /// another, and the dying one keeps talking for a moment afterwards. Without a
 /// number on each event its exit reads as the new bot stopping and its last
 /// lines read as the new bot's output, which is the difference between a reload
@@ -82,7 +82,7 @@ struct Exit {
 /// Compiler rendered, and runs it.
 ///
 /// `session` is the caller's own number for this bot, and every event from it
-/// carries that number back. Starting again — which is what a hot reload does —
+/// carries that number back. Starting again — which is what a Reload does —
 /// stops whatever was running first, so the caller's previous number goes dead
 /// the moment it asks for a new one.
 #[tauri::command]
@@ -103,7 +103,7 @@ pub async fn start_session(
     // under one lock, held across both.
     //
     // Two of these can be in flight at once — Tauri runs commands concurrently,
-    // and a hot reload asks for a bot without waiting for the last answer. Taken
+    // and a Reload asks for a bot without waiting for the last answer. Taken
     // and released twice, both calls could get past the kill before either
     // recorded its child, and the bot nobody is holding any more goes on
     // answering every interaction a second time. There is no `.await` between

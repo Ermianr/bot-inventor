@@ -25,6 +25,8 @@ const en = {
   "run.testServer.manual": "Or paste a server id",
   "run.start": "Run",
   "run.stop": "Stop",
+  "run.reload": "Reload",
+  "run.outdated": "Out of date",
   // The keys are not translated: they are what is printed on the keyboard.
   "run.shortcut": "{action} ({shortcut})",
   "run.status.stopped": "Stopped",
@@ -43,7 +45,7 @@ const en = {
   "run.failure.node": "This bot cannot run yet: {message}",
   "run.failure.build":
     "Your change could not be built, so your bot is still running the last version that worked. {message}",
-  "run.reloading": "You changed something. Restarting your bot…",
+  "run.reloading": "Reloading your bot with your changes…",
 
   "console.title": "Console",
   "console.tab.output": "Output",
@@ -342,6 +344,8 @@ const es: Record<MessageKey, string> = {
   "run.testServer.manual": "O pega el id de un servidor",
   "run.start": "Ejecutar",
   "run.stop": "Detener",
+  "run.reload": "Recargar",
+  "run.outdated": "Desactualizado",
   "run.shortcut": "{action} ({shortcut})",
   "run.status.stopped": "Detenido",
   "run.status.connecting": "Conectando…",
@@ -360,7 +364,7 @@ const es: Record<MessageKey, string> = {
   "run.failure.node": "Este bot todavía no puede ejecutarse: {message}",
   "run.failure.build":
     "Tu cambio no se pudo construir, así que tu bot sigue con la última versión que funcionó. {message}",
-  "run.reloading": "Cambiaste algo. Reiniciando tu bot…",
+  "run.reloading": "Recargando tu bot con tus cambios…",
 
   "console.title": "Consola",
   "console.tab.output": "Consola",
