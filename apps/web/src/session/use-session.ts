@@ -69,9 +69,11 @@ export type Session = {
    * be running perfectly well *and* be running code the user has moved on from,
    * and saying only one of those is a lie.
    *
-   * It is false whenever the Project cannot be built, because a Project that
-   * cannot be compiled cannot be reloaded either, and the reason is on screen
-   * as the problem instead.
+   * It stays true while the Project will not build: a bot running code that
+   * compiles is certainly not the Project on the Canvas, and hiding that half
+   * because the other half is also true would be the same lie. What a broken
+   * Project takes away is the Reload, not the fact of being behind, and the
+   * `problem` beside it is the reason.
    */
   outdated: boolean
   entries: readonly SessionEntry[]
@@ -322,8 +324,10 @@ export function useSession(project: Project, shell: SessionGateway, testServerId
 
     const built = describeEntry(project, testServerId)
     if ("problem" in built) {
+      // The control that asks for this is already dead here; a Reload arriving
+      // anyway still leaves the bot that works alone and says why.
       setProblem(built.problem)
-      setOutdated(false)
+      setOutdated(true)
       return
     }
 
@@ -350,10 +354,11 @@ export function useSession(project: Project, shell: SessionGateway, testServerId
       if ("problem" in built) {
         // The bot on the sidecar is the last version that worked, and it is
         // left running while the user finishes the edit that broke this one.
-        // There is nothing to reload it to, so the Session is not offered as
-        // outdated either: the reason is what the user reads instead.
+        // It is behind the Canvas — a Project that will not build cannot be the
+        // code a running bot is on — and there is nothing to reload it to,
+        // which is what the reason beside it says.
         setProblem(built.problem)
-        setOutdated(false)
+        setOutdated(true)
         return
       }
 

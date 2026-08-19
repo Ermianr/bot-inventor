@@ -39,11 +39,12 @@ export function RunControls({ session }: { session: Session }) {
   const running = session.status === "connecting" || session.status === "ready"
   /**
    * A Reload replaces a bot that is answering with another one. A bot still
-   * connecting is never killed to start a second, and a Project that cannot be
-   * built has nothing to be reloaded to — which is what leaves the Session not
-   * outdated while the Console carries the reason.
+   * connecting is never killed to start a second, and a Project the editor
+   * cannot build has nothing to be reloaded to — the Session is still shown as
+   * outdated there, because it is, and the reason it cannot be put right yet is
+   * the problem the Console is already carrying.
    */
-  const reloadable = session.status === "ready" && session.outdated
+  const reloadable = session.status === "ready" && session.outdated && session.problem === undefined
 
   const start = () => void session.start()
   const stop = () => void session.stop()

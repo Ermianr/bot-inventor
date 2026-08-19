@@ -20,7 +20,7 @@ import type { Session, SessionStatus } from "@/session/use-session"
 /** How many starts, reloads and stops were asked for. */
 type Asked = { starts: number; stops: number; reloads: number }
 
-function fakeSession(status: SessionStatus, outdated: boolean) {
+function fakeSession(status: SessionStatus, outdated: boolean, problem?: string) {
   const asked: Asked = { starts: 0, stops: 0, reloads: 0 }
 
   const session: Session = {
@@ -28,7 +28,7 @@ function fakeSession(status: SessionStatus, outdated: boolean) {
     outdated,
     entries: [],
     trace: undefined,
-    problem: undefined,
+    problem,
     start: async () => {
       asked.starts += 1
     },
@@ -43,8 +43,8 @@ function fakeSession(status: SessionStatus, outdated: boolean) {
   return { asked, session }
 }
 
-function renderControls(status: SessionStatus, outdated = false) {
-  const { asked, session } = fakeSession(status, outdated)
+function renderControls(status: SessionStatus, outdated = false, problem?: string) {
+  const { asked, session } = fakeSession(status, outdated, problem)
   render(<RunControls session={session} />)
   return asked
 }
@@ -135,6 +135,18 @@ describe("the Run controls", () => {
   }
 
   /**
+   * A Project the editor cannot build has nothing to be reloaded to. The bot
+   * that works is left alone and the Session is still shown as outdated, which
+   * it is — what is taken away is only the way to put it right.
+   */
+  it("offers no Reload while the Project will not build", () => {
+    renderControls("ready", true, "this Project cannot be built")
+
+    expect(reloadButton().hasAttribute("disabled")).toBe(true)
+    expect(screen.getByTestId("run-outdated")).toBeDefined()
+  })
+
+  /**
    * Being outdated is not being broken: the bot is alive and answering, and the
    * editor says both things at once rather than one instead of the other. It is
    * said in words, so nobody has to have learnt a colour to read it.
@@ -214,6 +226,15 @@ describe("running the bot from the keyboard", () => {
     expect(asked.reloads).toBe(1)
     expect(asked.starts).toBe(0)
     expect(notSwallowed).toBe(false)
+  })
+
+  it("does not reload on F5 while the Project will not build", () => {
+    const asked = renderControls("ready", true, "this Project cannot be built")
+
+    fireEvent.keyDown(window, { key: "F5" })
+
+    expect(asked.reloads).toBe(0)
+    expect(asked.starts).toBe(0)
   })
 
   it("does not reload on F5 while nothing is running", () => {

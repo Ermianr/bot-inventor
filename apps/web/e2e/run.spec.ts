@@ -58,16 +58,27 @@ test.describe("running the bot", () => {
   })
 
   /**
-   * F5 is the browser's own reload. The editor claims it whether or not it has
-   * anything to do with it — letting it through would reload the window, and
-   * with the bot running that is the one press that costs the user everything.
+   * F5 is the browser's own reload, and letting it through would take the
+   * Session with it. Whether the browser acts on the key is beyond what a
+   * driven browser can be asked — Playwright's F5 never reaches the browser's
+   * own chrome — so what the key is swallowed with is pinned where it can be:
+   * `run-controls.test.tsx` holds `preventDefault`. What is held here is the
+   * other half, and the half a user would notice: the editor is the same
+   * window afterwards, still on the same Project, however often F5 is pressed.
    */
-  test("never lets F5 reload the editor window, however often it is pressed", async () => {
-    await run.pressReload()
+  test("stays in the same window, on the same Project, however often F5 is pressed", async ({
+    page
+  }) => {
+    await page.evaluate(() => {
+      Object.assign(window, { theWindowTheTestStartedIn: true })
+    })
+
+    await run.pressStart()
     await run.pressReload()
 
     await expect(menuBar.row()).toBeVisible()
-    await expect(run.reload()).toBeDisabled()
+    // A reloaded window is a new one, and would not carry the mark.
+    expect(await page.evaluate(() => "theWindowTheTestStartedIn" in window)).toBe(true)
   })
 
   test("says why a Session could not start, in the Console", async () => {

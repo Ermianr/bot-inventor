@@ -431,9 +431,9 @@ describe("an edit that does not compile", () => {
     expect(shell.stops()).toBe(0)
     expect(session.result.current.status).toBe("ready")
     expect(session.result.current.problem).toBeDefined()
-    // There is nothing to reload to, so the Session is not offered as outdated
-    // and the control that would ask for it stays dead.
-    expect(session.result.current.outdated).toBe(false)
+    // The bot is behind the Canvas and the editor says so; what the problem
+    // beside it takes away is the Reload, not the fact of being behind.
+    expect(session.result.current.outdated).toBe(true)
   })
 
   it("refuses a Reload asked for anyway", async () => {
@@ -446,6 +446,18 @@ describe("an edit that does not compile", () => {
     await act(() => session.result.current.reload())
 
     expect(shell.started).toHaveLength(1)
+    expect(session.result.current.status).toBe("ready")
+  })
+
+  it("keeps the Session outdated while the edit is broken", async () => {
+    const shell = fakeGateway()
+    const project = helloProject()
+    const session = await run(shell, project)
+
+    session.rerender({ testServerId: TEST_SERVER, current: withoutTheCatalogue(project) })
+    await settle(2)
+
+    await waitFor(() => expect(session.result.current.outdated).toBe(true))
     expect(session.result.current.status).toBe("ready")
   })
 
