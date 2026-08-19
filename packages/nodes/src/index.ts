@@ -37,18 +37,18 @@ export {
   joinStatements,
   type NodeDefinition,
   type NodeFields,
+  type NodeProblem,
   type PortDefinition,
   type PortDirection,
   portsOf,
   type TraceRequest
 } from "./definition.js"
-export { embed } from "./discord/embed.js"
+export { embed, embedProblems } from "./discord/embed.js"
 export { reply } from "./discord/reply.js"
 export { slashCommandTrigger } from "./discord/slash-command-trigger.js"
 export {
   type EmbedField,
   embedFieldValue,
-  MAX_EMBED_FIELDS,
   readEmbedFields,
   type WrittenEmbedField,
   writtenEmbedFields

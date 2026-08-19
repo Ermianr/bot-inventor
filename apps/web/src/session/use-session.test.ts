@@ -2,7 +2,7 @@
 
 import { SESSION_MESSAGE_PREFIX } from "@bot-inventor/compiler"
 import type { Project } from "@bot-inventor/schema"
-import { helloProject } from "@bot-inventor/schema/fixtures"
+import { embedReplyProject, helloProject } from "@bot-inventor/schema/fixtures"
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { SessionExitEvent, SessionId, SessionOutputEvent } from "@/session/events"
@@ -295,6 +295,44 @@ describe("hot reload", () => {
     expect(session.result.current.status).toBe("ready")
   })
 })
+
+/**
+ * A Node the editor already knows Discord would refuse never becomes a running
+ * bot. The Embed Node is the first that can say so, and the reason the user
+ * reads here is the same one drawn on the Node.
+ */
+describe("a Run a Node refuses", () => {
+  it("does not start a bot whose Embed has nothing in it", async () => {
+    const shell = fakeGateway()
+    const project = embedReplyProject()
+    const node = requireEmbedNode(project)
+    node.fields = { ...node.fields, title: [], description: [] }
+
+    const session = renderHook(() => useSession(project, shell.gateway))
+    await act(() => session.result.current.start(RUNNING))
+
+    expect(shell.started).toEqual([])
+    expect(session.result.current.status).toBe("failed")
+    expect(session.result.current.problem).toContain("nothing in it")
+  })
+
+  it("starts the bot once the Embed says something", async () => {
+    const shell = fakeGateway()
+    const session = await run(shell, embedReplyProject())
+
+    expect(shell.started).toHaveLength(1)
+    expect(session.result.current.problem).toBeUndefined()
+  })
+})
+
+/** The Embed Node of the fixture, for a test that empties it. */
+function requireEmbedNode(project: Project) {
+  const node = project.flows
+    .flatMap(flow => flow.nodes)
+    .find(candidate => candidate.type === "discord.embed.build")
+  if (node === undefined) throw new Error("the fixture has no Embed Node")
+  return node
+}
 
 describe("an edit that does not compile", () => {
   it("says so and leaves the running bot alone", async () => {

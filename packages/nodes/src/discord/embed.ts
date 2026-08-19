@@ -1,8 +1,19 @@
 import {
+  buildEmbed,
+  checkEmbed,
+  describeEmbedProblem,
+  EMBED_LIMITS,
+  type EmbedInput,
+  type EmbedProblem
+} from "@bot-inventor/runtime/embed"
+import { type FieldValue, readSlottedText } from "@bot-inventor/schema"
+import {
   type FieldDefinition,
   type GenerationContext,
   joinStatements,
-  type NodeDefinition
+  type NodeDefinition,
+  type NodeFields,
+  type NodeProblem
 } from "../definition.js"
 import { writtenEmbedFields } from "../embed-fields.js"
 import { isSlotted } from "../slots.js"
@@ -20,7 +31,8 @@ const FIELDS: readonly FieldDefinition[] = [
     id: "title",
     labelKey: "nodes.discord.embed.build.fields.title.label",
     control: "slottedText",
-    defaultValue: []
+    defaultValue: [],
+    limit: EMBED_LIMITS.title
   },
   {
     id: "url",
@@ -32,7 +44,8 @@ const FIELDS: readonly FieldDefinition[] = [
     id: "description",
     labelKey: "nodes.discord.embed.build.fields.description.label",
     control: "slottedParagraph",
-    defaultValue: []
+    defaultValue: [],
+    limit: EMBED_LIMITS.description
   },
   {
     id: "embedFields",
@@ -50,7 +63,8 @@ const FIELDS: readonly FieldDefinition[] = [
     id: "authorName",
     labelKey: "nodes.discord.embed.build.fields.authorName.label",
     control: "slottedText",
-    defaultValue: []
+    defaultValue: [],
+    limit: EMBED_LIMITS.authorName
   },
   {
     id: "authorUrl",
@@ -80,7 +94,8 @@ const FIELDS: readonly FieldDefinition[] = [
     id: "footerText",
     labelKey: "nodes.discord.embed.build.fields.footerText.label",
     control: "slottedText",
-    defaultValue: []
+    defaultValue: [],
+    limit: EMBED_LIMITS.footerText
   },
   {
     id: "footerIcon",
@@ -128,7 +143,16 @@ export const embed: NodeDefinition = {
     }
   ],
   fields: FIELDS,
+  problems: embedProblems,
   generate(context) {
+    // What the editor already refused is refused here too, so that a Project
+    // that arrived from a hand edit or an older build cannot be run or exported
+    // into a bot Discord answers with a `400`.
+    const [fault] = embedFaults(fieldsOf(context))
+    if (fault !== undefined) {
+      throw new Error(`the Embed Node cannot be sent: ${describeEmbedProblem(fault)}`)
+    }
+
     // Every text part of the Embed is a Slotted field and reads the same way,
     // and each one is handed over under the name the Runtime's builder knows
     // it by, which is the field's own id. Which fields those are is read off
@@ -175,4 +199,93 @@ function embedFieldsCode(context: GenerationContext): string {
       return `{ name: ${name}, value: ${value}, inline: ${context.literal(embedField.inline)} }`
     })
     .join(", ")
+}
+
+/**
+ * What a Slot stands in for while the Embed is being looked at rather than run.
+ *
+ * One character, because that is the least the value that lands there can be:
+ * what the Wire actually carries is only known when the bot runs, and the
+ * Runtime is what checks it then. So an Embed whose title is nothing but a Slot
+ * is not an empty Embed, and a field the editor already counts as full is full
+ * here too — the count the user types against and this measurement are the same
+ * arithmetic, so the Node never says a field is too long that the count says is
+ * not.
+ */
+const SLOT_PLACEHOLDER = "\u2026"
+
+/**
+ * What is wrong with the Embed a Node is holding, as far as can be known
+ * without running it.
+ *
+ * It builds the Embed the Node describes and hands it to the Runtime's one
+ * checker, so the editor and the bot are reading the same rules. What it cannot
+ * know is what a Wire will carry: the Runtime checks that again when the value
+ * has actually arrived, and a value that turns out too long there leaves by the
+ * Failure Port.
+ */
+export function embedProblems(fields: NodeFields): readonly NodeProblem[] {
+  return embedFaults(fields).map(nodeProblem)
+}
+
+/** The same, in the Runtime's own words, for whoever has nothing to translate with. */
+function embedFaults(fields: NodeFields): readonly EmbedProblem[] {
+  return checkEmbed(buildEmbed(embedInputOf(fields)))
+}
+
+/** The Embed the Node describes, with a Slot standing in for what it will carry. */
+function embedInputOf(fields: NodeFields): EmbedInput {
+  const input: Record<string, unknown> = {
+    colour: fields.colour,
+    timestamp: fields.timestamp,
+    embedFields: writtenEmbedFields(fields.embedFields).map(embedField => ({
+      name: writtenText(embedField.name),
+      value: writtenText(embedField.value),
+      inline: embedField.inline
+    }))
+  }
+
+  for (const field of FIELDS) {
+    if (isSlotted(field.control)) input[field.id] = writtenText(fields[field.id])
+  }
+
+  return input
+}
+
+/** One Slotted field as the text it will read as, Slots included. */
+function writtenText(value: FieldValue | undefined): string {
+  return readSlottedText(value)
+    .map(segment => (segment.kind === "literal" ? segment.text : SLOT_PLACEHOLDER))
+    .join("")
+}
+
+/**
+ * One of the Runtime's problems as the editor draws it: a message of its own
+ * per part, because a sentence about a title and a sentence about the value of
+ * a pair are not the same sentence in every language.
+ */
+function nodeProblem(problem: EmbedProblem): NodeProblem {
+  switch (problem.kind) {
+    case "empty":
+      return { messageKey: "canvas.embed.problem.empty" }
+    case "too-many-embed-fields":
+      return {
+        messageKey: "canvas.embed.problem.tooManyEmbedFields",
+        values: { count: String(problem.count), limit: String(problem.limit) }
+      }
+    case "too-long":
+      return {
+        messageKey: `canvas.embed.problem.${problem.part}.tooLong`,
+        values: {
+          index: String(problem.index ?? ""),
+          length: String(problem.length),
+          limit: String(problem.limit)
+        }
+      }
+  }
+}
+
+/** The Node's fields as `problems` reads them, defaults and all. */
+function fieldsOf(context: GenerationContext): NodeFields {
+  return Object.fromEntries(FIELDS.map(field => [field.id, context.field(field.id)]))
 }

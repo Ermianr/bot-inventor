@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { toDiscordEmbed } from "./discord-js-runtime.js"
-import { embeds } from "./embed.js"
+import { buildEmbed, checkEmbed, describeEmbedProblem, embeds } from "./embed.js"
 
 /**
  * The builder generated code calls. What it hands back is what reaches Discord,
@@ -8,7 +8,7 @@ import { embeds } from "./embed.js"
  */
 describe("building an Embed", () => {
   it("keeps the title, the description and the colour it was given", () => {
-    expect(embeds.build({ title: "Rules", description: "Be kind.", colour: 5793266 })).toEqual({
+    expect(buildEmbed({ title: "Rules", description: "Be kind.", colour: 5793266 })).toEqual({
       title: "Rules",
       description: "Be kind.",
       colour: 5793266
@@ -16,37 +16,39 @@ describe("building an Embed", () => {
   })
 
   it("leaves out a part the user never typed, rather than sending it empty", () => {
-    expect(embeds.build({ title: "", description: "Only this", colour: 0 })).toEqual({
+    expect(buildEmbed({ title: "", description: "Only this", colour: 0 })).toEqual({
       description: "Only this",
       colour: 0
     })
   })
 
   it("is an empty Embed when nothing was typed into it at all", () => {
-    expect(embeds.build({})).toEqual({})
+    expect(buildEmbed({})).toEqual({})
   })
 
-  it("cuts a title and a description down to the length Discord accepts", () => {
-    const built = embeds.build({ title: "a".repeat(300), description: "b".repeat(5000) })
+  it("keeps a title and a description whole, however long they are", () => {
+    const built = buildEmbed({ title: "a".repeat(300), description: "b".repeat(5000) })
 
-    expect(built.title).toHaveLength(256)
-    expect(built.description).toHaveLength(4096)
+    // Nothing is cut: what is too long is what the user is told about, and a
+    // length that has already been cut has nothing left to tell them.
+    expect(built.title).toHaveLength(300)
+    expect(built.description).toHaveLength(5000)
   })
 
   it("brings a colour a hand-edited Project holds back into range", () => {
-    expect(embeds.build({ colour: -1 }).colour).toBe(0)
-    expect(embeds.build({ colour: 0x1000000 }).colour).toBe(0xffffff)
-    expect(embeds.build({ colour: 16.7 }).colour).toBe(16)
+    expect(buildEmbed({ colour: -1 }).colour).toBe(0)
+    expect(buildEmbed({ colour: 0x1000000 }).colour).toBe(0xffffff)
+    expect(buildEmbed({ colour: 16.7 }).colour).toBe(16)
   })
 
   it("leaves out a colour that is not a number at all", () => {
-    expect(embeds.build({ colour: "blurple" })).toEqual({})
-    expect(embeds.build({ colour: Number.NaN })).toEqual({})
+    expect(buildEmbed({ colour: "blurple" })).toEqual({})
+    expect(buildEmbed({ colour: Number.NaN })).toEqual({})
   })
 
   it("keeps the author, its link and its icon together", () => {
     expect(
-      embeds.build({
+      buildEmbed({
         authorName: "Ada",
         authorUrl: "https://example.com/ada",
         authorIcon: "https://example.com/ada.png"
@@ -60,7 +62,7 @@ describe("building an Embed", () => {
 
   it("leaves out an author with no name, link and icon included", () => {
     expect(
-      embeds.build({
+      buildEmbed({
         authorUrl: "https://example.com/ada",
         authorIcon: "https://example.com/a.png"
       })
@@ -69,14 +71,14 @@ describe("building an Embed", () => {
 
   it("keeps the footer and its icon, and leaves out a footer with no text", () => {
     expect(
-      embeds.build({ footerText: "Rule 1", footerIcon: "https://example.com/i.png" }).footer
+      buildEmbed({ footerText: "Rule 1", footerIcon: "https://example.com/i.png" }).footer
     ).toEqual({ text: "Rule 1", icon: "https://example.com/i.png" })
-    expect(embeds.build({ footerIcon: "https://example.com/i.png" })).toEqual({})
+    expect(buildEmbed({ footerIcon: "https://example.com/i.png" })).toEqual({})
   })
 
   it("keeps the Embed Fields in the order they were written, inline included", () => {
     expect(
-      embeds.build({
+      buildEmbed({
         embedFields: [
           { name: "Rule 1", value: "Be kind", inline: true },
           { name: "Rule 2", value: "Be brief", inline: false }
@@ -90,7 +92,7 @@ describe("building an Embed", () => {
 
   it("leaves out an Embed Field missing its name or its value, and keeps the rest", () => {
     expect(
-      embeds.build({
+      buildEmbed({
         embedFields: [
           { name: "", value: "Be kind" },
           { name: "Rule 2", value: "" },
@@ -101,45 +103,36 @@ describe("building an Embed", () => {
   })
 
   it("has no Embed Fields at all when none of them could be sent", () => {
-    expect(embeds.build({ embedFields: [{ name: "Rule 1", value: "" }] })).toEqual({})
-    expect(embeds.build({ embedFields: "Rule 1" })).toEqual({})
+    expect(buildEmbed({ embedFields: [{ name: "Rule 1", value: "" }] })).toEqual({})
+    expect(buildEmbed({ embedFields: "Rule 1" })).toEqual({})
   })
 
-  it("cuts an Embed Field down to the lengths Discord accepts", () => {
-    const built = embeds.build({
-      embedFields: [{ name: "a".repeat(300), value: "b".repeat(2000) }]
-    })
-
-    expect(built.embedFields?.[0]?.name).toHaveLength(256)
-    expect(built.embedFields?.[0]?.value).toHaveLength(1024)
-  })
-
-  it("stops at the twenty-five Embed Fields Discord accepts", () => {
+  it("keeps every Embed Field it was given, whole and however many there are", () => {
     const written = Array.from({ length: 30 }, (_, index) => ({
       name: `Rule ${index}`,
       value: "Be kind"
     }))
 
-    expect(embeds.build({ embedFields: written }).embedFields).toHaveLength(25)
+    expect(buildEmbed({ embedFields: written }).embedFields).toHaveLength(30)
   })
 
   it("keeps the large image and the thumbnail as the URLs they were given as", () => {
     expect(
-      embeds.build({ image: "https://example.com/big.png", thumbnail: "https://example.com/s.png" })
+      buildEmbed({ image: "https://example.com/big.png", thumbnail: "https://example.com/s.png" })
     ).toEqual({ image: "https://example.com/big.png", thumbnail: "https://example.com/s.png" })
   })
 
   it("links the title, and leaves the link out when there is no title to click", () => {
-    expect(embeds.build({ title: "Rules", url: "https://example.com/rules" })).toEqual({
+    expect(buildEmbed({ title: "Rules", url: "https://example.com/rules" })).toEqual({
       title: "Rules",
       url: "https://example.com/rules"
     })
-    expect(embeds.build({ url: "https://example.com/rules" })).toEqual({})
+    expect(buildEmbed({ url: "https://example.com/rules" })).toEqual({})
   })
 
   it("drops what is not a public link rather than sending an Embed Discord refuses", () => {
     expect(
-      embeds.build({
+      buildEmbed({
         title: "Rules",
         url: "example.com/rules",
         image: "  ",
@@ -152,30 +145,185 @@ describe("building an Embed", () => {
 
   it("stamps the Embed with the time it was sent when the switch is on", () => {
     const before = Date.now()
-    const stamped = embeds.build({ timestamp: true }).timestamp
+    const stamped = buildEmbed({ timestamp: true }).timestamp
 
     expect(stamped).toBeDefined()
     expect(Date.parse(stamped ?? "")).toBeGreaterThanOrEqual(before)
   })
 
   it("stamps nothing when the switch is off", () => {
-    expect(embeds.build({ timestamp: false })).toEqual({})
-    expect(embeds.build({})).toEqual({})
+    expect(buildEmbed({ timestamp: false })).toEqual({})
+    expect(buildEmbed({})).toEqual({})
   })
 
-  it("cuts an author name and a footer text down to the length Discord accepts", () => {
-    const built = embeds.build({ authorName: "a".repeat(300), footerText: "b".repeat(3000) })
+  it("keeps an author name and a footer text whole, however long they are", () => {
+    const built = buildEmbed({ authorName: "a".repeat(300), footerText: "b".repeat(3000) })
 
-    expect(built.author?.name).toHaveLength(256)
-    expect(built.footer?.text).toHaveLength(2048)
+    expect(built.author?.name).toHaveLength(300)
+    expect(built.footer?.text).toHaveLength(3000)
+  })
+})
+
+/**
+ * The one reading of Discord's limits. The editor calls this while the user
+ * types and the generated code reaches it through the builder, so what is
+ * tested here is what both of them enforce.
+ */
+describe("checking an Embed against Discord's limits", () => {
+  it("passes an Embed that is inside every limit", () => {
+    expect(checkEmbed(buildEmbed({ title: "Rules", description: "Be kind." }))).toEqual([])
   })
 
-  it("keeps a title whole rather than cutting a character in half", () => {
-    const built = embeds.build({ title: `${"a".repeat(255)}😀` })
+  it("reports each text part that is over its own limit", () => {
+    const problems = checkEmbed(
+      buildEmbed({
+        title: "a".repeat(257),
+        authorName: "b".repeat(257),
+        footerText: "c".repeat(2049)
+      })
+    )
+    const parts = problems.map(problem =>
+      problem.kind === "too-long" ? problem.part : problem.kind
+    )
 
-    // The emoji is two code units, so it does not fit: what is left is the
-    // text before it, and not half an emoji.
-    expect(built.title).toBe("a".repeat(255))
+    expect(problems).toContainEqual({
+      kind: "too-long",
+      part: "title",
+      index: undefined,
+      limit: 256,
+      length: 257
+    })
+    expect(parts).toContain("authorName")
+    expect(parts).toContain("footerText")
+  })
+
+  it("reports a description over four thousand and ninety-six", () => {
+    expect(checkEmbed(buildEmbed({ description: "a".repeat(4097) }))).toContainEqual({
+      kind: "too-long",
+      part: "description",
+      index: undefined,
+      limit: 4096,
+      length: 4097
+    })
+  })
+
+  it("names the pair whose name or value is too long, counted from one", () => {
+    const problems = checkEmbed(
+      buildEmbed({
+        embedFields: [
+          { name: "Rule 1", value: "Be kind" },
+          { name: "a".repeat(257), value: "b".repeat(1025) }
+        ]
+      })
+    )
+
+    expect(problems).toContainEqual({
+      kind: "too-long",
+      part: "embedFieldName",
+      index: 2,
+      limit: 256,
+      length: 257
+    })
+    expect(problems).toContainEqual({
+      kind: "too-long",
+      part: "embedFieldValue",
+      index: 2,
+      limit: 1024,
+      length: 1025
+    })
+  })
+
+  it("reports more than the twenty-five pairs Discord accepts", () => {
+    const written = Array.from({ length: 26 }, (_, index) => ({
+      name: `Rule ${index}`,
+      value: "Be kind"
+    }))
+
+    expect(checkEmbed(buildEmbed({ embedFields: written }))).toContainEqual({
+      kind: "too-many-embed-fields",
+      limit: 25,
+      count: 26
+    })
+  })
+
+  it("reports an Embed over the six thousand characters Discord budgets it", () => {
+    const problems = checkEmbed(
+      buildEmbed({ description: "a".repeat(4096), footerText: "b".repeat(1905) })
+    )
+
+    expect(problems).toContainEqual({
+      kind: "too-long",
+      part: "total",
+      index: undefined,
+      limit: 6000,
+      length: 6001
+    })
+  })
+
+  it("counts no link and no colour against the total", () => {
+    const inside = buildEmbed({
+      title: "Rules",
+      description: "a".repeat(4096),
+      footerText: "b".repeat(1899),
+      url: "https://example.com/rules",
+      colour: 0x5865f2
+    })
+
+    expect(checkEmbed(inside)).toEqual([])
+  })
+
+  it("reports an Embed with nothing in it", () => {
+    expect(checkEmbed(buildEmbed({}))).toContainEqual({ kind: "empty" })
+    expect(checkEmbed(buildEmbed({ colour: 0x5865f2, timestamp: true }))).toContainEqual({
+      kind: "empty"
+    })
+  })
+
+  it("takes a picture or a pair alone as something to draw", () => {
+    expect(checkEmbed(buildEmbed({ image: "https://example.com/big.png" }))).toEqual([])
+    expect(checkEmbed(buildEmbed({ embedFields: [{ name: "Rule 1", value: "Be kind" }] }))).toEqual(
+      []
+    )
+  })
+
+  it("says every problem in words a person can act on", () => {
+    expect(describeEmbedProblem({ kind: "empty" })).toContain("nothing in it")
+    expect(describeEmbedProblem({ kind: "too-long", part: "title", limit: 256, length: 300 })).toBe(
+      "the embed's title is 300 characters long, and Discord allows 256"
+    )
+    expect(
+      describeEmbedProblem({
+        kind: "too-long",
+        part: "embedFieldValue",
+        index: 2,
+        limit: 1024,
+        length: 2000
+      })
+    ).toBe("the embed's value of pair 2 is 2000 characters long, and Discord allows 1024")
+    expect(describeEmbedProblem({ kind: "too-many-embed-fields", limit: 25, count: 30 })).toBe(
+      "the embed has 30 pairs, and Discord allows 25"
+    )
+  })
+})
+
+/**
+ * What the generated code calls. It builds and checks in one go, because a bot
+ * has nobody to show a problem to: an Embed Discord would refuse stops the run
+ * instead, and the reason leaves by the Failure Port.
+ */
+describe("the builder generated code calls", () => {
+  it("hands back the Embed when it is one Discord accepts", () => {
+    expect(embeds.build({ title: "Rules" })).toEqual({ title: "Rules" })
+  })
+
+  it("refuses a value that arrived too long, saying which part and by how much", () => {
+    expect(() => embeds.build({ title: "a".repeat(300) })).toThrow(
+      "the embed's title is 300 characters long, and Discord allows 256"
+    )
+  })
+
+  it("refuses an Embed with nothing in it", () => {
+    expect(() => embeds.build({})).toThrow("nothing in it")
   })
 })
 

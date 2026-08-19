@@ -30,13 +30,6 @@ export type WrittenEmbedField = {
 }
 
 /**
- * How many Embed Fields Discord accepts on one Embed. It is what the editor
- * stops the user at; nothing throws the ones past it away, because a Project
- * that arrived holding them is a Project whose pairs are the user's to delete.
- */
-export const MAX_EMBED_FIELDS = 25
-
-/**
  * The Embed Fields an `embedFields` field holds, as they were written.
  *
  * A Project is a file that an older build wrote or that someone edited by hand,

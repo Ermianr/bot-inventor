@@ -90,6 +90,9 @@ export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
   const inputs = ports.filter(port => port.direction === "input")
   const outputs = ports.filter(port => port.direction === "output")
   const highlight = runState === undefined ? "" : ` ${RUN_STATE_RING[runState]}`
+  // What the user typed that whatever reads this Node would refuse. It is the
+  // Node's own answer, so every Node that can say something wrong says it here.
+  const problems = definition.problems?.(node.fields) ?? []
 
   return (
     /*
@@ -129,6 +132,19 @@ export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
               <PortRow key={`out-${port.id}`} nodeId={id} port={port} />
             ))}
           </div>
+
+          {problems.length > 0 && (
+            <div
+              className="border-t bg-destructive/10 px-3 py-2 text-destructive text-xs"
+              data-testid={`node-problems-${id}`}
+            >
+              {problems.map(problem => (
+                <p key={problem.messageKey}>
+                  {translateDefinitionKey(problem.messageKey, problem.values)}
+                </p>
+              ))}
+            </div>
+          )}
 
           <div className="grid gap-2 border-t px-3 py-2">
             {definition.fields
@@ -218,6 +234,7 @@ function FieldRow({
       <SlottedField
         fieldId={field.id}
         label={label}
+        limit={field.limit}
         multiline={field.control === "slottedParagraph"}
         nodeId={nodeId}
         onChange={segments => setField(field.id, segments)}

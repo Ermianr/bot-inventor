@@ -22,6 +22,7 @@ afterEach(cleanup)
 function draw(
   value: SlottedText,
   options: {
+    limit?: number
     multiline?: boolean
     onChange?: (value: SlottedText) => void
     slotIsWired?: (slot: string) => boolean
@@ -31,6 +32,7 @@ function draw(
     <SlottedField
       fieldId="content"
       label="Message"
+      limit={options.limit}
       multiline={options.multiline ?? false}
       nodeId="reply"
       onChange={options.onChange ?? (() => {})}
@@ -278,5 +280,70 @@ Second`
     const container = draw([{ kind: "literal", text: "Hello" }], { multiline: true })
 
     expect(fireEvent.keyDown(box(container, 0), { key: "Enter" })).toBe(true)
+  })
+})
+
+/**
+ * Discord's limits, met while the sentence is being written rather than when
+ * the bot runs. The limits themselves are the Runtime's; what is proved here is
+ * that the field stops at whichever one it was given, and says where it stands.
+ */
+describe("a field with a limit on it", () => {
+  it("shows how much of the limit has been typed", () => {
+    const container = draw([{ kind: "literal", text: "Hello" }], { limit: 256 })
+
+    expect(within(container).getByTestId("field-count-reply-content").textContent).toBe("5/256")
+  })
+
+  it("says nothing about a count when the field has no limit", () => {
+    const container = draw([{ kind: "literal", text: "Hello" }])
+
+    expect(within(container).queryByTestId("field-count-reply-content")).toBeNull()
+  })
+
+  it("cuts what is typed past the limit rather than refusing the whole edit", () => {
+    const edits: SlottedText[] = []
+    const container = draw([], { limit: 5, onChange: value => edits.push(value) })
+
+    fireEvent.change(box(container, 0), { target: { value: "Hello there" } })
+
+    expect(edits).toEqual([[{ kind: "literal", text: "Hello" }]])
+  })
+
+  it("counts a pill as the one character it is worth at the very least", () => {
+    const container = draw(
+      [
+        { kind: "literal", text: "Hola" },
+        { kind: "slot", slot: "caller" }
+      ],
+      { limit: 256 }
+    )
+
+    // Four typed and one pill. Counting the pill as nothing would let the field
+    // be filled to 256 and then be called too long by the Node, with nothing
+    // the count says to take out.
+    expect(within(container).getByTestId("field-count-reply-content").textContent).toBe("5/256")
+  })
+
+  it("counts every box of the sentence against the one limit", () => {
+    const edits: SlottedText[] = []
+    const container = draw(
+      [
+        { kind: "literal", text: "Hola" },
+        { kind: "slot", slot: "caller" }
+      ],
+      { limit: 5, onChange: value => edits.push(value) }
+    )
+
+    // Four characters and a pill are already spent, so nothing is left for the
+    // box after it.
+    fireEvent.change(box(container, 1), { target: { value: "!!!" } })
+
+    expect(edits).toEqual([
+      [
+        { kind: "literal", text: "Hola" },
+        { kind: "slot", slot: "caller" }
+      ]
+    ])
   })
 })

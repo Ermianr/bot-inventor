@@ -78,6 +78,25 @@ export type FieldDefinition = {
   labelKey: string
   control: FieldControl
   defaultValue: FieldValue
+  /**
+   * How many characters the field takes, when something outside this editor
+   * refuses a longer one. The editor stops the typing there and shows the
+   * count, so the user meets the limit while they are writing rather than when
+   * the bot runs.
+   */
+  limit?: number
+}
+
+/**
+ * Something wrong with what is typed into a Node, drawn on the Node itself and
+ * refused again before a Run starts.
+ *
+ * It names a message rather than carrying a sentence, because the editor says
+ * it in the user's own language; what the sentence needs is in `values`.
+ */
+export type NodeProblem = {
+  messageKey: string
+  values?: Record<string, string>
 }
 
 /**
@@ -166,6 +185,13 @@ export type NodeDefinition = {
    * disappearing is nothing more than a field being edited.
    */
   dynamicPorts?(fields: NodeFields): readonly PortDefinition[]
+  /**
+   * What is wrong with what the user typed, if anything. The editor draws it on
+   * the Node and refuses to start the Run while it is not empty, so a mistake
+   * the editor already knows about is never something the user debugs on a live
+   * bot.
+   */
+  problems?(fields: NodeFields): readonly NodeProblem[]
   /** Emits this Node's JavaScript, including the continuation of its Execution outputs. */
   generate(context: GenerationContext): string
 }
