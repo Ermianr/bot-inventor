@@ -150,6 +150,13 @@ function Outdated() {
   )
 }
 
+const STATUS_TONE: Record<SessionStatus, string> = {
+  stopped: "bg-muted-foreground",
+  connecting: "bg-amber-500",
+  ready: "bg-emerald-500",
+  failed: "bg-destructive"
+}
+
 /**
  * Stopped, connecting, running or failed — the one thing the user looks at.
  *
@@ -160,13 +167,6 @@ function Outdated() {
  * and nobody has to learn the colours to use the editor.
  */
 function Status({ status }: { status: SessionStatus }) {
-  const tone: Record<SessionStatus, string> = {
-    stopped: "bg-muted-foreground",
-    connecting: "bg-amber-500",
-    ready: "bg-emerald-500",
-    failed: "bg-destructive"
-  }
-
   const said = translate(`run.status.${status}`)
 
   return (
@@ -175,7 +175,7 @@ function Status({ status }: { status: SessionStatus }) {
       data-testid="run-status"
       data-status={status}
     >
-      <span className={`size-2 shrink-0 rounded-full ${tone[status]}`} aria-hidden="true" />
+      <span className={`size-2 shrink-0 rounded-full ${STATUS_TONE[status]}`} aria-hidden="true" />
       {said}
     </span>
   )

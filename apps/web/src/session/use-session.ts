@@ -159,7 +159,11 @@ export function useSession(project: Project, shell: SessionGateway, testServerId
   }, [])
 
   const say = useCallback((text: string, tone: SessionEntry["tone"]) => {
-    setEntries(previous => [...previous, { id: nextId.current++, text, tone }])
+    // The number is taken before the updater rather than inside it: an updater
+    // React may call more than once for the same entry must not be what moves
+    // the counter along.
+    const id = nextId.current++
+    setEntries(previous => [...previous, { id, text, tone }])
   }, [])
 
   const note = useCallback(

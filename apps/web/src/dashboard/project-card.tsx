@@ -143,8 +143,17 @@ function hueOf(projectId: string): number {
  * one they were working on yesterday, and a date is what they compare.
  */
 function whenChanged(changedAt: number): string {
-  return new Intl.DateTimeFormat(currentLocale(), {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(new Date(changedAt))
+  return dateFormatter(currentLocale()).format(new Date(changedAt))
+}
+
+/** One formatter per language, built the first time a card asks for it. */
+const FORMATTERS = new Map<string, Intl.DateTimeFormat>()
+
+function dateFormatter(locale: string): Intl.DateTimeFormat {
+  const known = FORMATTERS.get(locale)
+  if (known !== undefined) return known
+
+  const built = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" })
+  FORMATTERS.set(locale, built)
+  return built
 }
