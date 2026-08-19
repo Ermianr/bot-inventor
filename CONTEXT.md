@@ -100,6 +100,14 @@ _Avoid_: dev mode, preview, test mode
 One run of a Project in Development Mode: the process the bot lives in, from pressing Run until it stops. It belongs to the application — closing the application ends it.
 _Avoid_: run, instance, process, execution
 
+**Reload**:
+Putting the Project the user is looking at in place of the bot that is running. It replaces the bot entirely, and happens only when the user asks.
+_Avoid_: refresh, apply, update, hot reload
+
+**Outdated Session**:
+A Session whose running bot no longer matches the Project on the Canvas. It exists only while a Session runs, and ends with a Reload or with the edit being undone.
+_Avoid_: dirty, unsaved, pending changes, drift
+
 **Sidecar**:
 The Node.js binary shipped inside the installer, which every Session runs on. The user never installs it and never sees it.
 _Avoid_: runtime binary, embedded node, engine
