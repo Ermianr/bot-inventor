@@ -11,7 +11,7 @@ import {
 import { Input } from "@bot-inventor/ui/components/input"
 import { Label } from "@bot-inventor/ui/components/label"
 import { invoke } from "@tauri-apps/api/core"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { translate } from "@/i18n/messages"
 import { describeRefusal } from "@/session/refusal"
 
@@ -69,6 +69,8 @@ export function TestServerPicker({
   const [problem, setProblem] = useState<string | undefined>(undefined)
   /** Whether Discord has been asked at all, which is what a list means anything after. */
   const [asked, setAsked] = useState(false)
+  /** Which question is the one still worth an answer. */
+  const latestAsk = useRef(0)
 
   const typed = token?.trim() ?? ""
   /** Something to ask Discord with: a Project to read a token for, or one typed. */
@@ -81,18 +83,25 @@ export function TestServerPicker({
   const look = useCallback(
     async (token: string) => {
       if (projectId === undefined && token.length === 0) return
+      // Only the latest question is worth an answer: a slow reply to a question
+      // the user has already asked again would otherwise clear the newer one's
+      // spinner and overwrite its list.
+      const asking = ++latestAsk.current
       setLoading(true)
       setProblem(undefined)
       setAsked(true)
       try {
-        setServers(await invoke<TestServer[]>("list_test_servers", { projectId, token }))
+        const found = await invoke<TestServer[]>("list_test_servers", { projectId, token })
+        if (asking !== latestAsk.current) return
+        setServers(found)
       } catch (error) {
+        if (asking !== latestAsk.current) return
         // Not having a token yet is the ordinary state of a new Project, not
         // something to shout about: the token field above says what to do.
         setServers([])
         setProblem(describeRefusal(error))
       } finally {
-        setLoading(false)
+        if (asking === latestAsk.current) setLoading(false)
       }
     },
     [projectId]

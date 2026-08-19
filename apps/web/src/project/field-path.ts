@@ -1,9 +1,4 @@
-import {
-  type EmbedField,
-  embedFieldValue,
-  type NodeFields,
-  readEmbedFields
-} from "@bot-inventor/nodes"
+import { embedFieldValue, type NodeFields, readEmbedFields } from "@bot-inventor/nodes"
 import { type FieldValue, readSlottedText, type SlottedText } from "@bot-inventor/schema"
 
 /**
@@ -70,10 +65,7 @@ export function fieldWithSlottedTextAt(
 
   const { index, part } = path.embedField
   const embedFields = readEmbedFields(fields[path.field])
-  return embedFields
-    .map(
-      (embedField, at): EmbedField =>
-        at === index ? { ...embedField, [part]: segments } : embedField
-    )
-    .map(embedFieldValue)
+  return embedFields.map((embedField, at) =>
+    embedFieldValue(at === index ? { ...embedField, [part]: segments } : embedField)
+  )
 }
