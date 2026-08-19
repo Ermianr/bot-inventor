@@ -222,6 +222,20 @@ describe("the Embed Node", () => {
     ).toContain("slot.who")
   })
 
+  it("gives a Slot inside one of its Embed Fields a Port, as its own text does", () => {
+    const ports = portsOf(embed, {
+      embedFields: [
+        {
+          name: [{ kind: "literal", text: "Asked by" }],
+          value: [{ kind: "slot", slot: "caller" }],
+          inline: false
+        }
+      ]
+    }).map(port => port.id)
+
+    expect(ports).toContain("slot.caller")
+  })
+
   it("writes its description over several lines, and nothing else", () => {
     expect(findField(embed, "description")).toMatchObject({ control: "slottedParagraph" })
     expect(findField(embed, "title")).toMatchObject({ control: "slottedText" })

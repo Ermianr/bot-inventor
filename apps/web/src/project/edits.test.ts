@@ -2,6 +2,7 @@ import { catalogue } from "@bot-inventor/nodes"
 import { literalText } from "@bot-inventor/schema"
 import {
   echoParameterProject,
+  embedReplyProject,
   helloProject,
   unreachableNodeProject
 } from "@bot-inventor/schema/fixtures"
@@ -452,6 +453,40 @@ describe("dropping a Wire onto a text field", () => {
       kind: "data",
       from: { node: "node-trigger", port: "user" },
       to: { node: "node-reply", port: "slot.slot-who" }
+    })
+  })
+
+  it("puts a Slot inside the value of an Embed Field, and draws the Wire to it", () => {
+    const project = embedReplyProject()
+    const flow = flowOf(project)
+    const embed = flow.nodes.find(node => node.id === "node-embed")
+    if (embed === undefined) throw new Error("the fixture has no Embed Node")
+    embed.fields = {
+      ...embed.fields,
+      embedFields: [{ name: literalText("Asked by"), value: [], inline: false }]
+    }
+
+    const insertion = insertSlot(
+      flow,
+      catalogue,
+      {
+        node: "node-embed",
+        field: "embedFields.0.value",
+        caret: { literal: 0, offset: 0 }
+      },
+      { node: "node-trigger", port: "user" },
+      "slot-who"
+    )
+
+    if (!insertion.inserted) throw new Error(insertion.reasonKey)
+    const edited = insertion.flow.nodes.find(node => node.id === "node-embed")
+
+    expect(edited?.fields.embedFields).toEqual([
+      { name: literalText("Asked by"), value: [{ kind: "slot", slot: "slot-who" }], inline: false }
+    ])
+    expect(insertion.flow.wires.at(-1)).toMatchObject({
+      from: { node: "node-trigger", port: "user" },
+      to: { node: "node-embed", port: "slot.slot-who" }
     })
   })
 

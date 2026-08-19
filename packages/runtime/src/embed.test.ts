@@ -74,6 +74,55 @@ describe("building an Embed", () => {
     expect(embeds.build({ footerIcon: "https://example.com/i.png" })).toEqual({})
   })
 
+  it("keeps the Embed Fields in the order they were written, inline included", () => {
+    expect(
+      embeds.build({
+        embedFields: [
+          { name: "Rule 1", value: "Be kind", inline: true },
+          { name: "Rule 2", value: "Be brief", inline: false }
+        ]
+      }).embedFields
+    ).toEqual([
+      { name: "Rule 1", value: "Be kind", inline: true },
+      { name: "Rule 2", value: "Be brief", inline: false }
+    ])
+  })
+
+  it("leaves out an Embed Field missing its name or its value, and keeps the rest", () => {
+    expect(
+      embeds.build({
+        embedFields: [
+          { name: "", value: "Be kind" },
+          { name: "Rule 2", value: "" },
+          { name: "Rule 3", value: "Be brief" }
+        ]
+      }).embedFields
+    ).toEqual([{ name: "Rule 3", value: "Be brief", inline: false }])
+  })
+
+  it("has no Embed Fields at all when none of them could be sent", () => {
+    expect(embeds.build({ embedFields: [{ name: "Rule 1", value: "" }] })).toEqual({})
+    expect(embeds.build({ embedFields: "Rule 1" })).toEqual({})
+  })
+
+  it("cuts an Embed Field down to the lengths Discord accepts", () => {
+    const built = embeds.build({
+      embedFields: [{ name: "a".repeat(300), value: "b".repeat(2000) }]
+    })
+
+    expect(built.embedFields?.[0]?.name).toHaveLength(256)
+    expect(built.embedFields?.[0]?.value).toHaveLength(1024)
+  })
+
+  it("stops at the twenty-five Embed Fields Discord accepts", () => {
+    const written = Array.from({ length: 30 }, (_, index) => ({
+      name: `Rule ${index}`,
+      value: "Be kind"
+    }))
+
+    expect(embeds.build({ embedFields: written }).embedFields).toHaveLength(25)
+  })
+
   it("keeps the large image and the thumbnail as the URLs they were given as", () => {
     expect(
       embeds.build({ image: "https://example.com/big.png", thumbnail: "https://example.com/s.png" })
@@ -167,6 +216,22 @@ describe("handing an Embed to Discord", () => {
       thumbnail: { url: "https://example.com/small.png" },
       footer: { text: "Rule 1", icon_url: "https://example.com/i.png" },
       timestamp: "2026-08-18T10:00:00.000Z"
+    })
+  })
+
+  it("sends the Embed Fields under the name Discord's API knows them by", () => {
+    expect(
+      toDiscordEmbed({
+        embedFields: [
+          { name: "Rule 1", value: "Be kind", inline: true },
+          { name: "Rule 2", value: "Be brief", inline: false }
+        ]
+      })
+    ).toEqual({
+      fields: [
+        { name: "Rule 1", value: "Be kind", inline: true },
+        { name: "Rule 2", value: "Be brief", inline: false }
+      ]
     })
   })
 
