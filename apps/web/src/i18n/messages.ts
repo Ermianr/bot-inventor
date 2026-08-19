@@ -363,7 +363,7 @@ const es: Record<MessageKey, string> = {
   "run.reloading": "Cambiaste algo. Reiniciando tu bot…",
 
   "console.title": "Consola",
-  "console.tab.output": "Salida",
+  "console.tab.output": "Consola",
   "console.empty": "Nada todavía. Pulsa Ejecutar.",
   "console.collapse": "Ocultar la consola",
   "console.expand": "Mostrar la consola",
@@ -525,7 +525,7 @@ const es: Record<MessageKey, string> = {
   "canvas.embedField.remove": "Quitar este par",
   "canvas.embedField.moveUp": "Subir este par",
   "canvas.embedField.moveDown": "Bajar este par",
-  "canvas.embedField.full": "Discord permite {count} pares en un bloque, y ya los tienes todos.",
+  "canvas.embedField.full": "Discord permite {count} pares en un Embed, y ya los tienes todos.",
   "canvas.embedField.removeWire.title": "Esto también quitará un cable",
   "canvas.embedField.removeWire.body":
     "Este par usa un valor que no se usa en ningún otro sitio del par, así que el cable que lo alimenta se va con él.",
@@ -536,9 +536,9 @@ const es: Record<MessageKey, string> = {
   "canvas.field.count": "{used}/{limit}",
 
   "canvas.embed.problem.empty":
-    "Este bloque no tiene nada. Ponle un título, un texto, una imagen o un par.",
+    "Este Embed no tiene nada. Ponle un título, un texto, una imagen o un par.",
   "canvas.embed.problem.tooManyEmbedFields":
-    "Este bloque tiene {count} pares y Discord permite {limit}. Quita los que sobran.",
+    "Este Embed tiene {count} pares y Discord permite {limit}. Quita los que sobran.",
   "canvas.embed.problem.title.tooLong":
     "El título tiene {length} caracteres y Discord permite {limit}.",
   "canvas.embed.problem.description.tooLong":
@@ -552,7 +552,7 @@ const es: Record<MessageKey, string> = {
   "canvas.embed.problem.embedFieldValue.tooLong":
     "El valor del par {index} tiene {length} caracteres y Discord permite {limit}.",
   "canvas.embed.problem.total.tooLong":
-    "Este bloque tiene {length} caracteres en total y Discord permite {limit}.",
+    "Este Embed tiene {length} caracteres en total y Discord permite {limit}.",
 
   "canvas.inspector.label": "Lo que construye este nodo",
   "canvas.summary.untitled": "Todavía sin título",
@@ -599,10 +599,10 @@ const es: Record<MessageKey, string> = {
   "nodes.discord.interaction.reply.description": "Contesta a quien usó el comando.",
   "nodes.discord.interaction.reply.fields.content.label": "Mensaje",
   "nodes.discord.interaction.reply.fields.ephemeral.label": "Solo lo ve esa persona",
-  "nodes.discord.interaction.reply.ports.embed.label": "Bloque",
+  "nodes.discord.interaction.reply.ports.embed.label": "Embed",
 
-  "nodes.discord.embed.build.label": "Bloque",
-  "nodes.discord.embed.build.description": "Crea un bloque con formato para responder.",
+  "nodes.discord.embed.build.label": "Embed",
+  "nodes.discord.embed.build.description": "Crea un Embed con formato para responder.",
   "nodes.discord.embed.build.fields.title.label": "Título",
   "nodes.discord.embed.build.fields.url.label": "Enlace del título",
   "nodes.discord.embed.build.fields.description.label": "Texto",
@@ -616,7 +616,7 @@ const es: Record<MessageKey, string> = {
   "nodes.discord.embed.build.fields.footerText.label": "Pie",
   "nodes.discord.embed.build.fields.footerIcon.label": "Imagen del pie",
   "nodes.discord.embed.build.fields.timestamp.label": "Marcarlo con la hora de envío",
-  "nodes.discord.embed.build.ports.embed.label": "Bloque"
+  "nodes.discord.embed.build.ports.embed.label": "Embed"
 }
 
 const messages: Record<Locale, Record<MessageKey, string>> = { en, es }
