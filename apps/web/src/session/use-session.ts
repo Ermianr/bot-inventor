@@ -3,6 +3,7 @@ import type { Project } from "@bot-inventor/schema"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { type MessageKey, translate } from "@/i18n/messages"
 import { describeError } from "@/project/describe-error"
+import { describeProjectProblem } from "@/project/node-problems"
 import type { SessionId } from "@/session/events"
 import { describeRefusal } from "@/session/refusal"
 import type { SessionGateway } from "@/session/session-gateway"
@@ -249,6 +250,16 @@ export function useSession(project: Project, shell: SessionGateway): Session {
     async (options: { testServerId: string }) => {
       setEntries([])
 
+      // A Node that already knows Discord would refuse it stops the Run here,
+      // before the Session, so the user reads the reason on the Canvas instead
+      // of watching a bot fail on Discord for something the editor knew.
+      const invalid = describeProjectProblem(project)
+      if (invalid !== undefined) {
+        setStatus("failed")
+        setProblem(translate("run.failure.node", { message: invalid }))
+        return
+      }
+
       let entry: string
       try {
         entry = renderDevelopmentSession(project, { testServerId: options.testServerId })
@@ -281,6 +292,14 @@ export function useSession(project: Project, shell: SessionGateway): Session {
       // It can have been stopped in the meantime, and a bot nobody asked for is
       // worse than an edit that did not take.
       if (running.current === undefined) return
+
+      const invalid = describeProjectProblem(project)
+      if (invalid !== undefined) {
+        // The bot on the sidecar is the last version that was valid, and it is
+        // left running while the user finishes the edit that broke this one.
+        setProblem(translate("run.failure.node", { message: invalid }))
+        return
+      }
 
       let entry: string
       try {

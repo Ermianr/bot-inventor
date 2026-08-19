@@ -265,3 +265,57 @@ describe("picking an Embed's colour", () => {
     expect(swatch(drawEmbed("blurple")).value).toBe("#000000")
   })
 })
+
+/**
+ * What a Node says is wrong with what was typed into it. The Embed Node is the
+ * first that answers, and what it answers is the Runtime's one reading of
+ * Discord's limits: the Canvas only draws it.
+ */
+describe("a Node that says what is wrong with it", () => {
+  const embed = requireDefinition("discord.embed.build")
+
+  function drawEmbed(fields: Record<string, FieldValue>) {
+    const data: FlowNodeData = {
+      node: { id: "node-embed", type: embed.id, position: { x: 0, y: 0 }, fields },
+      definition: embed,
+      runState: undefined,
+      setField: () => {},
+      slotLabel: () => "",
+      slotIsWired: () => false,
+      remove: () => {}
+    }
+    const props = { data, id: "embed", type: "flowNode" } as unknown as ComponentProps<
+      typeof FlowNode
+    >
+
+    const { container } = render(
+      <ReactFlowProvider>
+        <FlowNode {...props} />
+      </ReactFlowProvider>
+    )
+    return container
+  }
+
+  it("says an Embed with nothing in it is one Discord refuses", () => {
+    const container = drawEmbed({})
+
+    expect(within(container).getByTestId("node-problems-embed").textContent).toContain(
+      "nothing in it"
+    )
+  })
+
+  it("says when the whole Embed is over Discord's total budget", () => {
+    const container = drawEmbed({
+      description: literalText("a".repeat(4096)),
+      footerText: literalText("b".repeat(1905))
+    })
+
+    expect(within(container).getByTestId("node-problems-embed").textContent).toContain("6000")
+  })
+
+  it("says nothing at all about an Embed Discord accepts", () => {
+    const container = drawEmbed({ title: literalText("Server rules") })
+
+    expect(within(container).queryByTestId("node-problems-embed")).toBeNull()
+  })
+})

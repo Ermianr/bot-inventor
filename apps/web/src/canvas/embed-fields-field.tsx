@@ -4,6 +4,7 @@ import {
   MAX_EMBED_FIELDS,
   readEmbedFields
 } from "@bot-inventor/nodes"
+import { EMBED_LIMITS } from "@bot-inventor/runtime/embed"
 import { type FieldValue, type SlottedText, slotIdsOf } from "@bot-inventor/schema"
 import { Button } from "@bot-inventor/ui/components/button"
 import { Checkbox } from "@bot-inventor/ui/components/checkbox"
@@ -224,6 +225,7 @@ function EmbedFieldRow({
       <SlottedField
         fieldId={part("name")}
         label={translate("canvas.embedField.name")}
+        limit={EMBED_LIMITS.embedFieldName}
         nodeId={nodeId}
         onChange={withPart("name")}
         slotIsWired={slotIsWired}
@@ -233,6 +235,7 @@ function EmbedFieldRow({
       <SlottedField
         fieldId={part("value")}
         label={translate("canvas.embedField.value")}
+        limit={EMBED_LIMITS.embedFieldValue}
         nodeId={nodeId}
         onChange={withPart("value")}
         slotIsWired={slotIsWired}

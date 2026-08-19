@@ -23,6 +23,7 @@
       "dependencies": {
         "@bot-inventor/compiler": "workspace:*",
         "@bot-inventor/nodes": "workspace:*",
+        "@bot-inventor/runtime": "workspace:*",
         "@bot-inventor/schema": "workspace:*",
         "@bot-inventor/ui": "workspace:*",
         "@hookform/resolvers": "^5.5.7",
@@ -85,6 +86,7 @@
       "name": "@bot-inventor/nodes",
       "version": "0.0.0",
       "dependencies": {
+        "@bot-inventor/runtime": "workspace:*",
         "@bot-inventor/schema": "workspace:*",
       },
       "devDependencies": {

@@ -26,6 +26,19 @@ export {
   type DiscordRuntimeOptions,
   toDiscordEmbed
 } from "./discord-js-runtime.js"
-export { type Embed, type EmbedInput, type Embeds, embeds } from "./embed.js"
+export {
+  buildEmbed,
+  checkEmbed,
+  describeEmbedProblem,
+  EMBED_LIMITS,
+  type Embed,
+  EmbedError,
+  type EmbedInput,
+  type EmbedPart,
+  type EmbedProblem,
+  type Embeds,
+  embedLength,
+  embeds
+} from "./embed.js"
 export type { FlowFailure, Runtime, TraceEvent, TraceSink } from "./runtime.js"
 export { createTracing, describeValue, type Tracing } from "./tracing.js"

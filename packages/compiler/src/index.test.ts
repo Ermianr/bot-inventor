@@ -1010,3 +1010,104 @@ describe("registering a compiled Project's commands", () => {
     expect(api.commandsFor(target).map(command => command.name)).toEqual(["hola"])
   })
 })
+
+/**
+ * Discord's limits, enforced once. What the editor stops the user at and what
+ * the bot enforces are the same check, so these are written through
+ * `runProject`: what matters is what the running bot does, not what was
+ * emitted.
+ */
+describe("an Embed against Discord's limits", () => {
+  /** The fixture with a piece of text the caller answers with, to feed a Slot. */
+  const askingProject = () => {
+    const project = embedReplyProject()
+    const trigger = requireFirst(requireFirst(project.flows, "Flow").nodes, "Node")
+    trigger.fields = {
+      ...trigger.fields,
+      parameters: [{ name: "who", description: "Whose card", type: "text", required: true }]
+    }
+    return project
+  }
+
+  it("takes the Failure Port when a value arrives along a Wire too long to send", async () => {
+    const project = askingProject()
+    const flow = requireFirst(project.flows, "Flow")
+    const node = embedNode(project)
+    // Nothing typed here is over the limit: the title is a Slot, and what the
+    // Wire carries is what turns out to be too long.
+    node.fields = { ...node.fields, title: [{ kind: "slot", slot: "slot-name" }] }
+    flow.wires.push({
+      id: "wire-name",
+      kind: "data",
+      from: { node: "node-trigger", port: "parameter.who" },
+      to: { node: "node-embed", port: "slot.slot-name" }
+    })
+
+    const result = await runProject(project, [
+      { type: "slashCommand", command: "card", parameters: { who: "a".repeat(300) } }
+    ])
+
+    expect(result.calls.filter(call => call.method === "reply")).toEqual([])
+    expect(result.failures).toHaveLength(1)
+    expect(String(result.failures[0]?.error)).toContain(
+      "the embed's title is 300 characters long, and Discord allows 256"
+    )
+  })
+
+  it("refuses to build a bot whose Embed has nothing in it", () => {
+    const project = embedReplyProject()
+    const node = embedNode(project)
+    node.fields = { ...node.fields, title: [], description: [] }
+
+    expect(() => compile(project, { mode: "build" })).toThrowError(/nothing in it/)
+  })
+
+  it("stops a run whose Embed turns out to have nothing in it once the Wires arrived", async () => {
+    const project = askingProject()
+    const flow = requireFirst(project.flows, "Flow")
+    const node = embedNode(project)
+    // A Slot is something to draw as far as the editor can tell; an empty value
+    // arriving along the Wire is what leaves the Embed with nothing in it.
+    node.fields = { ...node.fields, title: [], description: [{ kind: "slot", slot: "slot-text" }] }
+    flow.wires.push({
+      id: "wire-text",
+      kind: "data",
+      from: { node: "node-trigger", port: "parameter.who" },
+      to: { node: "node-embed", port: "slot.slot-text" }
+    })
+
+    const result = await runProject(project, [
+      { type: "slashCommand", command: "card", parameters: { who: "" } }
+    ])
+
+    expect(result.calls.filter(call => call.method === "reply")).toEqual([])
+    expect(String(result.failures[0]?.error)).toContain("nothing in it")
+  })
+
+  it("refuses to build a bot whose Embed is over the total Discord budgets it", () => {
+    const project = embedReplyProject()
+    const node = embedNode(project)
+    node.fields = {
+      ...node.fields,
+      description: literalText("a".repeat(4096)),
+      footerText: literalText("b".repeat(1905))
+    }
+
+    expect(() => compile(project, { mode: "build" })).toThrowError(/Discord allows 6000/)
+  })
+
+  it("refuses to build a bot with more than the twenty-five pairs Discord accepts", () => {
+    const project = embedReplyProject()
+    const node = embedNode(project)
+    node.fields = {
+      ...node.fields,
+      embedFields: Array.from({ length: 26 }, (_, index) => ({
+        name: literalText(`Rule ${index + 1}`),
+        value: literalText("Be kind"),
+        inline: false
+      }))
+    }
+
+    expect(() => compile(project, { mode: "build" })).toThrowError(/26 pairs/)
+  })
+})

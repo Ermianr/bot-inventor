@@ -49,6 +49,7 @@ export function SlottedField({
   fieldId,
   label,
   multiline = false,
+  limit,
   nodeId,
   onChange,
   slotIsWired,
@@ -57,6 +58,15 @@ export function SlottedField({
 }: {
   fieldId: string
   label: string
+  /**
+   * How many characters the field takes, when whatever reads it refuses a
+   * longer one. Typing stops there and the count is shown beside the label, so
+   * the limit is met while writing rather than when the bot runs.
+   *
+   * Only what was typed is counted: what a pill will carry is not known until
+   * the Flow runs, and the Runtime is what checks the whole of it then.
+   */
+  limit?: number
   /**
    * Whether the field is written over several lines. A paragraph is typed into
    * boxes that take a newline; a one-line field is not, because Enter inside a
@@ -73,6 +83,19 @@ export function SlottedField({
 }) {
   const editable = editableText(value)
   const boxes = useRef<(SlotBox | null)[]>([])
+
+  const typed = editable.literals.reduce((total, text) => total + text.length, 0)
+
+  /**
+   * What one box is allowed to hold after an edit: everything the limit leaves
+   * once the other boxes have had their share. Typing past it is cut rather
+   * than refused, so a paste that is too long still lands, shortened.
+   */
+  const cut = (index: number, text: string) => {
+    if (limit === undefined) return text
+    const elsewhere = typed - (editable.literals[index] ?? "").length
+    return text.slice(0, Math.max(limit - elsewhere, 0))
+  }
 
   /** Where the caret goes once React has drawn the field an edit left behind. */
   const [caret, setCaret] = useState<Caret | undefined>(undefined)
@@ -156,9 +179,19 @@ export function SlottedField({
 
   return (
     <div className="grid gap-1">
-      <Label className="text-xs" htmlFor={`${nodeId}-${fieldId}`}>
-        {label}
-      </Label>
+      <div className="flex items-baseline justify-between gap-2">
+        <Label className="text-xs" htmlFor={`${nodeId}-${fieldId}`}>
+          {label}
+        </Label>
+        {limit !== undefined && (
+          <span
+            className={`text-xs tabular-nums ${typed >= limit ? "text-destructive" : "text-muted-foreground"}`}
+            data-testid={`field-count-${nodeId}-${fieldId}`}
+          >
+            {translate("canvas.field.count", { used: String(typed), limit: String(limit) })}
+          </span>
+        )}
+      </div>
 
       {/*
         The border and the focus ring are drawn here rather than on each text
@@ -215,7 +248,9 @@ export function SlottedField({
                 data-testid={`field-box-${nodeId}-${fieldId}-${index}`}
                 id={index === 0 ? `${nodeId}-${fieldId}` : undefined}
                 onChange={event =>
-                  onChange(slottedTextOf(withLiteral(editable, index, event.target.value)))
+                  onChange(
+                    slottedTextOf(withLiteral(editable, index, cut(index, event.target.value)))
+                  )
                 }
                 onKeyDown={onKeyDown(index)}
                 /*

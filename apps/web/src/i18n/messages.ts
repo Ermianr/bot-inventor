@@ -40,6 +40,7 @@ const en = {
   "run.failure.timeout":
     "Your bot never finished connecting. Check your internet connection and press Run again.",
   "run.failure.flow": "The Flow {flow} stopped: {message}",
+  "run.failure.node": "This bot cannot run yet: {message}",
   "run.failure.build":
     "Your change could not be built, so your bot is still running the last version that worked. {message}",
   "run.reloading": "You changed something. Restarting your bot…",
@@ -223,6 +224,32 @@ const en = {
   "canvas.embedField.removeWire.cancel": "Keep the pair",
   "canvas.embedField.removeWire.confirm": "Remove it anyway",
 
+  // What a text field says about how much of Discord's limit it has spent. The
+  // pills are not counted: what a wire will carry is only known once it runs.
+  "canvas.field.count": "{used}/{limit}",
+
+  // What is wrong with an embed, drawn on the node that builds it. Each part
+  // has a sentence of its own, because "the title" and "the value of pair 3"
+  // are not the same sentence in every language.
+  "canvas.embed.problem.empty":
+    "This embed has nothing in it. Give it a title, some text, a picture or a pair.",
+  "canvas.embed.problem.tooManyEmbedFields":
+    "This embed has {count} pairs, and Discord allows {limit}. Remove {count} minus {limit} of them.",
+  "canvas.embed.problem.title.tooLong":
+    "The title is {length} characters long, and Discord allows {limit}.",
+  "canvas.embed.problem.description.tooLong":
+    "The text is {length} characters long, and Discord allows {limit}.",
+  "canvas.embed.problem.authorName.tooLong":
+    "The author is {length} characters long, and Discord allows {limit}.",
+  "canvas.embed.problem.footerText.tooLong":
+    "The footer is {length} characters long, and Discord allows {limit}.",
+  "canvas.embed.problem.embedFieldName.tooLong":
+    "The name of pair {index} is {length} characters long, and Discord allows {limit}.",
+  "canvas.embed.problem.embedFieldValue.tooLong":
+    "The value of pair {index} is {length} characters long, and Discord allows {limit}.",
+  "canvas.embed.problem.total.tooLong":
+    "This embed holds {length} characters all together, and Discord allows {limit}.",
+
   "connections.rejected.direction":
     "Wires run from an output on the right of a node to an input on the left.",
   "connections.rejected.kind":
@@ -315,6 +342,7 @@ const es: Record<MessageKey, string> = {
   "run.failure.timeout":
     "Tu bot nunca terminó de conectarse. Revisa tu conexión a internet y pulsa Ejecutar otra vez.",
   "run.failure.flow": "El Flow {flow} se detuvo: {message}",
+  "run.failure.node": "Este bot todavía no puede ejecutarse: {message}",
   "run.failure.build":
     "Tu cambio no se pudo construir, así que tu bot sigue con la última versión que funcionó. {message}",
   "run.reloading": "Cambiaste algo. Reiniciando tu bot…",
@@ -489,6 +517,28 @@ const es: Record<MessageKey, string> = {
   "canvas.embedField.removeWire.cancel": "Conservar el par",
   "canvas.embedField.removeWire.confirm": "Quitarlo de todas formas",
 
+  // Lo que un campo de texto dice sobre cuánto del límite de Discord ha gastado.
+  "canvas.field.count": "{used}/{limit}",
+
+  "canvas.embed.problem.empty":
+    "Este bloque no tiene nada. Ponle un título, un texto, una imagen o un par.",
+  "canvas.embed.problem.tooManyEmbedFields":
+    "Este bloque tiene {count} pares y Discord permite {limit}. Quita los que sobran.",
+  "canvas.embed.problem.title.tooLong":
+    "El título tiene {length} caracteres y Discord permite {limit}.",
+  "canvas.embed.problem.description.tooLong":
+    "El texto tiene {length} caracteres y Discord permite {limit}.",
+  "canvas.embed.problem.authorName.tooLong":
+    "El autor tiene {length} caracteres y Discord permite {limit}.",
+  "canvas.embed.problem.footerText.tooLong":
+    "El pie tiene {length} caracteres y Discord permite {limit}.",
+  "canvas.embed.problem.embedFieldName.tooLong":
+    "El nombre del par {index} tiene {length} caracteres y Discord permite {limit}.",
+  "canvas.embed.problem.embedFieldValue.tooLong":
+    "El valor del par {index} tiene {length} caracteres y Discord permite {limit}.",
+  "canvas.embed.problem.total.tooLong":
+    "Este bloque tiene {length} caracteres en total y Discord permite {limit}.",
+
   "connections.rejected.direction":
     "Los cables van de una salida a la derecha de un nodo a una entrada a la izquierda.",
   "connections.rejected.kind":
@@ -559,8 +609,12 @@ export function currentLocale(): Locale {
  * time. A missing one shows as itself rather than as blank space, which is a
  * bug report the user can read out loud.
  */
-export function translateDefinitionKey(key: string, locale: Locale = currentLocale()): string {
-  return messages[locale][key as MessageKey] ?? key
+export function translateDefinitionKey(
+  key: string,
+  locale: Locale = currentLocale(),
+  values: Readonly<Record<string, string>> = {}
+): string {
+  return fill(messages[locale][key as MessageKey] ?? key, values)
 }
 
 /** Resolves a key to text, filling in `{placeholders}`. */
@@ -569,6 +623,10 @@ export function translate(
   values: Readonly<Record<string, string>> = {},
   locale: Locale = currentLocale()
 ): string {
-  const text = messages[locale][key]
+  return fill(messages[locale][key], values)
+}
+
+/** Puts the values into a message's `{placeholders}`. */
+function fill(text: string, values: Readonly<Record<string, string>>): string {
   return text.replace(/\{(\w+)\}/g, (whole, name: string) => values[name] ?? whole)
 }
