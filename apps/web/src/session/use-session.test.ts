@@ -80,6 +80,15 @@ function fakeGateway() {
   }
 }
 
+/**
+ * How an entry point says which server its commands are registered to. It is
+ * read out of the generated code because that is the whole point: the Test
+ * Server has to be visible there for a change of server to be a change of bot.
+ */
+function onTestServer(testServerId: string) {
+  return `guildId: ${JSON.stringify(testServerId)}`
+}
+
 /** The same Project with one Node's field edited, which is what a user does. */
 function withGreeting(project: Project, greeting: string): Project {
   const [flow] = project.flows
@@ -122,6 +131,9 @@ async function run(shell: ReturnType<typeof fakeGateway>, project: Project) {
   await act(() => session.result.current.start())
   shell.send(shell.latest(), { kind: "status", status: "ready" })
   expect(session.result.current.status).toBe("ready")
+  // The bot is tried on the Test Server the Project is set to, from the first
+  // Run onwards and not only from the reload that follows a change of server.
+  expect(shell.started[0]?.entry).toContain(onTestServer(TEST_SERVER))
 
   return session
 }
@@ -301,8 +313,8 @@ describe("hot reload", () => {
     })
 
     await waitFor(() => expect(shell.started).toHaveLength(2))
-    expect(shell.started.at(-1)?.entry).toContain("999")
-    expect(shell.started.at(-1)?.entry).not.toContain(`"${TEST_SERVER}"`)
+    expect(shell.started.at(-1)?.entry).toContain(onTestServer("999"))
+    expect(shell.started.at(-1)?.entry).not.toContain(onTestServer(TEST_SERVER))
   })
 
   it("does not read the death of the old bot as the new one stopping", async () => {

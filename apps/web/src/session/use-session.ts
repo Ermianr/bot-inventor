@@ -17,9 +17,7 @@ import { type RunTrace, watchFailure, watchTrace } from "@/session/trace"
  * everything after that — the process, its lifetime and its output.
  *
  * The Project and its Test Server are watched while the bot runs, and a change
- * that changes the bot puts a new one in its place. That is the whole of hot
- * reload, and it is here rather than on a button because the user is meant to
- * never think about it.
+ * that changes the bot puts a new one in its place.
  */
 
 /**

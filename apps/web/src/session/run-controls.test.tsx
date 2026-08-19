@@ -17,7 +17,7 @@ import type { Session, SessionStatus } from "@/session/use-session"
  * something the hook underneath can be held to.
  */
 
-/** Every start and stop asked for, in the order it was asked. */
+/** How many starts and stops were asked for. */
 type Asked = { starts: number; stops: number }
 
 function fakeSession(status: SessionStatus) {
