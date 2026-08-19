@@ -17,19 +17,19 @@ import type { Session, SessionStatus } from "@/session/use-session"
  * something the hook underneath can be held to.
  */
 
-/** Every start and stop asked for, in the order it was asked. */
-type Asked = { starts: string[]; stops: number }
+/** How many starts and stops were asked for. */
+type Asked = { starts: number; stops: number }
 
 function fakeSession(status: SessionStatus) {
-  const asked: Asked = { starts: [], stops: 0 }
+  const asked: Asked = { starts: 0, stops: 0 }
 
   const session: Session = {
     status,
     entries: [],
     trace: undefined,
     problem: undefined,
-    start: async ({ testServerId }) => {
-      asked.starts.push(testServerId)
+    start: async () => {
+      asked.starts += 1
     },
     stop: async () => {
       asked.stops += 1
@@ -41,7 +41,7 @@ function fakeSession(status: SessionStatus) {
 
 function renderControls(status: SessionStatus) {
   const { asked, session } = fakeSession(status)
-  render(<RunControls session={session} testServerId="777" />)
+  render(<RunControls session={session} />)
   return asked
 }
 
@@ -57,12 +57,12 @@ function stopButton() {
 afterEach(cleanup)
 
 describe("the Run controls", () => {
-  it("starts the bot on the Project's Test Server, asking for nothing", () => {
+  it("starts the bot asking for nothing", () => {
     const asked = renderControls("stopped")
 
     fireEvent.click(play())
 
-    expect(asked.starts).toEqual(["777"])
+    expect(asked.starts).toBe(1)
   })
 
   it("stops the bot that is running", () => {
@@ -118,7 +118,7 @@ describe("running the bot from the keyboard", () => {
 
     fireEvent.keyDown(window, { key: "F5" })
 
-    expect(asked.starts).toEqual(["777"])
+    expect(asked.starts).toBe(1)
   })
 
   it("stops the bot on Shift+F5", () => {
@@ -140,7 +140,7 @@ describe("running the bot from the keyboard", () => {
 
     const notSwallowed = fireEvent.keyDown(window, { key: "F5" })
 
-    expect(asked.starts).toEqual([])
+    expect(asked.starts).toBe(0)
     expect(notSwallowed).toBe(false)
   })
 
@@ -158,7 +158,7 @@ describe("running the bot from the keyboard", () => {
 
     fireEvent.keyDown(window, { key: "F5", ctrlKey: true })
 
-    expect(asked.starts).toEqual([])
+    expect(asked.starts).toBe(0)
   })
 
   it("runs the bot once while the key is held down", () => {
@@ -167,6 +167,6 @@ describe("running the bot from the keyboard", () => {
     fireEvent.keyDown(window, { key: "F5" })
     fireEvent.keyDown(window, { key: "F5", repeat: true })
 
-    expect(asked.starts).toEqual(["777"])
+    expect(asked.starts).toBe(1)
   })
 })
