@@ -2,6 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
   "globalEnv": ["DISCORD_API_URL"],
+  "globalDependencies": ["eslint.config.js"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -10,6 +11,9 @@
     },
     "check-types": {
       "dependsOn": ["^build", "^check-types"]
+    },
+    "check-react-rules": {
+      "outputs": []
     },
     "test": {
       "dependsOn": ["^build"],

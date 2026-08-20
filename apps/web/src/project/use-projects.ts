@@ -116,12 +116,11 @@ export function useProjects(store: ProjectStore): Projects {
     }
   }, [store])
 
-  // Awaited rather than called and forgotten, so that what the store answers is
-  // written down after the render that asked rather than during it.
   useEffect(() => {
-    void (async () => {
-      await refresh()
-    })()
+    // `refresh` writes nothing down until the store has answered, which is
+    // after this render either way. The rule cannot see that across the call.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refresh()
   }, [refresh])
 
   /**

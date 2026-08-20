@@ -8,6 +8,7 @@
     "build": "vite build",
     "serve": "vite preview",
     "start": "vite",
+    "check-react-rules": "eslint src",
     "check-types": "vite build && tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
