@@ -1,5 +1,5 @@
 import type { Project } from "@bot-inventor/schema"
-import { useCallback, useState } from "react"
+import { useState } from "react"
 
 import { translate } from "@/i18n/messages"
 import { describeError } from "@/project/describe-error"
@@ -44,7 +44,7 @@ export function useImport(imports: ImportGateway): Importing {
   const [problem, setProblem] = useState<string | undefined>(undefined)
   const [busy, setBusy] = useState(false)
 
-  const choose = useCallback(async () => {
+  const choose = async () => {
     setProblem(undefined)
     setBusy(true)
 
@@ -67,12 +67,12 @@ export function useImport(imports: ImportGateway): Importing {
     } finally {
       setBusy(false)
     }
-  }, [imports])
+  }
 
   return {
     problem,
     busy,
     choose,
-    forgetProblem: useCallback(() => setProblem(undefined), [])
+    forgetProblem: () => setProblem(undefined)
   }
 }

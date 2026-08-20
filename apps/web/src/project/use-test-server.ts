@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 
 import type { ProjectStore } from "@/project/project-store"
 
@@ -46,12 +46,9 @@ export function useTestServer(store: ProjectStore, projectId: string): TestServe
      * would make picking a server feel like it did not take, and the worst a
      * failed write costs is picking it again next time.
      */
-    choose: useCallback(
-      (chosen: string) => {
-        setTestServerId(chosen)
-        void store.writeTestServer(projectId, chosen).catch(() => {})
-      },
-      [store, projectId]
-    )
+    choose: (chosen: string) => {
+      setTestServerId(chosen)
+      void store.writeTestServer(projectId, chosen).catch(() => {})
+    }
   }
 }

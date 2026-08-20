@@ -1,6 +1,6 @@
 import type { ExportFormat } from "@bot-inventor/compiler"
 import type { Project } from "@bot-inventor/schema"
-import { useCallback, useMemo, useState } from "react"
+import { useState } from "react"
 
 import { translate } from "@/i18n/messages"
 import { describeError } from "@/project/describe-error"
@@ -40,56 +40,51 @@ export function useExport(project: Project, exports: ExportGateway): Exporting {
   const [problem, setProblem] = useState<string | undefined>(undefined)
   const [busy, setBusy] = useState(false)
 
-  const exportAs = useCallback(
-    async (format: ExportFormat) => {
-      setWritten(undefined)
-      setWrittenPath(undefined)
-      setProblem(undefined)
+  const exportAs = async (format: ExportFormat) => {
+    setWritten(undefined)
+    setWrittenPath(undefined)
+    setProblem(undefined)
 
-      let outputDirectory: string | undefined
-      try {
-        outputDirectory = await exports.chooseDestination(format)
-      } catch (error) {
-        setProblem(translate("export.problem.failed", { message: describeError(error) }))
-        return
+    let outputDirectory: string | undefined
+    try {
+      outputDirectory = await exports.chooseDestination(format)
+    } catch (error) {
+      setProblem(translate("export.problem.failed", { message: describeError(error) }))
+      return
+    }
+    // The user closed the dialog. Nothing was asked for, so nothing is said.
+    if (outputDirectory === undefined) return
+
+    setBusy(true)
+    try {
+      let result = await exports.run({ format, project, outputDirectory })
+
+      // The one refusal the user can answer. Everything of theirs is still
+      // where it was until they say otherwise.
+      if (result.kind === "refused" && result.reason === "already-exists") {
+        // What is in the way rather than where it was put: for a Single File
+        // those are different things, and asking about the folder when the
+        // file is what goes is how somebody agrees to lose the wrong thing.
+        if (!(await exports.confirmOverwrite(result.path ?? outputDirectory))) return
+        result = await exports.run({ format, project, outputDirectory, overwrite: true })
       }
-      // The user closed the dialog. Nothing was asked for, so nothing is said.
-      if (outputDirectory === undefined) return
 
-      setBusy(true)
-      try {
-        let result = await exports.run({ format, project, outputDirectory })
-
-        // The one refusal the user can answer. Everything of theirs is still
-        // where it was until they say otherwise.
-        if (result.kind === "refused" && result.reason === "already-exists") {
-          // What is in the way rather than where it was put: for a Single File
-          // those are different things, and asking about the folder when the
-          // file is what goes is how somebody agrees to lose the wrong thing.
-          if (!(await exports.confirmOverwrite(result.path ?? outputDirectory))) return
-          result = await exports.run({ format, project, outputDirectory, overwrite: true })
-        }
-
-        if (result.kind === "exported") {
-          setWritten(translate(whereItWent(format), { path: result.path }))
-          setWrittenPath(result.path)
-        } else {
-          setProblem(translate("export.problem.failed", { message: result.message }))
-        }
-      } catch (error) {
-        setProblem(translate("export.problem.failed", { message: describeError(error) }))
-      } finally {
-        setBusy(false)
+      if (result.kind === "exported") {
+        setWritten(translate(whereItWent(format), { path: result.path }))
+        setWrittenPath(result.path)
+      } else {
+        setProblem(translate("export.problem.failed", { message: result.message }))
       }
-    },
-    [exports, project]
-  )
+    } catch (error) {
+      setProblem(translate("export.problem.failed", { message: describeError(error) }))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const show = exports.show
-  const showWritten = useMemo(() => {
-    if (show === undefined || writtenPath === undefined) return undefined
-    return () => show(writtenPath)
-  }, [show, writtenPath])
+  const showWritten =
+    show === undefined || writtenPath === undefined ? undefined : () => show(writtenPath)
 
   return { written, problem, busy, showWritten, exportAs }
 }

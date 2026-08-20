@@ -11,7 +11,7 @@ import {
 import { Input } from "@bot-inventor/ui/components/input"
 import { Label } from "@bot-inventor/ui/components/label"
 import { invoke } from "@tauri-apps/api/core"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { translate } from "@/i18n/messages"
 import { describeRefusal } from "@/session/refusal"
 
@@ -80,43 +80,48 @@ export function TestServerPicker({
    * The token is passed in rather than read from above, so that looking again
    * is what the button does and not what every keystroke of the token does.
    */
-  const look = useCallback(
-    async (token: string) => {
-      if (projectId === undefined && token.length === 0) return
-      // Only the latest question is worth an answer: a slow reply to a question
-      // the user has already asked again would otherwise clear the newer one's
-      // spinner and overwrite its list.
-      const asking = ++latestAsk.current
-      setLoading(true)
-      setProblem(undefined)
-      setAsked(true)
-      try {
-        const found = await invoke<TestServer[]>("list_test_servers", { projectId, token })
-        if (asking !== latestAsk.current) return
-        setServers(found)
-      } catch (error) {
-        if (asking !== latestAsk.current) return
-        // Not having a token yet is the ordinary state of a new Project, not
-        // something to shout about: the token field above says what to do.
-        setServers([])
-        setProblem(describeRefusal(error))
-      } finally {
-        if (asking === latestAsk.current) setLoading(false)
-      }
-    },
-    [projectId]
-  )
+  const look = async (token: string) => {
+    if (projectId === undefined && token.length === 0) return
+    // Only the latest question is worth an answer: a slow reply to a question
+    // the user has already asked again would otherwise clear the newer one's
+    // spinner and overwrite its list.
+    const asking = ++latestAsk.current
+    setLoading(true)
+    setProblem(undefined)
+    setAsked(true)
+    try {
+      const found = await invoke<TestServer[]>("list_test_servers", { projectId, token })
+      if (asking !== latestAsk.current) return
+      setServers(found)
+    } catch (error) {
+      if (asking !== latestAsk.current) return
+      // Not having a token yet is the ordinary state of a new Project, not
+      // something to shout about: the token field above says what to do.
+      setServers([])
+      setProblem(describeRefusal(error))
+    } finally {
+      if (asking === latestAsk.current) setLoading(false)
+    }
+  }
 
   // A Project already has its token, so its servers are there to be picked from
   // the moment the dialog opens. A Project being created has not been typed one
   // yet, and waits for the button.
+  //
+  // The Project is the whole of what this listens to, and `look` is left out of
+  // the list on purpose: it is the same question either way, and asking it once
+  // per render is the one thing this effect must not do. Nothing here rests on
+  // how still `look` is held — the list says when to ask, so the answer does not
+  // change with the function's identity.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: explained above.
   useEffect(() => {
     if (projectId === undefined) return
     // The spinner goes up as the dialog opens: one render that says the list is
     // being fetched, not a cascade — nothing here re-runs on what it sets.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void look("")
-  }, [look, projectId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- explained above.
+  }, [projectId])
 
   const chosen = servers.find(server => server.id === value) ?? null
   const capped = servers.length >= LIMIT
