@@ -91,6 +91,7 @@ _Avoid_: open, load, restore
 **Compiler**:
 Translates a Project into JavaScript. It emits the same behaviour in two modes — Development Mode (with Tracing) and Build — from a single definition of each Node.
 _Avoid_: generator, transpiler, engine
+_The name is taken_: React's build-time tool is written in full as "React Compiler", never shortened to "compiler", anywhere outside `packages/compiler`. It is build tooling, not part of the user's domain, so it is not a term of its own here.
 
 **Development Mode**:
 Running the real bot, connected to Discord with a test token, from inside the application and with Tracing enabled.

@@ -1,0 +1,19 @@
+# Memoization is no longer written by hand
+
+The React Compiler now compiles the editor and `packages/ui`, so React's own tool decides what is memoized and where. That alone is a line in a Vite config and would not be worth an ADR. What is worth recording is what it does to the code we write: **a `useCallback` or a `useMemo` written by hand is no longer how memoization happens in this repository**, and the ones that were there for that purpose are gone. A memoization call surviving in a diff is now a claim about identity that a reader is meant to stop and read, not the background noise it used to be.
+
+The reason to say it here is that the removal is easy to misread. A contributor arriving at `use-export.ts` and finding a bare function where every React tutorial shows a `useCallback` will read it as an oversight and put one back, and nothing in the build will disagree with them — the compiler quietly does its work either way, and the hand-written call is not an error, only a redundant one that hides the ones that mean something.
+
+The exception is stated by what a consumer depends on, not by what a hook returns. **The Project, Projects and Session hooks keep their memoization**, because the identity of the callbacks they expose is part of their contract: they are the state seams most of the application reads, and a consumer is entitled to put one of those callbacks in a dependency array or an effect and expect it to hold still. The React Compiler improves that identity without promising it — `infer` mode is a heuristic, it bails out on code it cannot prove safe, and it logs when it does rather than failing. A guarantee that half the application leans on is not something to buy on a heuristic.
+
+We considered phrasing the exception as "hooks that return callbacks" and rejected it. Almost every hook in the editor returns callbacks inside an object, so that phrasing exempts nearly all of them and leaves the decision with no content. The five that lost their memoization — `use-export`, `use-import`, `use-share`, `use-test-server` and the minimap preference — are read by buttons and handlers, which do not care.
+
+We also considered leaving the hand-written calls in place, on the grounds that they are harmless once the compiler runs. They are not harmless: they are the thing that makes the deliberate ones unreadable, and they cost a reviewer the same attention whether they mean something or not.
+
+## Consequences
+
+- **New code does not memoize by hand.** When a hook is added, the question to ask is whether a consumer will place its callback in a dependency array or an effect — not what the hook's return type looks like. If nothing depends on identity, write the plain function.
+- **A memoization call is a statement, and belongs with its reason.** The ones that stay are there because a named consumer needs a stable identity; if that is not obvious from the file, it is a comment's job to say so.
+- **An effect watches the value that decides, not the function that fetches.** `TestServerPicker` listens to the Project rather than to its lookup callback for exactly this reason: the Project is what decides whether the question is worth asking again, and nothing there should rest on how still the compiler holds a function.
+- **Unit tests do not run the compiler.** `vitest.config.ts` runs without the Babel pass, so a test sees the uncompiled code: an effect depending on a function rebuilt every render loops in the suite even where the shipped build would be fine. The end-to-end specs are what actually exercise the compiled editor.
+- **Restoring a `useCallback` is cheap.** If a consumer turns up that genuinely needs a stable identity from one of the five, it is a one-line change in one file — this decision is not a ban, it is a default.
