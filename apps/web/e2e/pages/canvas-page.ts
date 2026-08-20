@@ -76,6 +76,17 @@ export class CanvasPage {
     return this.page.getByTestId(`field-box-${nodeId}-${fieldId}-${index}`)
   }
 
+  /**
+   * Where the caret stands inside one of those boxes, counted in characters
+   * from its start. It is read rather than seen: crossing a pill puts the
+   * caret on the far side of it, and nothing on the screen says where it went.
+   */
+  async caretIn(nodeId: string, fieldId: string, index: number): Promise<number> {
+    return await this.fieldBox(nodeId, fieldId, index).evaluate(
+      box => (box as HTMLTextAreaElement).selectionStart ?? -1
+    )
+  }
+
   /** One Slot, drawn as a pill inside the text of a field. */
   slot(nodeId: string, fieldId: string, index: number): Locator {
     return this.page.getByTestId(`slot-${nodeId}-${fieldId}-${index}`)
