@@ -117,6 +117,9 @@ export function useProjects(store: ProjectStore): Projects {
   }, [store])
 
   useEffect(() => {
+    // `refresh` writes nothing down until the store has answered, which is
+    // after this render either way. The rule cannot see that across the call.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh()
   }, [refresh])
 

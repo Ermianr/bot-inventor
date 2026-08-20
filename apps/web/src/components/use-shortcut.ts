@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useEffectEvent } from "react"
 
 /**
  * A keyboard shortcut for something the editor already draws a control for.
@@ -35,8 +35,7 @@ export function useShortcut(shortcut: Shortcut, act: () => void, enabled = true)
   // What to do is read when the key is pressed and never watched, so a caller
   // may pass a fresh closure every render — they all do — without the listener
   // being taken off the window and put back on it each time.
-  const latest = useRef(act)
-  latest.current = act
+  const run = useEffectEvent(act)
 
   useEffect(() => {
     const shift = shortcut.startsWith("Shift+")
@@ -60,7 +59,7 @@ export function useShortcut(shortcut: Shortcut, act: () => void, enabled = true)
       // Held down, a key repeats. One press is one Session.
       if (event.repeat) return
 
-      latest.current()
+      run()
     }
 
     window.addEventListener("keydown", listen)

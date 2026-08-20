@@ -112,6 +112,9 @@ export function TestServerPicker({
   // yet, and waits for the button.
   useEffect(() => {
     if (projectId === undefined) return
+    // The spinner goes up as the dialog opens: one render that says the list is
+    // being fetched, not a cascade — nothing here re-runs on what it sets.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void look("")
   }, [look, projectId])
 

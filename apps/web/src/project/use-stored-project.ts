@@ -1,5 +1,5 @@
 import type { OpenProjectResult, Project } from "@bot-inventor/schema"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useEffectEvent, useState } from "react"
 
 import { translate } from "@/i18n/messages"
 import { describeError } from "@/project/describe-error"
@@ -39,9 +39,17 @@ export type LoadedProject =
 export function useStoredProject(store: ProjectStore, projectId: string): LoadedProject {
   const [loaded, setLoaded] = useState<LoadedProject>({ status: "loading" })
 
+  // Pointing somewhere else is a Project that is not read yet, said while the
+  // render that changed it is still going: waiting for an effect to say it
+  // would draw the Project just left behind under the new route for a frame.
+  const [reading, setReading] = useState({ store, projectId })
+  if (reading.store !== store || reading.projectId !== projectId) {
+    setReading({ store, projectId })
+    setLoaded({ status: "loading" })
+  }
+
   useEffect(() => {
     let current = true
-    setLoaded({ status: "loading" })
 
     void (async () => {
       let result: OpenProjectResult
@@ -117,29 +125,29 @@ export function useAutosave(
   const [savedDocument, setSavedDocument] = useState(options.migrated === true ? "" : document)
   const [problem, setProblem] = useState<string | undefined>(undefined)
 
-  // Read through a ref so that the timer is only ever restarted by an edit, and
-  // never by a store that was rebuilt on a render.
-  const latest = useRef({ store, project })
-  latest.current = { store, project }
+  // The Project is read when the timer goes off and never watched, so that the
+  // timer is only ever restarted by an edit and never by a store that was
+  // rebuilt on a render.
+  const write = useEffectEvent(async () => {
+    // Taken before the write rather than after it: an edit made while the
+    // write is under way is still owed one of its own, and reading the Canvas
+    // afterwards would count that edit as already stored.
+    const writing = { ...project }
+    try {
+      await store.write(writing)
+    } catch (error) {
+      setProblem(translate("project.problem.write", { message: describeError(error) }))
+      return
+    }
+    setSavedDocument(serializeProject(writing))
+    setProblem(undefined)
+  })
 
   useEffect(() => {
     if (document === savedDocument) return
 
     const timer = setTimeout(() => {
-      void (async () => {
-        // Taken before the write rather than after it: an edit made while the
-        // write is under way is still owed one of its own, and reading the
-        // Canvas afterwards would count that edit as already stored.
-        const writing = { ...latest.current.project }
-        try {
-          await latest.current.store.write(writing)
-        } catch (error) {
-          setProblem(translate("project.problem.write", { message: describeError(error) }))
-          return
-        }
-        setSavedDocument(serializeProject(writing))
-        setProblem(undefined)
-      })()
+      void write()
     }, AUTOSAVE_DELAY)
 
     return () => clearTimeout(timer)

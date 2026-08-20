@@ -113,7 +113,9 @@ export function SlottedField({
     const box = boxes.current[caret.literal]
     box?.focus()
     box?.setSelectionRange(caret.offset, caret.offset)
-    setCaret(undefined)
+    // Not cleared afterwards: every move records a caret of its own, so the
+    // next one is a new value and this runs again on it. Clearing it here would
+    // only cost a second render to say nothing happened.
   }, [caret])
 
   const remove = (index: number) => {

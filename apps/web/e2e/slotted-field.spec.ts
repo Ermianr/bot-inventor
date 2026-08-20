@@ -52,6 +52,28 @@ test.describe("a text field with values inside it", () => {
     await expect(canvas.slots("node-reply", "content")).toHaveCount(2)
   })
 
+  test("crosses a pill with the arrow keys, as often as the user does", async ({ page }) => {
+    const before = canvas.fieldBox("node-reply", "content", 0)
+    const after = canvas.fieldBox("node-reply", "content", 1)
+
+    // Four times over, because once is not the question. Crossing is remembered
+    // as where the caret is to go next, and a field that only forwards the
+    // first crossing looks right until the user comes back.
+    for (let crossing = 0; crossing < 4; crossing++) {
+      await before.click()
+      await page.keyboard.press("End")
+      await page.keyboard.press("ArrowRight")
+
+      await expect(after).toBeFocused()
+      expect(await canvas.caretIn("node-reply", "content", 1)).toBe(0)
+
+      await page.keyboard.press("ArrowLeft")
+
+      await expect(before).toBeFocused()
+      expect(await canvas.caretIn("node-reply", "content", 0)).toBe("Hello, ".length)
+    }
+  })
+
   test("takes a pill nothing is wired to without asking", async () => {
     await canvas.removeSlot("node-reply", "content", 0).click()
 
