@@ -87,7 +87,19 @@ export function Canvas(props: CanvasProps) {
 }
 
 function CanvasUnderProvider({ editor, trace }: CanvasProps) {
-  const { flow } = editor
+  // Taken apart rather than read through `editor`: each of these keeps its
+  // identity across a render and the object holding them does not, so what the
+  // memoized values below depend on is the callback and never its container.
+  const {
+    flow,
+    setNodeField,
+    removeNode,
+    moveNode,
+    disconnectWire,
+    connectWire,
+    insertSlot,
+    addNode
+  } = editor
   const { screenToFlowPosition } = useReactFlow()
   const [refusal, setRefusal] = useState<string | undefined>(undefined)
 
@@ -128,10 +140,10 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
           node,
           definition,
           runState: watching?.nodes[node.id],
-          setField: (fieldId, value) => editor.setNodeField(node.id, fieldId, value),
+          setField: (fieldId, value) => setNodeField(node.id, fieldId, value),
           slotLabel: slot => slotLabelOf(flow, node.id, slot),
           slotIsWired: slot => slotWireOf(flow, node.id, slot) !== undefined,
-          remove: () => editor.removeNode(node.id)
+          remove: () => removeNode(node.id)
         }
         return [
           {
@@ -142,7 +154,7 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
           }
         ]
       }),
-    [flow, editor.setNodeField, editor.removeNode, watching]
+    [flow, setNodeField, removeNode, watching]
   )
 
   const wires = useMemo<WireType[]>(
@@ -152,7 +164,7 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
           kind: wire.kind,
           coercionLabelKey: coercionLabelKeyOf(flow, wire),
           carried: watching?.wires[wire.id],
-          remove: editor.disconnectWire
+          remove: disconnectWire
         }
         return {
           id: wire.id,
@@ -164,7 +176,7 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
           data
         }
       }),
-    [flow, editor.disconnectWire, watching]
+    [flow, disconnectWire, watching]
   )
 
   /**
@@ -195,15 +207,15 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
       applyNodeChanges(changes)
       for (const change of changes) {
         if (change.type === "position" && change.position !== undefined) {
-          editor.moveNode(change.id, change.position)
+          moveNode(change.id, change.position)
         }
-        if (change.type === "remove") editor.removeNode(change.id)
+        if (change.type === "remove") removeNode(change.id)
         // The Inspector follows the selection React Flow already keeps, so
         // clicking a Node is the one gesture that opens it.
         if (change.type === "select" && change.selected) setSelected(change.id)
       }
     },
-    [applyNodeChanges, editor.moveNode, editor.removeNode]
+    [applyNodeChanges, moveNode, removeNode]
   )
 
   const isValidConnection = useCallback<IsValidConnection<WireType>>(
@@ -228,19 +240,19 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
 
       lastRefusal.current = undefined
       setRefusal(undefined)
-      editor.connectWire({ kind: check.kind, ...ends })
+      connectWire({ kind: check.kind, ...ends })
     },
-    [flow, editor.connectWire]
+    [flow, connectWire]
   )
 
   /** Removing a Wire is removing it from the Project, however it was removed. */
   const onWiresChange = useCallback(
     (changes: EdgeChange<WireType>[]) => {
       for (const change of changes) {
-        if (change.type === "remove") editor.disconnectWire(change.id)
+        if (change.type === "remove") disconnectWire(change.id)
       }
     },
-    [editor.disconnectWire]
+    [disconnectWire]
   )
 
   /** A new drag is a new question, so the last answer stops being shown. */
@@ -272,7 +284,7 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
         Slot and the Wire are made in one edit.
       */
       if (drop !== undefined && from?.type === "source" && typeof fromPort === "string") {
-        const insertion = editor.insertSlot(drop, { node: from.nodeId, port: fromPort })
+        const insertion = insertSlot(drop, { node: from.nodeId, port: fromPort })
         setRefusal(insertion.inserted ? undefined : insertion.reasonKey)
         lastRefusal.current = undefined
         return
@@ -282,7 +294,7 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
       setRefusal(lastRefusal.current)
       lastRefusal.current = undefined
     },
-    [editor.insertSlot]
+    [insertSlot]
   )
 
   /**
@@ -299,9 +311,9 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
    */
   const placeNode = useCallback(
     (definition: NodeDefinition, at: ScreenPoint) => {
-      editor.addNode(definition, screenToFlowPosition(at))
+      addNode(definition, screenToFlowPosition(at))
     },
-    [editor.addNode, screenToFlowPosition]
+    [addNode, screenToFlowPosition]
   )
 
   /**
@@ -358,7 +370,7 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
         <Inspector
           definition={inspected.definition}
           node={inspected.node}
-          setField={(fieldId, value) => editor.setNodeField(inspected.node.id, fieldId, value)}
+          setField={(fieldId, value) => setNodeField(inspected.node.id, fieldId, value)}
           slotIsWired={slot => slotWireOf(flow, inspected.node.id, slot) !== undefined}
           slotLabel={slot => slotLabelOf(flow, inspected.node.id, slot)}
           slotValue={slot => slotValueOf(flow, inspected.node.id, slot, watching)}

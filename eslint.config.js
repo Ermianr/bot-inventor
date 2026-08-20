@@ -10,6 +10,16 @@ import { parser as typescriptParser } from "typescript-eslint"
  * The configuration sits at the repository root so that it reaches the UI
  * package as well as the web app, and extends no preset beyond the plugin's
  * own. Only the parser comes from `typescript-eslint`; none of its rules run.
+ * A warning fails the command as an error does: a check whose findings are
+ * printed and survived teaches the reader to scroll past it.
+ *
+ * Biome does have a rule of its own now — `useReactCompiler`, from 2.5.8 — and
+ * it is not a replacement yet. It is in the nursery group, it caught three of
+ * the seven breaches this plugin found the day both were run over the same
+ * code, and it is skipped entirely unless the nearest `package.json` names a
+ * React version it can parse — which `"react": "catalog:"` is not. A check that
+ * turns itself off in silence is worse than no check. Worth trying again once
+ * the rule is stable.
  */
 export default [
   {
