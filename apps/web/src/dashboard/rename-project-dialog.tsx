@@ -9,7 +9,7 @@ import {
 } from "@bot-inventor/ui/components/dialog"
 import { Input } from "@bot-inventor/ui/components/input"
 import { Label } from "@bot-inventor/ui/components/label"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { translate } from "@/i18n/messages"
 import type { ProjectSummary } from "@/project/project-store"
@@ -47,9 +47,11 @@ export function RenameProjectDialog({
   // must not throw away what the user has typed into the field.
   const projectId = project?.id
   const storedName = project?.name
-  useEffect(() => {
-    if (projectId !== undefined) setName(storedName ?? "")
-  }, [projectId, storedName])
+  const [shown, setShown] = useState<{ id?: string; name?: string }>({})
+  if (projectId !== undefined && (projectId !== shown.id || storedName !== shown.name)) {
+    setShown({ id: projectId, name: storedName })
+    setName(storedName ?? "")
+  }
 
   return (
     <Dialog open={project !== undefined} onOpenChange={onOpenChange}>

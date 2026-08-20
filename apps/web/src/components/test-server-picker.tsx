@@ -112,7 +112,9 @@ export function TestServerPicker({
   // yet, and waits for the button.
   useEffect(() => {
     if (projectId === undefined) return
-    void look("")
+    void (async () => {
+      await look("")
+    })()
   }, [look, projectId])
 
   const chosen = servers.find(server => server.id === value) ?? null

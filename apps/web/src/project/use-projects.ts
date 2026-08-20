@@ -116,8 +116,12 @@ export function useProjects(store: ProjectStore): Projects {
     }
   }, [store])
 
+  // Awaited rather than called and forgotten, so that what the store answers is
+  // written down after the render that asked rather than during it.
   useEffect(() => {
-    void refresh()
+    void (async () => {
+      await refresh()
+    })()
   }, [refresh])
 
   /**
