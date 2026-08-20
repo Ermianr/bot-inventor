@@ -21,7 +21,7 @@ import {
   useNodesState,
   useReactFlow
 } from "@xyflow/react"
-import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { type CSSProperties, useEffect, useRef, useState } from "react"
 import { AddNodeMenu, type ScreenPoint } from "@/canvas/add-node"
 import { FlowNode, type FlowNodeData, type FlowNodeType } from "@/canvas/flow-node"
 import { Inspector } from "@/canvas/inspector"
@@ -130,54 +130,46 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
    */
   const lastRefusal = useRef<string | undefined>(undefined)
 
-  const nodes = useMemo<FlowNodeType[]>(
-    () =>
-      flow.nodes.flatMap(node => {
-        const definition = catalogue.get(node.type)
-        if (definition === undefined) return []
+  const nodes: FlowNodeType[] = flow.nodes.flatMap(node => {
+    const definition = catalogue.get(node.type)
+    if (definition === undefined) return []
 
-        const data: FlowNodeData = {
-          node,
-          definition,
-          runState: watching?.nodes[node.id],
-          setField: (fieldId, value) => setNodeField(node.id, fieldId, value),
-          slotLabel: slot => slotLabelOf(flow, node.id, slot),
-          slotIsWired: slot => slotWireOf(flow, node.id, slot) !== undefined,
-          remove: () => removeNode(node.id)
-        }
-        return [
-          {
-            id: node.id,
-            type: "flowNode" as const,
-            position: node.position,
-            data
-          }
-        ]
-      }),
-    [flow, setNodeField, removeNode, watching]
-  )
+    const data: FlowNodeData = {
+      node,
+      definition,
+      runState: watching?.nodes[node.id],
+      setField: (fieldId, value) => setNodeField(node.id, fieldId, value),
+      slotLabel: slot => slotLabelOf(flow, node.id, slot),
+      slotIsWired: slot => slotWireOf(flow, node.id, slot) !== undefined,
+      remove: () => removeNode(node.id)
+    }
+    return [
+      {
+        id: node.id,
+        type: "flowNode" as const,
+        position: node.position,
+        data
+      }
+    ]
+  })
 
-  const wires = useMemo<WireType[]>(
-    () =>
-      flow.wires.map(wire => {
-        const data: WireData = {
-          kind: wire.kind,
-          coercionLabelKey: coercionLabelKeyOf(flow, wire),
-          carried: watching?.wires[wire.id],
-          remove: disconnectWire
-        }
-        return {
-          id: wire.id,
-          type: "wire" as const,
-          source: wire.from.node,
-          sourceHandle: wire.from.port,
-          target: wire.to.node,
-          targetHandle: wire.to.port,
-          data
-        }
-      }),
-    [flow, disconnectWire, watching]
-  )
+  const wires: WireType[] = flow.wires.map(wire => {
+    const data: WireData = {
+      kind: wire.kind,
+      coercionLabelKey: coercionLabelKeyOf(flow, wire),
+      carried: watching?.wires[wire.id],
+      remove: disconnectWire
+    }
+    return {
+      id: wire.id,
+      type: "wire" as const,
+      source: wire.from.node,
+      sourceHandle: wire.from.port,
+      target: wire.to.node,
+      targetHandle: wire.to.port,
+      data
+    }
+  })
 
   /**
    * The Nodes React Flow is drawing. They are the Project's, plus what React
@@ -202,64 +194,52 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
    * and would otherwise leave it in the Project, still compiled and still run;
    * routing it through the same removal takes its Wires with it too.
    */
-  const onNodesChange = useCallback(
-    (changes: NodeChange<FlowNodeType>[]) => {
-      applyNodeChanges(changes)
-      for (const change of changes) {
-        if (change.type === "position" && change.position !== undefined) {
-          moveNode(change.id, change.position)
-        }
-        if (change.type === "remove") removeNode(change.id)
-        // The Inspector follows the selection React Flow already keeps, so
-        // clicking a Node is the one gesture that opens it.
-        if (change.type === "select" && change.selected) setSelected(change.id)
+  const onNodesChange = (changes: NodeChange<FlowNodeType>[]) => {
+    applyNodeChanges(changes)
+    for (const change of changes) {
+      if (change.type === "position" && change.position !== undefined) {
+        moveNode(change.id, change.position)
       }
-    },
-    [applyNodeChanges, moveNode, removeNode]
-  )
+      if (change.type === "remove") removeNode(change.id)
+      // The Inspector follows the selection React Flow already keeps, so
+      // clicking a Node is the one gesture that opens it.
+      if (change.type === "select" && change.selected) setSelected(change.id)
+    }
+  }
 
-  const isValidConnection = useCallback<IsValidConnection<WireType>>(
-    connection => {
-      const ends = endsOf(connection)
-      if (ends === undefined) return false
+  const isValidConnection: IsValidConnection<WireType> = connection => {
+    const ends = endsOf(connection)
+    if (ends === undefined) return false
 
-      const check = checkConnection({ flow, catalogue, ...ends })
-      lastRefusal.current = check.legal ? undefined : check.reasonKey
-      return check.legal
-    },
-    [flow]
-  )
+    const check = checkConnection({ flow, catalogue, ...ends })
+    lastRefusal.current = check.legal ? undefined : check.reasonKey
+    return check.legal
+  }
 
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      const ends = endsOf(connection)
-      if (ends === undefined) return
+  const onConnect = (connection: Connection) => {
+    const ends = endsOf(connection)
+    if (ends === undefined) return
 
-      const check = checkConnection({ flow, catalogue, ...ends })
-      if (!check.legal) return
+    const check = checkConnection({ flow, catalogue, ...ends })
+    if (!check.legal) return
 
-      lastRefusal.current = undefined
-      setRefusal(undefined)
-      connectWire({ kind: check.kind, ...ends })
-    },
-    [flow, connectWire]
-  )
-
-  /** Removing a Wire is removing it from the Project, however it was removed. */
-  const onWiresChange = useCallback(
-    (changes: EdgeChange<WireType>[]) => {
-      for (const change of changes) {
-        if (change.type === "remove") disconnectWire(change.id)
-      }
-    },
-    [disconnectWire]
-  )
-
-  /** A new drag is a new question, so the last answer stops being shown. */
-  const onConnectStart = useCallback(() => {
     lastRefusal.current = undefined
     setRefusal(undefined)
-  }, [])
+    connectWire({ kind: check.kind, ...ends })
+  }
+
+  /** Removing a Wire is removing it from the Project, however it was removed. */
+  const onWiresChange = (changes: EdgeChange<WireType>[]) => {
+    for (const change of changes) {
+      if (change.type === "remove") disconnectWire(change.id)
+    }
+  }
+
+  /** A new drag is a new question, so the last answer stops being shown. */
+  const onConnectStart = () => {
+    lastRefusal.current = undefined
+    setRefusal(undefined)
+  }
 
   /**
    * A refused Wire is told to the user in words. React Flow's own answer is to
@@ -270,62 +250,47 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
    * leaves `isValid` null, and that is someone changing their mind, not the
    * editor turning them down.
    */
-  const onConnectEnd = useCallback<OnConnectEnd>(
-    (event, state) => {
-      const from = state.fromHandle
-      const fromPort = from?.id
-      const drop = slotDropTarget(event)
+  const onConnectEnd: OnConnectEnd = (event, state) => {
+    const from = state.fromHandle
+    const fromPort = from?.id
+    const drop = slotDropTarget(event)
 
-      /*
-        A Wire let go over a text field is a Slot being dropped into the
-        sentence, not a Wire nobody finished. React Flow can only read it as
-        landing on nothing — the Port the Wire arrives at does not exist until
-        the Slot is in the field — so the gesture is answered here, and the
-        Slot and the Wire are made in one edit.
-      */
-      if (drop !== undefined && from?.type === "source" && typeof fromPort === "string") {
-        const insertion = insertSlot(drop, { node: from.nodeId, port: fromPort })
-        setRefusal(insertion.inserted ? undefined : insertion.reasonKey)
-        lastRefusal.current = undefined
-        return
-      }
-
-      if (state.isValid !== false) return
-      setRefusal(lastRefusal.current)
+    /*
+      A Wire let go over a text field is a Slot being dropped into the
+      sentence, not a Wire nobody finished. React Flow can only read it as
+      landing on nothing — the Port the Wire arrives at does not exist until
+      the Slot is in the field — so the gesture is answered here, and the
+      Slot and the Wire are made in one edit.
+    */
+    if (drop !== undefined && from?.type === "source" && typeof fromPort === "string") {
+      const insertion = insertSlot(drop, { node: from.nodeId, port: fromPort })
+      setRefusal(insertion.inserted ? undefined : insertion.reasonKey)
       lastRefusal.current = undefined
-    },
-    [insertSlot]
-  )
+      return
+    }
+
+    if (state.isValid !== false) return
+    setRefusal(lastRefusal.current)
+    lastRefusal.current = undefined
+  }
 
   /**
    * What the catalogue offers this Flow. It is read off the Flow's Nodes, so a
    * Trigger becomes unavailable the moment one is dropped on the Canvas and is
    * offered again the moment it is gone.
    */
-  const choices = useMemo(() => addableNodes(flow, catalogue), [flow])
+  const choices = addableNodes(flow, catalogue)
 
   /**
    * A Node is added where the pointer was, not where the viewport happens to
    * start: the user is told it lands where they clicked, and a Canvas they have
    * panned or zoomed must keep that promise.
    */
-  const placeNode = useCallback(
-    (definition: NodeDefinition, at: ScreenPoint) => {
-      addNode(definition, screenToFlowPosition(at))
-    },
-    [addNode, screenToFlowPosition]
-  )
+  const placeNode = (definition: NodeDefinition, at: ScreenPoint) => {
+    addNode(definition, screenToFlowPosition(at))
+  }
 
-  /**
-   * The Node the Inspector is open for: the selected one, when it is a Node
-   * that is typed into the Inspector rather than on the Canvas.
-   */
-  const inspected = useMemo(() => {
-    const node = flow.nodes.find(candidate => candidate.id === selected)
-    const definition = node === undefined ? undefined : catalogue.get(node.type)
-    if (node === undefined || definition?.summary === undefined) return undefined
-    return { node, definition }
-  }, [flow, selected])
+  const inspected = inspectedNode(flow, selected)
 
   return (
     <section aria-label={translate("canvas.label")} className="relative flex h-full w-full">
@@ -378,6 +343,17 @@ function CanvasUnderProvider({ editor, trace }: CanvasProps) {
       )}
     </section>
   )
+}
+
+/**
+ * The Node the Inspector is open for: the selected one, when it is a Node that
+ * is typed into the Inspector rather than on the Canvas.
+ */
+function inspectedNode(flow: ProjectEditor["flow"], selected: string | undefined) {
+  const node = flow.nodes.find(candidate => candidate.id === selected)
+  const definition = node === undefined ? undefined : catalogue.get(node.type)
+  if (node === undefined || definition?.summary === undefined) return undefined
+  return { node, definition }
 }
 
 /** A text field a Wire was let go over, and where in it the Slot lands. */

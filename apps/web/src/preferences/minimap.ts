@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from "react"
+import { useSyncExternalStore } from "react"
 
 /**
  * Whether the Minimap is shown: the user's preference, and nothing to do with
@@ -58,10 +58,10 @@ export type MinimapPreference = {
 export function useMinimap(): MinimapPreference {
   const shown = useSyncExternalStore(subscribe, readShown)
 
-  const setShown = useCallback((next: boolean) => {
+  const setShown = (next: boolean) => {
     window.localStorage.setItem(MINIMAP_STORAGE_KEY, next ? SHOWN : HIDDEN)
     for (const listener of listeners) listener()
-  }, [])
+  }
 
   return { shown, setShown }
 }

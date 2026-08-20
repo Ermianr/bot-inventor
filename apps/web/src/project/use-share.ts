@@ -1,5 +1,5 @@
 import type { Project } from "@bot-inventor/schema"
-import { useCallback, useState } from "react"
+import { useState } from "react"
 
 import { translate } from "@/i18n/messages"
 import { describeError } from "@/project/describe-error"
@@ -35,7 +35,7 @@ export function useShare(project: Project, shares: ShareGateway): Sharing {
   const [problem, setProblem] = useState<string | undefined>(undefined)
   const [busy, setBusy] = useState(false)
 
-  const share = useCallback(async () => {
+  const share = async () => {
     setWritten(undefined)
     setProblem(undefined)
     setBusy(true)
@@ -55,7 +55,7 @@ export function useShare(project: Project, shares: ShareGateway): Sharing {
     } finally {
       setBusy(false)
     }
-  }, [project, shares])
+  }
 
   return { written, problem, busy, share }
 }
