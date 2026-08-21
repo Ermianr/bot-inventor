@@ -34,7 +34,7 @@
     // The editor compiles with the automatic JSX runtime.
     "react/react-in-jsx-scope": "off",
     // Memoization is not written by hand here (ADR 0013), and what is left of
-    // it is `eslint-plugin-react-hooks`' ground, which still runs.
+    // it is the React Compiler set below.
     "react/memo-dependencies": "off",
     // Steps that must happen in order are awaited in order. Turning those into
     // `Promise.all` would change what the test or the Export means.
@@ -48,7 +48,47 @@
     // `vi.fn()` infers what it needs to from the call it replaces.
     "vitest/require-mock-type-parameters": "off",
     // A stylesheet is imported for its effect and has nothing to assign.
-    "import/no-unassigned-import": "off"
+    "import/no-unassigned-import": "off",
+
+    // The React Compiler's diagnostics, which ESLint used to carry through
+    // `eslint-plugin-react-hooks` (ADR 0015). They are named here one by one
+    // rather than left to whichever category happens to hold each of them,
+    // because this repository does not write memoization by hand (ADR 0013)
+    // and these are the check that the code the compiler is trusted to
+    // memoize is code it can memoize. A category reshuffle upstream must not
+    // be able to turn one of them off in silence.
+    "react/hooks": "error",
+    // The one rule oxlint keeps in a `react-hooks` namespace of its own, and
+    // not a leftover from the plugin: the prefix is oxlint's, so leave it.
+    "react-hooks/exhaustive-deps": "error",
+    "react/set-state-in-render": "error",
+    "react/set-state-in-effect": "error",
+    "react/purity": "error",
+    "react/globals": "error",
+    "react/refs": "error",
+    "react/static-components": "error",
+    "react/error-boundaries": "error",
+    "react/immutability": "error",
+    "react/preserve-manual-memoization": "error",
+    "react/use-memo": "error",
+    "react/unsupported-syntax": "error",
+    "react/incompatible-library": "error",
+
+    // What oxlint offers beyond the plugin's recommended set. Each is a
+    // decision, not an inheritance. These three are silent over this
+    // repository's source and guard the same assumptions, so they run.
+    "react/exhaustive-effect-dependencies": "error",
+    "react/no-deriving-state-in-effects": "error",
+    "react/no-unstable-nested-components": "error",
+
+    // `todo` reports functions the compiler declines to compile rather than
+    // code that is wrong; four hooks here bail out on `try`/`finally`, and
+    // rewriting them is a change with its own reasons, not a linter's.
+    "react/todo": "off",
+    // The three React-rule suppressions in this repository are argued for in
+    // prose above the line they sit on. A rule that objects to a suppression
+    // on principle would only be answered with a second suppression.
+    "react/rule-suppression": "off"
   },
   "overrides": [
     {
@@ -73,7 +113,6 @@
     "**/node_modules",
     "**/dist",
     "**/.turbo",
-    "**/packages/ui",
     "**/routeTree.gen.ts",
     "**/src-tauri/target",
     "**/src-tauri/binaries",

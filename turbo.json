@@ -12,9 +12,6 @@
     "check-types": {
       "dependsOn": ["^build", "^check-types"]
     },
-    "check-react-rules": {
-      "outputs": []
-    },
     "test": {
       "dependsOn": ["^build"],
       "outputs": []
