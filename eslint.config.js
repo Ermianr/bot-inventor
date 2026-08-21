@@ -12,6 +12,9 @@ import { parser as typescriptParser } from "typescript-eslint"
  * own. Only the parser comes from `typescript-eslint`; none of its rules run.
  * A warning fails the command as an error does: a check whose findings are
  * printed and survived teaches the reader to scroll past it.
+ *
+ * Why two linters still coexist, and what has to be measured before this one
+ * goes, is [ADR 0015](./docs/adr/0015-the-lint-and-format-pass-runs-on-oxc.md).
  */
 export default [
   {
