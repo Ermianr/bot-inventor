@@ -81,8 +81,8 @@ export function TestServerPicker({
    * The token is passed in rather than read from above, so that looking again
    * is what the button does and not what every keystroke of the token does.
    */
-  const look = async (token: string) => {
-    if (projectId === undefined && token.length === 0) return
+  const look = async (withToken: string) => {
+    if (projectId === undefined && withToken.length === 0) return
     // Only the latest question is worth an answer: a slow reply to a question
     // the user has already asked again would otherwise clear the newer one's
     // spinner and overwrite its list.
@@ -91,7 +91,7 @@ export function TestServerPicker({
     setProblem(undefined)
     setAsked(true)
     try {
-      const found = await invoke<TestServer[]>("list_test_servers", { projectId, token })
+      const found = await invoke<TestServer[]>("list_test_servers", { projectId, token: withToken })
       if (asking !== latestAsk.current) return
       setServers(found)
     } catch (error) {
@@ -114,7 +114,6 @@ export function TestServerPicker({
   // per render is the one thing this effect must not do. Nothing here rests on
   // how still `look` is held — the list says when to ask, so the answer does not
   // change with the function's identity.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: explained above.
   useEffect(() => {
     if (projectId === undefined) return
     // The spinner goes up as the dialog opens: one render that says the list is

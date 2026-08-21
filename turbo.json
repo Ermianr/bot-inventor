@@ -2,7 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
   "globalEnv": ["DISCORD_API_URL"],
-  "globalDependencies": ["eslint.config.js"],
+  "globalDependencies": [".oxlintrc.json", ".oxfmtrc.json"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

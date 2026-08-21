@@ -32,7 +32,8 @@
     "check-types": "turbo run check-types",
     "check-react-rules": "turbo run check-react-rules",
     "test": "turbo run test",
-    "check": "oxfmt . && biome check --write .",
+    "check": "oxfmt . && oxlint --fix",
+    "check:ci": "oxfmt --check . && oxlint",
     "sidecar": "bun run scripts/prepare-sidecar.ts"
   },
   "dependencies": {
@@ -40,13 +41,14 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.6",
     "@bot-inventor/compiler": "workspace:*",
     "@bot-inventor/config": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "^10.8.1",
+    "eslint-plugin-playwright": "^2.11.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "oxfmt": "^0.64.0",
+    "oxlint": "^1.79.0",
     "turbo": "^2.10.7",
     "typescript": "catalog:",
     "typescript-eslint": "^8.67.0"

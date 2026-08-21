@@ -1,0 +1,82 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // oxlint detects nothing about the dependency list, so every plugin the
+  // repository needs is named here. `typescript`, `unicorn` and `oxc` are on by
+  // default and are repeated so that this list is the whole of the answer.
+  "plugins": ["typescript", "unicorn", "oxc", "react", "vitest", "import"],
+  // Playwright has no native plugin. The upstream ESLint one runs through
+  // oxlint's JS-plugin support, and its rules are turned on in the override
+  // below so that they reach the end-to-end specs and nothing else.
+  "jsPlugins": [{ "name": "playwright", "specifier": "eslint-plugin-playwright" }],
+  // Three categories, chosen rather than inherited. `pedantic`, `restriction`
+  // and `nursery` stay off, and `style` is not enabled wholesale: the ten rules
+  // below are the ones the team picked by hand while Biome ran this pass.
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "rules": {
+    "eslint/no-param-reassign": "error",
+    "typescript/prefer-as-const": "error",
+    "typescript/default-param-last": "error",
+    "typescript/prefer-enum-initializers": "error",
+    "react/self-closing-comp": "error",
+    "eslint/one-var": ["error", "never"],
+    "typescript/no-unnecessary-template-expression": "error",
+    "unicorn/prefer-number-properties": "error",
+    "typescript/no-inferrable-types": "error",
+    "eslint/no-else-return": "error",
+
+    // What the three categories bring that this repository does not want. Each
+    // is off for a reason, not to keep a migration's diff small.
+
+    // The editor compiles with the automatic JSX runtime.
+    "react/react-in-jsx-scope": "off",
+    // Memoization is not written by hand here (ADR 0013), and what is left of
+    // it is `eslint-plugin-react-hooks`' ground, which still runs.
+    "react/memo-dependencies": "off",
+    // Steps that must happen in order are awaited in order. Turning those into
+    // `Promise.all` would change what the test or the Export means.
+    "eslint/no-await-in-loop": "off",
+    // A helper written inside the `describe` it serves is where a reader looks
+    // for it; hoisting it to the top of the file to satisfy a linter is worse.
+    "unicorn/consistent-function-scoping": "off",
+    // Narrowing a discriminated union before asserting on its payload reads as
+    // a conditional `expect` and is not one.
+    "vitest/no-conditional-expect": "off",
+    // `vi.fn()` infers what it needs to from the call it replaces.
+    "vitest/require-mock-type-parameters": "off",
+    // A stylesheet is imported for its effect and has nothing to assign.
+    "import/no-unassigned-import": "off"
+  },
+  "overrides": [
+    {
+      "files": ["apps/web/e2e/**/*.ts"],
+      "rules": {
+        "playwright/expect-expect": "error",
+        "playwright/no-conditional-expect": "error",
+        "playwright/no-conditional-in-test": "error",
+        "playwright/no-focused-test": "error",
+        "playwright/no-force-option": "error",
+        "playwright/no-page-pause": "error",
+        "playwright/no-skipped-test": "error",
+        "playwright/no-standalone-expect": "error",
+        "playwright/no-useless-await": "error",
+        "playwright/no-useless-not": "error",
+        "playwright/no-wait-for-timeout": "error",
+        "playwright/valid-expect": "error"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/node_modules",
+    "**/dist",
+    "**/.turbo",
+    "**/packages/ui",
+    "**/routeTree.gen.ts",
+    "**/src-tauri/target",
+    "**/src-tauri/binaries",
+    "**/src-tauri/resources"
+  ]
+}

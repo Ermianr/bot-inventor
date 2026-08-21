@@ -27,7 +27,7 @@ export type CommandParameter = {
   required: boolean
 }
 
-const PARAMETER_TYPES: readonly ParameterType[] = ["text", "number", "boolean", "user"]
+const PARAMETER_TYPES: ReadonlySet<ParameterType> = new Set(["text", "number", "boolean", "user"])
 
 /**
  * The prefix a parameter's Port id carries. It keeps the ids the user's
@@ -86,7 +86,7 @@ function readParameter(entry: FieldValue): CommandParameter | undefined {
 
   const { name, description, type, required } = entry
   if (typeof name !== "string" || name.length === 0) return undefined
-  if (typeof type !== "string" || !PARAMETER_TYPES.includes(type as ParameterType)) return undefined
+  if (typeof type !== "string" || !PARAMETER_TYPES.has(type as ParameterType)) return undefined
 
   return {
     name,

@@ -79,7 +79,6 @@ export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
       application breaking, and that must hold anywhere on the Node, including
       the edges the trigger under this does not itself cover.
     */
-    // biome-ignore lint/a11y/noStaticElementInteractions: the menu the handler guards is the interactive element.
     <div
       onContextMenu={event => {
         event.preventDefault()

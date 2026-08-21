@@ -287,7 +287,7 @@ const STYLES: readonly { delimiter: string; kind: StyleKind }[] = [
 ]
 
 /** What a backslash may stand in front of, which is every marker's first character. */
-const ESCAPABLE = new Set([..."*_~|`\\[]()#->"])
+const ESCAPABLE = new Set("*_~|`\\[]()#->")
 
 const PILLS: readonly { pattern: RegExp; shape: MarkupPill["shape"] }[] = [
   { pattern: /^<@[!&]?\d+>/, shape: "mention" },

@@ -116,7 +116,7 @@ export async function listProjects(store: ProjectStore): Promise<readonly Projec
       name: nameIn(project.document),
       changedAt: project.changedAt
     }))
-    .sort((one, other) => other.changedAt - one.changedAt)
+    .toSorted((one, other) => other.changedAt - one.changedAt)
 }
 
 /**

@@ -131,7 +131,7 @@ describe("the reason an Embed cannot be sent", () => {
   ]
 
   it("reports every way an Embed can be wrong", () => {
-    expect([...new Set(reported)].sort()).toEqual([...expected].sort())
+    expect([...new Set(reported)].toSorted()).toEqual(expected.toSorted())
   })
 
   for (const locale of LOCALES) {

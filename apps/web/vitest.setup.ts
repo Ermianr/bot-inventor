@@ -20,4 +20,6 @@ declare global {
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
+// The empty export is what makes this file a module, which `declare global` needs.
+// oxlint-disable-next-line unicorn/require-module-specifiers
 export {}

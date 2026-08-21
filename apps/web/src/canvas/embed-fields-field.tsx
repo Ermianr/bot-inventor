@@ -123,7 +123,7 @@ export function EmbedFieldsField({
           // A pair has nothing stable to be keyed by: its name is what the user
           // is still typing, and two of them may read the same. Its place in
           // the list is what identifies it, and that is what moving one edits.
-          // biome-ignore lint/suspicious/noArrayIndexKey: the position is the identity here.
+          // oxlint-disable-next-line react/no-array-index-key -- the position is the identity here.
           key={index}
           last={index === embedFields.length - 1}
           move={by => move(index, by)}

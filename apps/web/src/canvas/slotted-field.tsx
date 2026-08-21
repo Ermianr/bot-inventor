@@ -212,7 +212,7 @@ export function SlottedField({
         {editable.literals.map((text, index) => (
           // A text box is the gap between two pills, and its position in the
           // sentence is the only identity it has.
-          // biome-ignore lint/suspicious/noArrayIndexKey: the position is what the gap is.
+          // oxlint-disable-next-line react/no-array-index-key -- the position is what the gap is.
           <Fragment key={index}>
             {index > 0 && (
               <SlotPill
