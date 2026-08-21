@@ -19,15 +19,7 @@
     ]
   },
   "formatter": {
-    "enabled": true,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineWidth": 100,
-    "lineEnding": "lf",
-    "attributePosition": "auto",
-    "bracketSpacing": true,
-    "expand": "auto",
-    "bracketSameLine": false
+    "enabled": false
   },
   "linter": {
     "enabled": true,
@@ -62,15 +54,6 @@
       "test": "recommended",
       "turborepo": "recommended",
       "drizzle": "recommended"
-    }
-  },
-  "javascript": {
-    "formatter": {
-      "quoteStyle": "double",
-      "semicolons": "asNeeded",
-      "trailingCommas": "none",
-      "arrowParentheses": "asNeeded",
-      "quoteProperties": "asNeeded"
     }
   },
   "css": {
