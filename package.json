@@ -2,7 +2,10 @@
   "name": "bot-inventor",
   "private": true,
   "workspaces": {
-    "packages": ["apps/*", "packages/*"],
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
     "catalog": {
       "dotenv": "^17.4.2",
       "zod": "^4.4.3",
@@ -29,7 +32,7 @@
     "check-types": "turbo run check-types",
     "check-react-rules": "turbo run check-react-rules",
     "test": "turbo run test",
-    "check": "biome check --write .",
+    "check": "oxfmt . && biome check --write .",
     "sidecar": "bun run scripts/prepare-sidecar.ts"
   },
   "dependencies": {
@@ -43,6 +46,7 @@
     "@types/node": "catalog:",
     "eslint": "^10.8.1",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "oxfmt": "^0.64.0",
     "turbo": "^2.10.7",
     "typescript": "catalog:",
     "typescript-eslint": "^8.67.0"

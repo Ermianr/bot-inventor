@@ -1,0 +1,6 @@
+# Revisions listed here are formatting-only and are skipped by `git blame`.
+# Configure it once per clone:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: reformat the repository with oxfmt
+0037b32f951cb5834f6015f85012cf3bae624bb4
