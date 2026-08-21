@@ -8,6 +8,7 @@ import type {
   WireKind
 } from "@bot-inventor/schema"
 import { useCallback, useMemo, useState } from "react"
+
 import { translate } from "@/i18n/messages"
 import type { Caret } from "@/project/editable-text"
 import {

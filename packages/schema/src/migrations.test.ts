@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { emptyProject } from "./fixtures.js"
 import {
   type Migration,

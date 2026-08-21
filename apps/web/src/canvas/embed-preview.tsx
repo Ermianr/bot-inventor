@@ -1,5 +1,6 @@
 import { type NodeFields, readEmbedFields } from "@bot-inventor/nodes"
 import { readSlottedText, type SlottedText } from "@bot-inventor/schema"
+
 import { colourHex } from "@/canvas/colour"
 import { formattedText, plainText } from "@/canvas/discord-markup"
 import { MarkupBlocks, MarkupInline, type SlotLabel } from "@/canvas/markup-view"
@@ -51,7 +52,7 @@ export function EmbedPreview({
 
   if (empty) {
     return (
-      <p className="text-muted-foreground text-sm" data-testid="embed-preview-empty">
+      <p className="text-sm text-muted-foreground" data-testid="embed-preview-empty">
         {translate("canvas.preview.empty")}
       </p>
     )
@@ -75,7 +76,7 @@ export function EmbedPreview({
                 url={written("authorIcon")}
               />
               {/* Discord renders no formatting on an author's name either. */}
-              <span className="truncate font-semibold text-xs">
+              <span className="truncate text-xs font-semibold">
                 <MarkupInline nodes={plainText(authorName)} slotLabel={slotLabel} />
               </span>
             </div>
@@ -112,7 +113,7 @@ export function EmbedPreview({
                   // biome-ignore lint/suspicious/noArrayIndexKey: the position is what the pair is.
                   key={index}
                 >
-                  <p className="font-semibold text-xs">
+                  <p className="text-xs font-semibold">
                     <MarkupInline
                       nodes={plainText(filled(embedField.name, slotValue))}
                       slotLabel={slotLabel}
@@ -137,7 +138,7 @@ export function EmbedPreview({
 
           {(footerText.length > 0 || stamped) && (
             <div
-              className="flex items-center gap-2 text-muted-foreground text-xs"
+              className="flex items-center gap-2 text-xs text-muted-foreground"
               data-testid="embed-preview-footer"
             >
               <PreviewPicture

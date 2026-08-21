@@ -1,5 +1,6 @@
 import { catalogue, type NodeProblem } from "@bot-inventor/nodes"
 import type { Project } from "@bot-inventor/schema"
+
 import { translateDefinitionKey } from "@/i18n/messages"
 
 /**

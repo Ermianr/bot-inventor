@@ -44,7 +44,7 @@ function MarkupBlockView({ block, slotLabel }: { block: Block; slotLabel: SlotLa
   switch (block.kind) {
     case "paragraph":
       return (
-        <p className="whitespace-pre-wrap break-words">
+        <p className="break-words whitespace-pre-wrap">
           <MarkupInline nodes={block.content} slotLabel={slotLabel} />
         </p>
       )
@@ -56,7 +56,7 @@ function MarkupBlockView({ block, slotLabel }: { block: Block; slotLabel: SlotLa
       )
     case "quote":
       return (
-        <blockquote className="border-muted-foreground/40 border-l-4 pl-2">
+        <blockquote className="border-l-4 border-muted-foreground/40 pl-2">
           <MarkupBlocks blocks={block.content} slotLabel={slotLabel} />
         </blockquote>
       )
@@ -106,7 +106,7 @@ function MarkupInlineView({ node, slotLabel }: { node: Inline; slotLabel: SlotLa
     case "slot":
       return (
         <span
-          className="mx-0.5 inline-flex items-center rounded-sm bg-primary/15 px-1 py-px font-medium text-primary text-xs"
+          className="mx-0.5 inline-flex items-center rounded-sm bg-primary/15 px-1 py-px text-xs font-medium text-primary"
           data-testid="preview-slot"
         >
           {slotLabel(node.slot)}
@@ -115,7 +115,7 @@ function MarkupInlineView({ node, slotLabel }: { node: Inline; slotLabel: SlotLa
     case "pill":
       return (
         <span
-          className="mx-0.5 inline-flex items-center rounded-sm bg-secondary px-1 py-px text-secondary-foreground text-xs"
+          className="mx-0.5 inline-flex items-center rounded-sm bg-secondary px-1 py-px text-xs text-secondary-foreground"
           data-testid={`preview-pill-${node.shape}`}
         >
           {translate(PILL_LABEL[node.shape])}

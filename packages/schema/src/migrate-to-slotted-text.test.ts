@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+
 import { helloProject } from "./fixtures.js"
 import { toSlottedText } from "./migrate-to-slotted-text.js"
 import { openProject } from "./open-project.js"

@@ -1,5 +1,6 @@
 import type { Flow, PortReference } from "@bot-inventor/schema"
 import { describe, expect, it } from "vitest"
+
 import { buildCatalogue } from "./catalogue.js"
 import {
   checkConnection,

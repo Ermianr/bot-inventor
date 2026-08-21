@@ -15,6 +15,7 @@ import {
   ContextMenuTrigger
 } from "@bot-inventor/ui/components/context-menu"
 import { type ReactNode, useState } from "react"
+
 import { translate, translateDefinitionKey } from "@/i18n/messages"
 
 /**
@@ -113,7 +114,7 @@ export function AddNodeMenu({
       >
         {translateDefinitionKey(definition.labelKey)}
         {refusalKey === undefined ? null : (
-          <span className="ml-auto text-muted-foreground text-xs" id={reasonId(definition.id)}>
+          <span className="ml-auto text-xs text-muted-foreground" id={reasonId(definition.id)}>
             {translateDefinitionKey(refusalKey)}
           </span>
         )}

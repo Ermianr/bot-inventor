@@ -82,7 +82,7 @@ export function RenameProjectDialog({
           </div>
 
           {problem === undefined ? null : (
-            <p className="text-destructive text-sm" data-testid="rename-project-problem">
+            <p className="text-sm text-destructive" data-testid="rename-project-problem">
               {problem}
             </p>
           )}

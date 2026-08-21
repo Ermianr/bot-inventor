@@ -1,4 +1,5 @@
 import { type FieldValue, readSlottedText, type SlottedText, slotIdsOf } from "@bot-inventor/schema"
+
 import type { DataPortDefinition, FieldControl, FieldDefinition, NodeFields } from "./definition.js"
 import { readEmbedFields } from "./embed-fields.js"
 

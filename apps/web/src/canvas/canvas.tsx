@@ -22,6 +22,7 @@ import {
   useReactFlow
 } from "@xyflow/react"
 import { type CSSProperties, useEffect, useRef, useState } from "react"
+
 import { AddNodeMenu, type ScreenPoint } from "@/canvas/add-node"
 import { FlowNode, type FlowNodeData, type FlowNodeType } from "@/canvas/flow-node"
 import { Inspector } from "@/canvas/inspector"

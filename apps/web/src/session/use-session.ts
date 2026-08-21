@@ -1,6 +1,7 @@
 import { readSessionLine, renderDevelopmentSession } from "@bot-inventor/compiler"
 import type { Project } from "@bot-inventor/schema"
 import { useCallback, useEffect, useRef, useState } from "react"
+
 import { type MessageKey, translate } from "@/i18n/messages"
 import { describeError } from "@/project/describe-error"
 import { describeProjectProblem } from "@/project/node-problems"

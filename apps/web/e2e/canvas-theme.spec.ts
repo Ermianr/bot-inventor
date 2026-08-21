@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+
 import { CanvasPage } from "./pages/canvas-page"
 import { ThemePage } from "./pages/theme-page"
 

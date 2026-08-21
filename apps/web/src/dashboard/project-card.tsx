@@ -66,7 +66,7 @@ export function ProjectCard({
           <span className="truncate font-medium" data-testid="card-name">
             {project.name.length > 0 ? project.name : translate("dashboard.card.unreadable")}
           </span>
-          <span className="text-muted-foreground text-xs">
+          <span className="text-xs text-muted-foreground">
             {translate("dashboard.card.changed", { when: whenChanged(project.changedAt) })}
           </span>
         </span>
@@ -84,7 +84,7 @@ export function ProjectCard({
           render={<Button size="icon-xs" variant="secondary" />}
           aria-label={translate("dashboard.card.manage")}
           data-testid={`card-manage-${project.id}`}
-          className="absolute top-2 right-2 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-popup-open:opacity-100"
+          className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
         >
           <EllipsisIcon />
         </DropdownMenuTrigger>
@@ -116,7 +116,7 @@ export function ProjectCard({
       */}
       {problem === undefined ? null : (
         <p
-          className="px-4 pb-4 text-destructive text-sm"
+          className="px-4 pb-4 text-sm text-destructive"
           data-testid={`card-problem-${project.id}`}
         >
           {problem}

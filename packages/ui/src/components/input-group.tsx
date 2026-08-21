@@ -1,10 +1,9 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-
-import { cn } from "@bot-inventor/ui/lib/utils"
 import { Button } from "@bot-inventor/ui/components/button"
 import { Input } from "@bot-inventor/ui/components/input"
 import { Textarea } from "@bot-inventor/ui/components/textarea"
+import { cn } from "@bot-inventor/ui/lib/utils"
+import { cva, type VariantProps } from "class-variance-authority"
+import * as React from "react"
 
 function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (

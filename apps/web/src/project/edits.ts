@@ -15,6 +15,7 @@ import type {
   Project,
   WireKind
 } from "@bot-inventor/schema"
+
 import { type Caret, editableText, slottedTextOf, withSlotInserted } from "@/project/editable-text"
 import { fieldWithSlottedTextAt, readFieldPath, slottedTextAt } from "@/project/field-path"
 

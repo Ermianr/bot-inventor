@@ -1,5 +1,6 @@
 import type { NodeFields, NodeSummary } from "@bot-inventor/nodes"
 import { readSlottedText } from "@bot-inventor/schema"
+
 import { colourHex } from "@/canvas/colour"
 import { plainText } from "@/canvas/discord-markup"
 import { MarkupInline, type SlotLabel } from "@/canvas/markup-view"

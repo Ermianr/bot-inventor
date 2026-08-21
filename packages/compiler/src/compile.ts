@@ -4,6 +4,7 @@ import {
   type NodeCatalogue
 } from "@bot-inventor/nodes"
 import type { Project } from "@bot-inventor/schema"
+
 import { compileFlow } from "./compile-flow.js"
 import { renderModule } from "./module.js"
 

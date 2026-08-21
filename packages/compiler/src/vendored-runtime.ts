@@ -1,7 +1,9 @@
 import { readdir, readFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
+
 import { build } from "esbuild"
+
 import { NATIVE_ADDON_EXTERNALS } from "./bundle.js"
 import { ExportError } from "./export-error.js"
 import { SINGLE_FILE_TARGET } from "./export-target.js"

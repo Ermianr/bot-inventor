@@ -10,6 +10,7 @@ import { EMBED_LIMITS } from "@bot-inventor/runtime/embed"
 import { literalText } from "@bot-inventor/schema"
 import { helloProject, requireFirst } from "@bot-inventor/schema/fixtures"
 import { describe, expect, it } from "vitest"
+
 import { LOCALES, translateDefinitionKey } from "@/i18n/messages"
 
 /**

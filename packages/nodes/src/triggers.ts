@@ -1,4 +1,5 @@
 import type { Flow } from "@bot-inventor/schema"
+
 import type { NodeCatalogue } from "./catalogue.js"
 import type { NodeDefinition } from "./definition.js"
 

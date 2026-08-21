@@ -1,5 +1,6 @@
 import type { TraceEvent } from "@bot-inventor/compiler"
 import { describe, expect, it } from "vitest"
+
 import { type RunTrace, watchFailure, watchTrace } from "@/session/trace"
 
 const entered = (run: number, node: string): TraceEvent => ({

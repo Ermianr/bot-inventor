@@ -14,6 +14,7 @@ import {
 import { Label } from "@bot-inventor/ui/components/label"
 import { ChevronDownIcon, ChevronUpIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
+
 import { SlottedField } from "@/canvas/slotted-field"
 import { translate } from "@/i18n/messages"
 import { fieldPathId } from "@/project/field-path"
@@ -148,7 +149,7 @@ export function EmbedFieldsField({
       </Button>
 
       {full && (
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           {translate("canvas.embedField.full", { count: String(EMBED_LIMITS.embedFields) })}
         </p>
       )}

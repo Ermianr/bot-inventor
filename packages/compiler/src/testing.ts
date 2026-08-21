@@ -7,6 +7,7 @@ import {
   type SlashCommandInput
 } from "@bot-inventor/runtime/testing"
 import type { Project } from "@bot-inventor/schema"
+
 import { compile } from "./compile.js"
 
 /**

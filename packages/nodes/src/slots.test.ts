@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import type { NodeDefinition } from "./definition.js"
 import { portsOf } from "./definition.js"
 import { slotPortId } from "./slots.js"

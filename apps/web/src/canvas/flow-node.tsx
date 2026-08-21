@@ -12,6 +12,7 @@ import {
   type NodeProps,
   type Node as ReactFlowNode
 } from "@xyflow/react"
+
 import { drawnFields, FieldRow } from "@/canvas/field-row"
 import { NodeSummaryRow } from "@/canvas/node-summary"
 import { translate, translateDefinitionKey } from "@/i18n/messages"
@@ -92,8 +93,8 @@ export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
           data-testid={`node-${id}`}
         >
           <header className="border-b px-3 py-2">
-            <p className="font-medium text-sm">{translateDefinitionKey(definition.labelKey)}</p>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-sm font-medium">{translateDefinitionKey(definition.labelKey)}</p>
+            <p className="text-xs text-muted-foreground">
               {translateDefinitionKey(definition.descriptionKey)}
             </p>
           </header>
@@ -109,7 +110,7 @@ export function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
 
           {problems.length > 0 && (
             <div
-              className="border-t bg-destructive/10 px-3 py-2 text-destructive text-xs"
+              className="border-t bg-destructive/10 px-3 py-2 text-xs text-destructive"
               data-testid={`node-problems-${id}`}
             >
               {problems.map(problem => (

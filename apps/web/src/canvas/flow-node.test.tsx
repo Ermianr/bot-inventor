@@ -6,6 +6,7 @@ import { fireEvent, render, within } from "@testing-library/react"
 import { ReactFlowProvider } from "@xyflow/react"
 import type { ComponentProps } from "react"
 import { describe, expect, it } from "vitest"
+
 import { FlowNode, type FlowNodeData } from "@/canvas/flow-node"
 import type { NodeRunState } from "@/session/trace"
 

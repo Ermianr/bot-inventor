@@ -1,6 +1,7 @@
 import { EMBED_LIMITS } from "@bot-inventor/runtime/embed"
 import { literalText } from "@bot-inventor/schema"
 import { describe, expect, it } from "vitest"
+
 import { readEmbedFields, writtenEmbedFields } from "./embed-fields.js"
 
 describe("the Embed Fields a field holds", () => {

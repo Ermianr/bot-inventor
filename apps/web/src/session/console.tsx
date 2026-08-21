@@ -73,7 +73,7 @@ export function Console({
               aria-controls={`${strip}-${panel.id}-panel`}
               data-testid={`console-tab-${panel.id}`}
               onClick={() => setSelected(panel.id)}
-              className="-mb-px border-transparent border-b-2 px-2 py-2 text-muted-foreground text-xs transition-colors hover:text-foreground aria-selected:border-primary aria-selected:text-foreground"
+              className="-mb-px border-b-2 border-transparent px-2 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground aria-selected:border-primary aria-selected:text-foreground"
             >
               {translate(panel.labelKey)}
             </button>

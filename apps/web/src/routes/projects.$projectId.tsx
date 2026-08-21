@@ -45,7 +45,7 @@ function ProjectRoute() {
   if (loaded.status === "problem") {
     return (
       <div className="grid h-full place-items-center p-8">
-        <p className="max-w-md text-center text-destructive text-sm" data-testid="project-problem">
+        <p className="max-w-md text-center text-sm text-destructive" data-testid="project-problem">
           {loaded.message}
         </p>
       </div>

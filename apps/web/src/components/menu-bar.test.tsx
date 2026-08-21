@@ -3,6 +3,7 @@
 import type { ExportFormat } from "@bot-inventor/compiler"
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { MenuBar } from "@/components/menu-bar"
 import { translate } from "@/i18n/messages"
 import type { Exporting } from "@/project/use-export"

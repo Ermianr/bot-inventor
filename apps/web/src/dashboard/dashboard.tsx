@@ -124,8 +124,8 @@ export function Dashboard({
       <div className="mx-auto grid max-w-5xl gap-8 px-8 py-12">
         <header className="flex items-end justify-between gap-4">
           <div className="grid gap-1">
-            <h1 className="font-semibold text-2xl">{translate("dashboard.title")}</h1>
-            <p className="text-muted-foreground text-sm">{translate("dashboard.subtitle")}</p>
+            <h1 className="text-2xl font-semibold">{translate("dashboard.title")}</h1>
+            <p className="text-sm text-muted-foreground">{translate("dashboard.subtitle")}</p>
           </div>
 
           <div className="flex gap-2">
@@ -149,7 +149,7 @@ export function Dashboard({
         </header>
 
         {problem === undefined ? null : (
-          <p className="text-destructive text-sm" data-testid="dashboard-problem">
+          <p className="text-sm text-destructive" data-testid="dashboard-problem">
             {problem}
           </p>
         )}
@@ -159,7 +159,7 @@ export function Dashboard({
           dialog: the dialog it would have opened is the one that never opened.
         */}
         {importProblem === undefined ? null : (
-          <p className="text-destructive text-sm" data-testid="dashboard-import-problem">
+          <p className="text-sm text-destructive" data-testid="dashboard-import-problem">
             {importProblem}
           </p>
         )}
@@ -293,8 +293,8 @@ function Empty({
       className="grid justify-items-center gap-4 py-24 text-center"
       data-testid="dashboard-empty"
     >
-      <p className="font-medium text-lg">{translate("dashboard.empty.title")}</p>
-      <p className="max-w-md text-muted-foreground text-sm">{translate("dashboard.empty.body")}</p>
+      <p className="text-lg font-medium">{translate("dashboard.empty.title")}</p>
+      <p className="max-w-md text-sm text-muted-foreground">{translate("dashboard.empty.body")}</p>
       <div className="flex gap-2">
         <Button data-testid="dashboard-empty-create" onClick={onCreate}>
           {translate("dashboard.create")}

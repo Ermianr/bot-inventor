@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+
 import { AboutPage } from "./pages/about-page"
 import { MenuBarPage } from "./pages/menu-bar-page"
 
