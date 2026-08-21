@@ -92,15 +92,15 @@ function renderFlowModules(project: Project, catalogue: NodeCatalogue): readonly
     const program = compileFlow(flow, catalogue, "build")
     if (program.length === 0) continue
 
-    const slug = uniqueSlug(flow.name.length > 0 ? flow.name : flow.id, taken)
-    const functionName = `define${pascalCase(slug)}`
+    const flowSlug = uniqueSlug(flow.name.length > 0 ? flow.name : flow.id, taken)
+    const functionName = `define${pascalCase(flowSlug)}`
 
     modules.push({
       flow,
       functionName,
-      importPath: `./${FLOWS_DIRECTORY}/${slug}.js`,
+      importPath: `./${FLOWS_DIRECTORY}/${flowSlug}.js`,
       file: {
-        path: `${FLOWS_DIRECTORY}/${slug}.js`,
+        path: `${FLOWS_DIRECTORY}/${flowSlug}.js`,
         contents: renderFlowModule(flow, functionName, program)
       }
     })

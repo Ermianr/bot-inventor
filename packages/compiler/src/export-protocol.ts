@@ -87,7 +87,7 @@ export type ExportResult = z.infer<typeof exportResultSchema>
  * leaving the editor waiting.
  */
 export function readExportResult(output: string): ExportResult {
-  for (const line of output.split("\n").reverse()) {
+  for (const line of output.split("\n").toReversed()) {
     if (line.trim().length === 0) continue
 
     let parsed: unknown

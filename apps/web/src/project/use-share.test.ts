@@ -66,8 +66,8 @@ describe("sharing a Project", () => {
 
     const document: unknown = JSON.parse(shell.wrote[0]?.document ?? "")
     expect(projectSchema.parse(document)).toEqual(project)
-    expect(Object.keys(document as object).sort()).toEqual(
-      ["flows", "id", "name", "schemaVersion"].sort()
+    expect(Object.keys(document as object).toSorted()).toEqual(
+      ["flows", "id", "name", "schemaVersion"].toSorted()
     )
   })
 

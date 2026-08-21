@@ -122,8 +122,8 @@ export function toCommandPayload(definition: SlashCommandDefinition): CommandPay
     // for, so this reorders rather than rejecting: parameters are named, and a
     // command the user cannot register is worse than one asking in a different
     // order than they typed.
-    options: [...parameters]
-      .sort((left, right) => Number(right.required) - Number(left.required))
+    options: parameters
+      .toSorted((left, right) => Number(right.required) - Number(left.required))
       .map(parameter => ({
         type: optionTypeOf(parameter, definition),
         name: nameOf(parameter, definition, parameters),

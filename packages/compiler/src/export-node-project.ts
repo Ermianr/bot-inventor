@@ -109,7 +109,7 @@ export async function exportNodeProject(
 
   // The marker goes last. Written first, a write that failed halfway would
   // leave behind just enough of an Export to make the next one refuse.
-  const order = [...files].sort(
+  const order = files.toSorted(
     (left, right) => Number(left.path === MARKER_FILE) - Number(right.path === MARKER_FILE)
   )
 

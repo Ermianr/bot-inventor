@@ -110,7 +110,7 @@ export function EmbedPreview({
                   className={`grid min-w-0 gap-0.5 ${embedField.inline ? "" : "col-span-3"}`}
                   data-inline={embedField.inline}
                   // A pair has no identity but the place it was put in.
-                  // biome-ignore lint/suspicious/noArrayIndexKey: the position is what the pair is.
+                  // oxlint-disable-next-line react/no-array-index-key -- the position is what the pair is.
                   key={index}
                 >
                   <p className="text-xs font-semibold">
@@ -196,7 +196,6 @@ function PreviewPicture({
     // The address is whatever the user typed, so the picture may well not load.
     // The frame stays either way: something is there, and that is the fact the
     // preview is reporting.
-    // biome-ignore lint/performance/noImgElement: the editor is not a framework with an image component.
     <img
       alt=""
       className={`${className} border bg-muted`}

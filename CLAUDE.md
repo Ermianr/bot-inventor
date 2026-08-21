@@ -15,7 +15,8 @@ bun run dev:web        # the editor in a browser, no Tauri shell
 bun run test           # vitest across every package
 bun run check-types
 bun run check-react-rules   # eslint: the Rules of React, and nothing else
-bun run check          # biome check --write . — this one rewrites files
+bun run check          # oxfmt then oxlint --fix — this one rewrites files
+bun run check:ci       # the same pass in reporting mode: writes nothing, fails on any finding
 ```
 
 End-to-end tests are Playwright and are not part of `bun run test`: `cd apps/web && bun run test:e2e`.
@@ -52,7 +53,7 @@ Branch names use the same vocabulary: `type/short-description` in kebab-case, su
 
 ## Stack
 
-Bun workspaces + Turborepo. Vite 8, React 19, TanStack Router, Tailwind 4, shadcn/ui in `packages/ui`, Tauri v2, Biome for formatting and the general lint pass, ESLint for the Rules of React alone, Zod for schemas.
+Bun workspaces + Turborepo. Vite 8, React 19, TanStack Router, Tailwind 4, shadcn/ui in `packages/ui`, Tauri v2, oxfmt for formatting and oxlint for the general lint pass, ESLint for the Rules of React alone, Zod for schemas.
 
 ## Package layout
 

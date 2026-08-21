@@ -27,6 +27,8 @@ import type { VendoredRuntime } from "./vendored-runtime.js"
  * installed application has no Runtime build on disk and no `node_modules` to
  * resolve one out of. `bundleExporter` is what puts it here.
  */
+// The name is the placeholder the bundler substitutes, not ours to spell.
+// oxlint-disable-next-line eslint/no-underscore-dangle
 declare const __VENDORED_RUNTIME__: string
 
 await main()

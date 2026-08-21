@@ -29,7 +29,7 @@ export function MarkupBlocks({
 }) {
   return blocks.map((block, index) => (
     // A block's place in the text is the only identity it has.
-    // biome-ignore lint/suspicious/noArrayIndexKey: the position is what the block is.
+    // oxlint-disable-next-line react/no-array-index-key -- the position is what the block is.
     <MarkupBlockView block={block} key={index} slotLabel={slotLabel} />
   ))
 }
@@ -66,7 +66,7 @@ function MarkupBlockView({ block, slotLabel }: { block: Block; slotLabel: SlotLa
           {block.items.map((item, index) => (
             <li
               className={block.ordered ? "list-decimal" : "list-disc"}
-              // biome-ignore lint/suspicious/noArrayIndexKey: the position is what the line is.
+              // oxlint-disable-next-line react/no-array-index-key -- the position is what the line is.
               key={index}
               style={{ marginInlineStart: `${item.depth}rem` }}
             >
@@ -94,7 +94,7 @@ export function MarkupInline({
   slotLabel: SlotLabel
 }) {
   return nodes.map((node, index) => (
-    // biome-ignore lint/suspicious/noArrayIndexKey: the position is what the node is.
+    // oxlint-disable-next-line react/no-array-index-key -- the position is what the node is.
     <MarkupInlineView key={index} node={node} slotLabel={slotLabel} />
   ))
 }

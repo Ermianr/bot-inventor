@@ -730,9 +730,9 @@ describe("putting a value inside a Node's text", () => {
   function messageOf(...segments: SlottedText): Project {
     const project = echoParameterProject()
     const flow = requireFirst(project.flows, "Flow")
-    const reply = flow.nodes[1]
-    if (reply === undefined) throw new Error("the fixture has no Reply Node")
-    reply.fields.content = segments
+    const replyNode = flow.nodes[1]
+    if (replyNode === undefined) throw new Error("the fixture has no Reply Node")
+    replyNode.fields.content = segments
     return project
   }
 
@@ -788,14 +788,14 @@ describe("putting a value inside a Node's text", () => {
     const project = echoParameterProject()
     const flow = requireFirst(project.flows, "Flow")
     const trigger = requireFirst(flow.nodes, "Node")
-    const reply = flow.nodes[1]
-    if (reply === undefined) throw new Error("the fixture has no Reply Node")
+    const replyNode = flow.nodes[1]
+    if (replyNode === undefined) throw new Error("the fixture has no Reply Node")
 
     trigger.fields.parameters = [
       { name: "times", description: "How many times", type: "number", required: true },
       { name: "loudly", description: "Whether to shout", type: "boolean", required: true }
     ]
-    reply.fields.content = [
+    replyNode.fields.content = [
       { kind: "literal", text: "x" },
       { kind: "slot", slot: "slot-times" },
       { kind: "literal", text: ", " },
@@ -839,9 +839,9 @@ describe("putting a value inside a Node's text", () => {
 
   it("refuses a message that does not read as text with Slots in it", () => {
     const project = helloProject()
-    const reply = requireFirst(project.flows, "Flow").nodes[1]
-    if (reply === undefined) throw new Error("the fixture has no Reply Node")
-    reply.fields.content = "written by a build this one has never met"
+    const replyNode = requireFirst(project.flows, "Flow").nodes[1]
+    if (replyNode === undefined) throw new Error("the fixture has no Reply Node")
+    replyNode.fields.content = "written by a build this one has never met"
 
     // Emitting an empty message instead would be the bot answering with
     // nothing and nowhere for the user to find out why.

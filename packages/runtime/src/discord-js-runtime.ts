@@ -232,6 +232,8 @@ export function toDiscordEmbed(embed: Embed): APIEmbed {
   // An Embed Field is what we call one of them and `fields` is what Discord's
   // API calls the list of them; the pair itself is spelled the same on both
   // sides.
+  // The copy is the point: what goes to Discord must not alias the caller's Embed.
+  // oxlint-disable-next-line oxc/no-map-spread
   if (embedFields !== undefined) sent.fields = embedFields.map(embedField => ({ ...embedField }))
 
   return sent

@@ -230,7 +230,7 @@ describe("Exporting somewhere that is not there yet", () => {
 
         expect(exported.path).toBe(target)
         // Every path reported is a file that is really there, at that path.
-        expect(await tree(target)).toEqual([...exported.files].sort())
+        expect(await tree(target)).toEqual(exported.files.toSorted())
       } finally {
         await rm(parent, { recursive: true, force: true })
       }
@@ -273,7 +273,7 @@ async function tree(root: string): Promise<string[]> {
   return entries
     .filter(entry => entry.isFile())
     .map(entry => relative(root, join(entry.parentPath, entry.name)).split(sep).join("/"))
-    .sort()
+    .toSorted()
 }
 
 /** Runs a command to completion, collecting everything it printed. */
