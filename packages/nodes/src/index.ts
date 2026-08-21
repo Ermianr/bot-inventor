@@ -1,10 +1,5 @@
 export { buildCatalogue, catalogue, type NodeCatalogue } from "./catalogue.js"
-export {
-  applyCoercion,
-  type CoercionDefinition,
-  coercions,
-  findCoercion
-} from "./coercions.js"
+export { applyCoercion, type CoercionDefinition, coercions, findCoercion } from "./coercions.js"
 export {
   type CommandParameter,
   commandParameterPorts,

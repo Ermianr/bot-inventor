@@ -2,7 +2,10 @@
   "name": "bot-inventor",
   "private": true,
   "workspaces": {
-    "packages": ["apps/*", "packages/*"],
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
     "catalog": {
       "dotenv": "^17.4.2",
       "zod": "^4.4.3",
