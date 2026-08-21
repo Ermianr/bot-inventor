@@ -1,5 +1,6 @@
 import { emptyProject, helloProject, requireFirst } from "@bot-inventor/schema/fixtures"
 import { describe, expect, it } from "vitest"
+
 import { catalogue } from "./catalogue.js"
 import { addableNodes, hasTrigger } from "./triggers.js"
 

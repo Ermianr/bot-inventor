@@ -1,4 +1,5 @@
 import { CURRENT_SCHEMA_VERSION, type Project } from "@bot-inventor/schema"
+
 import { translate } from "@/i18n/messages"
 
 /**

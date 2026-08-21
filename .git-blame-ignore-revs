@@ -4,3 +4,6 @@
 
 # style: reformat the repository with oxfmt
 0037b32f951cb5834f6015f85012cf3bae624bb4
+
+# style: sort imports and Tailwind classes across the repository
+7f17deff94f290e3c39f6244be05d6de05879be0

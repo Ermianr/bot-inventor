@@ -1,9 +1,5 @@
 "use client"
 
-import * as React from "react"
-import { Command as CommandPrimitive } from "cmdk"
-
-import { cn } from "@bot-inventor/ui/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -12,7 +8,10 @@ import {
   DialogTitle
 } from "@bot-inventor/ui/components/dialog"
 import { InputGroup, InputGroupAddon } from "@bot-inventor/ui/components/input-group"
+import { cn } from "@bot-inventor/ui/lib/utils"
+import { Command as CommandPrimitive } from "cmdk"
 import { SearchIcon, CheckIcon } from "lucide-react"
+import * as React from "react"
 
 function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
   return (

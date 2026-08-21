@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { toDiscordEmbed } from "./discord-js-runtime.js"
 import { buildEmbed, checkEmbed, describeEmbedProblem, embeds } from "./embed.js"
 

@@ -1,5 +1,6 @@
 import { literalText, type SlottedText } from "@bot-inventor/schema"
 import { describe, expect, it } from "vitest"
+
 import { type Block, formattedText, type Inline, plainText } from "@/canvas/discord-markup"
 
 /**

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { literalText, readSlottedText, type SlottedText, slotIdsOf } from "./slotted-text.js"
 
 const greeting: SlottedText = [

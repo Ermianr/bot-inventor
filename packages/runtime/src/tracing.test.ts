@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import type { TraceEvent } from "./runtime.js"
 import { createTracing, describeValue } from "./tracing.js"
 

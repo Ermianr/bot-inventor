@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { type RegistrationTarget, registerCommands } from "./command-registration.js"
 import type { SlashCommandDefinition } from "./discord.js"
 import { createFakeDiscordCommandApi } from "./testing.js"

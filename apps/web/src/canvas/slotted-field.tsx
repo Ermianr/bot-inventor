@@ -10,6 +10,7 @@ import {
 } from "@bot-inventor/ui/components/dialog"
 import { Label } from "@bot-inventor/ui/components/label"
 import { Fragment, type KeyboardEvent, useEffect, useRef, useState } from "react"
+
 import { translate } from "@/i18n/messages"
 import {
   type Caret,
@@ -237,7 +238,7 @@ export function SlottedField({
             >
               <span
                 aria-hidden
-                className={`invisible ${multiline ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}
+                className={`invisible ${multiline ? "break-words whitespace-pre-wrap" : "whitespace-pre"}`}
               >
                 {/*
                   A line the user has only just opened has nothing in it to
@@ -328,7 +329,7 @@ function SlotPill({
 }) {
   return (
     <span
-      className="inline-flex select-none items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-secondary-foreground text-xs"
+      className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground select-none"
       data-testid={`slot-${nodeId}-${fieldId}-${index}`}
     >
       {label}

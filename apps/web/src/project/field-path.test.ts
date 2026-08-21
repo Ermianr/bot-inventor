@@ -1,5 +1,6 @@
 import { literalText } from "@bot-inventor/schema"
 import { describe, expect, it } from "vitest"
+
 import {
   fieldPathId,
   fieldWithSlottedTextAt,

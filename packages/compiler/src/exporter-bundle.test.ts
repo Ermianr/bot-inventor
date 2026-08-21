@@ -2,8 +2,10 @@ import { spawn } from "node:child_process"
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+
 import { helloProject } from "@bot-inventor/schema/fixtures"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+
 import { type ExportRequest, type ExportResult, readExportResult } from "./export-protocol.js"
 import { SINGLE_FILE_NAME } from "./export-single-file.js"
 import {

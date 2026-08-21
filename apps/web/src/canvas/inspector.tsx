@@ -1,5 +1,6 @@
 import type { NodeDefinition } from "@bot-inventor/nodes"
 import type { FieldValue, Node } from "@bot-inventor/schema"
+
 import { EmbedPreview } from "@/canvas/embed-preview"
 import { drawnFields, FieldRow } from "@/canvas/field-row"
 import type { SlotLabel } from "@/canvas/markup-view"
@@ -37,15 +38,15 @@ export function Inspector({
       data-testid={`inspector-${node.id}`}
     >
       <header className="border-b px-3 py-2">
-        <p className="font-medium text-sm">{translateDefinitionKey(definition.labelKey)}</p>
-        <p className="text-muted-foreground text-xs">
+        <p className="text-sm font-medium">{translateDefinitionKey(definition.labelKey)}</p>
+        <p className="text-xs text-muted-foreground">
           {translateDefinitionKey(definition.descriptionKey)}
         </p>
       </header>
 
       {definition.preview === "embed" && (
         <div className="border-b p-3">
-          <p className="pb-2 font-medium text-muted-foreground text-xs">
+          <p className="pb-2 text-xs font-medium text-muted-foreground">
             {translate("canvas.preview.label")}
           </p>
           <EmbedPreview fields={node.fields} slotLabel={slotLabel} slotValue={slotValue} />

@@ -48,11 +48,11 @@ export function SecretField({
         onChange={event => onChange(event.target.value)}
       />
       {stored === undefined ? null : (
-        <p className="text-muted-foreground text-xs" data-testid={`${testId}-state`}>
+        <p className="text-xs text-muted-foreground" data-testid={`${testId}-state`}>
           {translate(stored ? "project.token.present" : "project.token.absent")}
         </p>
       )}
-      <p className="text-muted-foreground text-xs">{translate("project.token.help")}</p>
+      <p className="text-xs text-muted-foreground">{translate("project.token.help")}</p>
     </div>
   )
 }

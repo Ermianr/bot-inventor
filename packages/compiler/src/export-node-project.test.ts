@@ -2,8 +2,10 @@ import { type ChildProcess, spawn } from "node:child_process"
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join, relative, sep } from "node:path"
+
 import { helloProject, requireFirst } from "@bot-inventor/schema/fixtures"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+
 import { delay, died, stop } from "./child-process.js"
 import { ExportError } from "./export-error.js"
 import { exportNodeProject } from "./export-node-project.js"

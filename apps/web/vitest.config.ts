@@ -1,5 +1,7 @@
 import { fileURLToPath } from "node:url"
+
 import { defineConfig } from "vitest/config"
+
 import { reactCompiler } from "./react-compiler.ts"
 
 /**

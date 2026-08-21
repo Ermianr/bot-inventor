@@ -142,7 +142,7 @@ function RunButton({
 function Outdated() {
   return (
     <span
-      className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-700 text-xs dark:text-amber-400"
+      className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400"
       data-testid="run-outdated"
     >
       {translate("run.outdated")}
@@ -171,7 +171,7 @@ function Status({ status }: { status: SessionStatus }) {
 
   return (
     <span
-      className="ml-1 inline-flex items-center gap-1.5 text-muted-foreground text-sm"
+      className="ml-1 inline-flex items-center gap-1.5 text-sm text-muted-foreground"
       data-testid="run-status"
       data-status={status}
     >

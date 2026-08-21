@@ -1,4 +1,5 @@
 import type { FieldValue } from "@bot-inventor/schema"
+
 import type { DataPortDefinition, DataType } from "./definition.js"
 
 /**

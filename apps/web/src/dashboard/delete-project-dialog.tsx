@@ -57,7 +57,7 @@ export function DeleteProjectDialog({
         </DialogHeader>
 
         {problem === undefined ? null : (
-          <p className="text-destructive text-sm" data-testid="delete-project-problem">
+          <p className="text-sm text-destructive" data-testid="delete-project-problem">
             {problem}
           </p>
         )}

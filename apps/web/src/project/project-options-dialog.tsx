@@ -132,7 +132,7 @@ export function ProjectOptionsDialog({
           />
 
           {problem === undefined ? null : (
-            <p className="text-destructive text-sm" data-testid="project-options-problem">
+            <p className="text-sm text-destructive" data-testid="project-options-problem">
               {problem}
             </p>
           )}

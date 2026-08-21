@@ -1,7 +1,4 @@
-import * as React from "react"
 import { Combobox as ComboboxPrimitive } from "@base-ui/react"
-
-import { cn } from "@bot-inventor/ui/lib/utils"
 import { Button } from "@bot-inventor/ui/components/button"
 import {
   InputGroup,
@@ -9,7 +6,9 @@ import {
   InputGroupButton,
   InputGroupInput
 } from "@bot-inventor/ui/components/input-group"
+import { cn } from "@bot-inventor/ui/lib/utils"
 import { ChevronDownIcon, XIcon, CheckIcon } from "lucide-react"
+import * as React from "react"
 
 const Combobox = ComboboxPrimitive.Root
 

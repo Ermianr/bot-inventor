@@ -13,8 +13,11 @@
   "bracketSameLine": false,
   "bracketSpacing": true,
   "singleAttributePerLine": false,
-  "sortImports": false,
-  "sortTailwindcss": false,
+  "sortImports": true,
+  "sortTailwindcss": {
+    "stylesheet": "./packages/ui/src/styles/globals.css",
+    "functions": ["clsx", "cva", "cn"]
+  },
   "sortPackageJson": false,
   "ignorePatterns": [
     "**/node_modules",

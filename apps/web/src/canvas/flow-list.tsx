@@ -60,7 +60,7 @@ export function FlowList({ editor }: { editor: ProjectEditor }) {
   return (
     <nav aria-label={translate("flows.title")} className="grid gap-1 p-2">
       <div className="flex items-center justify-between gap-1 px-2 py-1">
-        <p className="font-medium text-muted-foreground text-xs uppercase">
+        <p className="text-xs font-medium text-muted-foreground uppercase">
           {translate("flows.title")}
         </p>
         <Button

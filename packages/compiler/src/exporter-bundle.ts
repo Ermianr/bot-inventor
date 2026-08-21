@@ -1,7 +1,9 @@
 import { copyFile, mkdir, writeFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
+
 import { build } from "esbuild"
+
 import { NATIVE_ADDON_EXTERNALS, NODE_BUNDLE_BANNER } from "./bundle.js"
 import { SIDECAR_NODE_TARGET } from "./development-runtime.js"
 import { ExportError } from "./export-error.js"

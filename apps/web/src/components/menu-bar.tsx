@@ -169,7 +169,7 @@ export function MenuBar({
                   onClick={() => void exporting.exportAs("single-file")}
                 >
                   <span className="font-medium">{translate("export.singleFile")}</span>
-                  <span className="text-muted-foreground text-xs">
+                  <span className="text-xs text-muted-foreground">
                     {translate("export.singleFile.help")}
                   </span>
                 </MenubarItem>
@@ -179,7 +179,7 @@ export function MenuBar({
                   onClick={() => void exporting.exportAs("node-project")}
                 >
                   <span className="font-medium">{translate("export.nodeProject")}</span>
-                  <span className="text-muted-foreground text-xs">
+                  <span className="text-xs text-muted-foreground">
                     {translate("export.nodeProject.help")}
                   </span>
                 </MenubarItem>

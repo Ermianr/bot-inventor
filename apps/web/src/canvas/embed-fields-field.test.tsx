@@ -4,6 +4,7 @@ import { EMBED_LIMITS } from "@bot-inventor/runtime/embed"
 import { type FieldValue, literalText } from "@bot-inventor/schema"
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
+
 import { EmbedFieldsField } from "@/canvas/embed-fields-field"
 
 /**

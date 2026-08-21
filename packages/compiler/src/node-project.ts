@@ -1,5 +1,6 @@
 import { catalogue as defaultCatalogue, indent, type NodeCatalogue } from "@bot-inventor/nodes"
 import type { Flow, Project } from "@bot-inventor/schema"
+
 import { compileFlow } from "./compile-flow.js"
 
 /**

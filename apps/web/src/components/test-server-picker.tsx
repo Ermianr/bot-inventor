@@ -12,6 +12,7 @@ import { Input } from "@bot-inventor/ui/components/input"
 import { Label } from "@bot-inventor/ui/components/label"
 import { invoke } from "@tauri-apps/api/core"
 import { useEffect, useRef, useState } from "react"
+
 import { translate } from "@/i18n/messages"
 import { describeRefusal } from "@/session/refusal"
 
@@ -195,7 +196,7 @@ export function TestServerPicker({
       {listing && (loading || (servers.length > 0 && !capped)) ? null : (
         <>
           {!listing ? null : (
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               {problem ??
                 translate(capped ? "run.testServer.capped" : "run.testServer.none", {
                   count: String(LIMIT)
@@ -223,7 +224,7 @@ export function TestServerPicker({
         </>
       )}
 
-      <p className="text-muted-foreground text-xs">{translate("run.testServer.help")}</p>
+      <p className="text-xs text-muted-foreground">{translate("run.testServer.help")}</p>
     </div>
   )
 }

@@ -23,6 +23,7 @@ import {
   slottedTextSchema,
   type Wire
 } from "@bot-inventor/schema"
+
 import { CompilerError } from "./errors.js"
 import { assignIdentifierPrefixes, claimIdentifier, literal, sanitise } from "./identifiers.js"
 

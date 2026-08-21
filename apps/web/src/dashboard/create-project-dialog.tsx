@@ -128,7 +128,7 @@ export function CreateProjectDialog({
           />
 
           {problem === undefined ? null : (
-            <p className="text-destructive text-sm" data-testid="create-project-problem">
+            <p className="text-sm text-destructive" data-testid="create-project-problem">
               {problem}
             </p>
           )}

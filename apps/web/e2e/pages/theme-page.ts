@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test"
+
 import { waitForMenuToClose } from "./menu-bar-page"
 
 /** The three colours a surface in this application is made of. */

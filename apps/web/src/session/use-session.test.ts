@@ -5,6 +5,7 @@ import type { Project } from "@bot-inventor/schema"
 import { embedReplyProject, helloProject } from "@bot-inventor/schema/fixtures"
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import type { SessionExitEvent, SessionId, SessionOutputEvent } from "@/session/events"
 import type { SessionGateway } from "@/session/session-gateway"
 import { OUTDATED_DELAY, useSession } from "@/session/use-session"

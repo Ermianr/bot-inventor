@@ -24,6 +24,7 @@ import {
   unreachableNodeProject
 } from "@bot-inventor/schema/fixtures"
 import { describe, expect, it } from "vitest"
+
 import { compile } from "./compile.js"
 import { CompilerError } from "./errors.js"
 import { type RunProjectResult, runProject } from "./testing.js"

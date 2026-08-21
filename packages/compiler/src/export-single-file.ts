@@ -1,8 +1,10 @@
 import { mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+
 import type { NodeCatalogue } from "@bot-inventor/nodes"
 import type { Project } from "@bot-inventor/schema"
 import { build, type Plugin } from "esbuild"
+
 import { NATIVE_ADDON_EXTERNALS, NODE_BUNDLE_BANNER } from "./bundle.js"
 import { compile } from "./compile.js"
 import { ExportError } from "./export-error.js"

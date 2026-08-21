@@ -1,10 +1,7 @@
 "use client"
 
-import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { Menubar as MenubarPrimitive } from "@base-ui/react/menubar"
-
-import { cn } from "@bot-inventor/ui/lib/utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +17,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger
 } from "@bot-inventor/ui/components/dropdown-menu"
+import { cn } from "@bot-inventor/ui/lib/utils"
 import { CheckIcon } from "lucide-react"
+import * as React from "react"
 
 function Menubar({ className, ...props }: MenubarPrimitive.Props) {
   return (

@@ -3,6 +3,7 @@ import { type FieldValue, readSlottedText } from "@bot-inventor/schema"
 import { Checkbox } from "@bot-inventor/ui/components/checkbox"
 import { Input } from "@bot-inventor/ui/components/input"
 import { Label } from "@bot-inventor/ui/components/label"
+
 import { colourHex, colourNumber } from "@/canvas/colour"
 import { EmbedFieldsField } from "@/canvas/embed-fields-field"
 import { SlottedField } from "@/canvas/slotted-field"

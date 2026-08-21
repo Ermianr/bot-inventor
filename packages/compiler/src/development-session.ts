@@ -2,6 +2,7 @@ import { indent, type NodeCatalogue } from "@bot-inventor/nodes"
 import type { TraceEvent } from "@bot-inventor/runtime"
 import type { Project } from "@bot-inventor/schema"
 import { z } from "zod"
+
 import { compile } from "./compile.js"
 import { DEFINE_BOT } from "./module.js"
 import { TOKEN_VARIABLE } from "./node-project.js"

@@ -1,5 +1,6 @@
 import type { Node } from "@bot-inventor/schema"
 import { describe, expect, it } from "vitest"
+
 import { assignIdentifierPrefixes, literal } from "./identifiers.js"
 
 function nodesWithIds(ids: readonly string[]): Node[] {

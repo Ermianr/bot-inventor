@@ -1,4 +1,5 @@
 import type { Flow, PortReference, Project, Wire, WireKind } from "@bot-inventor/schema"
+
 import type { NodeCatalogue } from "./catalogue.js"
 import { type CoercionDefinition, findCoercion } from "./coercions.js"
 import { findPort, type PortDefinition } from "./definition.js"

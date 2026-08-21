@@ -7,6 +7,7 @@ import {
   getBezierPath,
   type Edge as ReactFlowEdge
 } from "@xyflow/react"
+
 import { translate, translateDefinitionKey } from "@/i18n/messages"
 
 /**
@@ -91,7 +92,7 @@ export function Wire({
               </TooltipTrigger>
               {/* A carried value can be one long unbroken run of characters,
                   which has nowhere to wrap without being told to. */}
-              <TooltipContent className="break-all font-mono">{data.carried}</TooltipContent>
+              <TooltipContent className="font-mono break-all">{data.carried}</TooltipContent>
             </Tooltip>
           )}
           {data?.coercionLabelKey !== undefined && (
