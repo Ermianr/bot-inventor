@@ -55,7 +55,7 @@ export type TestServerPickerProps = {
   testId: string
   /** The id currently chosen, which is what a Session registers to. */
   value: string
-  onChange(testServerId: string): void
+  onChange: (testServerId: string) => void
 }
 
 export function TestServerPicker({

@@ -14,14 +14,14 @@ export type ExportGateway = {
    * changed their mind. The format is passed because it changes what the
    * dialog says, not what it returns.
    */
-  chooseDestination(format: ExportFormat): Promise<string | undefined>
+  chooseDestination: (format: ExportFormat) => Promise<string | undefined>
   /**
    * Asks whether an Export that is already there may be replaced. Answering no
    * leaves it exactly as it was.
    */
-  confirmOverwrite(path: string): Promise<boolean>
+  confirmOverwrite: (path: string) => Promise<boolean>
   /** Performs the Export and says what happened. It does not throw for a refusal. */
-  run(request: ExportRequest): Promise<ExportResult>
+  run: (request: ExportRequest) => Promise<ExportResult>
   /**
    * Shows the user an Export that was written, in whatever the machine has for
    * looking at files.
@@ -31,5 +31,5 @@ export type ExportGateway = {
    * during development and under the end-to-end tests. Absent means the offer
    * is never made, rather than made and doing nothing.
    */
-  show?(path: string): Promise<void>
+  show?: (path: string) => Promise<void>
 }

@@ -68,7 +68,7 @@ export function InlineName({
    * Takes the trimmed name. Returning `false` refuses it: the field stays open
    * on what the user typed, and saying why is the caller's to do.
    */
-  onRename(name: string): boolean | void
+  onRename: (name: string) => boolean | void
 }) {
   const [typed, setTyped] = useState<string | undefined>(startEditing ? name : undefined)
   const pencil = useRef<HTMLButtonElement>(null)
@@ -166,6 +166,7 @@ export function InlineName({
     <Input
       // The pencil is gone the moment the field appears, so the field has to
       // take the focus itself or the keyboard is left on nothing.
+      // oxlint-disable-next-line jsx-a11y/no-autofocus -- rescuing focus, not taking it.
       autoFocus
       className={cn("w-48", className)}
       value={typed}

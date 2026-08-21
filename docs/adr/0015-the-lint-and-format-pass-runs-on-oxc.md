@@ -72,11 +72,20 @@ The rules oxlint adds beyond that set are decided on. `react/exhaustive-effect-d
 
 Nothing else the measurement flagged is lost. A deliberate breach — a Hook called inside a condition, and `Date.now()` during render — was dropped into `apps/web/src` and into `packages/ui/src` and failed `bun run check:ci` from both.
 
-## Why type-aware linting is out of scope
+## Type-aware linting, and what it cost
 
-Type-aware linting is the largest capability oxlint offers and the one this change does not take. It runs on a TypeScript 7 tool chain, and there is no TypeScript 6 path to it. The workspace catalogue pins TypeScript 6.
+Type-aware linting is the largest capability oxlint offers, and it is on: `bun run check` and `bun run check:ci` both pass `--type-aware`.
 
-Upgrading that major is not a lint decision. It pulls in every `check-types` task, the Vite build and the Tauri build, and doing it in the same change as a linter swap would make any breakage ambiguous — a type error after that commit could belong to either half. So the capability waits, and the constraint is written here rather than rediscovered: what blocks type-aware linting is a TypeScript major upgrade that has to be decided on its own merits.
+This section previously recorded the opposite, and the reason it gave was wrong rather than merely out of date. It read the TypeScript 7 requirement as a requirement on *this* repository's tool chain. It is not one. The checker is `oxlint-tsgolint`, a devDependency that ships the Go port of the compiler as a binary of its own; it reads `tsconfig.json` and the source, and it has no opinion about which `typescript` the workspace catalogue pins. The catalogue stays on TypeScript 6, `check-types` still runs `tsc` from it, and the type-aware pass runs beside them. A major upgrade was never the blocker.
+
+Turning the flag on produced 107 findings. Twenty-one of them were code, and are fixed:
+
+- **Nine unnecessary assertions and two unnecessary boolean comparisons.** An `as` that asserted what the line above had already proved, and `checked === true` on a value that was already `boolean`.
+- **Twenty unbound methods, from one declaration habit.** A callback declared as a method — `onRename(name: string): boolean | void` — reads to the checker as something that might want a `this`, and reads to TypeScript as bivariant in its parameters. Both are wrong for a callback. The declarations became property signatures — `onRename: (name: string) => boolean | void` — which is what they meant, and which is checked contravariantly. The rule stays on because it has real work here: the Playwright Page Objects are classes, and an unbound method of one is a bug.
+
+The other four rules are off, each argued for on its line in `.oxlintrc.json`. In short: `no-unsafe-type-assertion` reads every `as` as a hole and finds sixty-three test fixtures and proven narrowings; `consistent-return` wants a `return` on the branch of an exhaustive `switch` that TypeScript has proved unreachable, and on a `useEffect` with no cleanup to give; `no-base-to-string` is right that `String(unknown)` can render `[object Object]`, which is the decision at all five sites; `no-unnecessary-type-parameters` counts a type parameter the caller passes explicitly as pointless.
+
+What the pass was turned on for is silent: `no-floating-promises`, `no-misused-promises` and `await-thenable` find nothing today. They are named in the configuration anyway. A promise dropped on the floor is what a Session dies of, and it is invisible to every rule that cannot see a type.
 
 ## Consequences
 
@@ -85,4 +94,5 @@ Upgrading that major is not a lint decision. It pulls in every `check-types` tas
 - **Named specifiers inside braces are no longer sorted.** oxfmt sorts import declarations; Biome's organize-imports assist sorted the names inside the braces too. The gap is accepted and must not be patched with a rule from the other linter: splitting one responsibility across two tools is the thing this change exists to stop doing.
 - **The formatter is pre-1.0.** oxfmt's remaining published work is finishing its Prettier port, so an upgrade may move the output. A reformat that appears after bumping the version is beta churn, not a regression, and the response is a new blame-ignore revision rather than an investigation.
 - **`bun run check` still means what it meant.** It rewrites files, now as the formatter followed by the linter with fixes applied. `bun run check:ci` answers the same question without touching anything and exits non-zero on any finding, so a complaint cannot be printed and scrolled past.
+- **The lint pass needs a second binary.** `oxlint-tsgolint` is a devDependency and `--type-aware` does nothing without it, so a checkout that skipped `bun install` runs a smaller pass and exits zero. The flag lives in the `check` scripts rather than in `.oxlintrc.json` because oxlint has no configuration key for it; running `oxlint` by hand is therefore not running the pass this repository has.
 - **One command makes the repository right, one says what is wrong.** `bun run check-react-rules` is gone with ESLint; `bun run check` and `bun run check:ci` are the whole of the lint answer.

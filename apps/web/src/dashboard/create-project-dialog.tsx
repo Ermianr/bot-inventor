@@ -106,6 +106,7 @@ export function CreateProjectDialog({
               data-testid="create-project-name"
               // The user is here to name their bot: the cursor is already in
               // the field they came to type in.
+              // oxlint-disable-next-line jsx-a11y/no-autofocus -- focus entering a dialog.
               autoFocus
               placeholder={translate("project.untitled")}
               value={name}

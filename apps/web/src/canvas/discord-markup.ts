@@ -317,7 +317,7 @@ function nodesOf(text: string): Inline[] {
   let plain = ""
   let index = 0
 
-  const top = () => stack[stack.length - 1] as Frame
+  const top = () => stack[stack.length - 1]
   const flush = () => {
     if (plain.length === 0) return
     top().nodes.push({ kind: "text", text: plain })

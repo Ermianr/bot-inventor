@@ -16,7 +16,7 @@ function version1Hello(): Record<string, unknown> {
   const reply = document.flows[0]?.nodes[1]
   if (reply === undefined) throw new Error("the fixture has no Reply Node")
   reply.fields = { content: "Hello!", ephemeral: false }
-  return document as unknown as Record<string, unknown>
+  return document
 }
 
 describe("toSlottedText", () => {

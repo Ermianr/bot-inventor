@@ -22,7 +22,7 @@ function definition(isTrigger: boolean): NodeDefinition {
     fields: [],
     ports: [],
     generate: () => ""
-  } as unknown as NodeDefinition
+  }
 }
 
 function node(isTrigger: boolean, runState?: NodeRunState): FlowNodeType {

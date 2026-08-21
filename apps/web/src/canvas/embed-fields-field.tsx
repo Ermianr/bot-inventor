@@ -245,7 +245,7 @@ function EmbedFieldRow({
           className="nodrag"
           data-testid={`embed-field-inline-${rowId}`}
           id={`${rowId}-inline`}
-          onCheckedChange={checked => onChange({ ...embedField, inline: checked === true })}
+          onCheckedChange={checked => onChange({ ...embedField, inline: checked })}
         />
         <Label className="text-xs" htmlFor={`${rowId}-inline`}>
           {translate("canvas.embedField.inline")}

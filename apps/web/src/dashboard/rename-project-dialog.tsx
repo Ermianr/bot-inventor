@@ -75,6 +75,7 @@ export function RenameProjectDialog({
               data-testid="rename-project-name"
               // The user came to type a name: the cursor is already there, on
               // the name they are about to replace.
+              // oxlint-disable-next-line jsx-a11y/no-autofocus -- focus entering a dialog.
               autoFocus
               value={name}
               onChange={event => setName(event.target.value)}

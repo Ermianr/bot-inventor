@@ -38,7 +38,7 @@ beforeEach(() => {
       addEventListener: () => {},
       removeEventListener: () => {},
       dispatchEvent: () => false
-    }) as unknown as MediaQueryList
+    }) as MediaQueryList
 })
 
 afterEach(cleanup)
