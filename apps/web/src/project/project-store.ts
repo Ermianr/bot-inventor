@@ -150,7 +150,7 @@ function nameIn(document: string): string {
   try {
     const parsed: unknown = JSON.parse(document)
     if (typeof parsed === "object" && parsed !== null && "name" in parsed) {
-      const { name } = parsed as { name: unknown }
+      const { name }: { name: unknown } = parsed
       if (typeof name === "string" && name.trim().length > 0) return name
     }
   } catch {

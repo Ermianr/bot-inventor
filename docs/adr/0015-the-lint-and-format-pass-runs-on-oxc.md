@@ -1,6 +1,6 @@
 # The lint and format pass runs on oxc
 
-Biome formatted this repository and ran its general lint pass; ESLint was installed for exactly one rule set. That pass now runs on the oxc toolchain — `oxfmt` for formatting and its sorting assists, `oxlint` for the lint pass — and Biome is gone. ESLint stays, unchanged and for the same one rule set.
+Biome formatted this repository and ran its general lint pass; ESLint was installed for exactly one rule set. That pass now runs on the oxc toolchain — `oxfmt` for formatting and its sorting assists, `oxlint` for the lint pass — and Biome is gone. ESLint stayed at first, for that one rule set; the measurement recorded below then retired it too, and oxc is now the whole of the answer.
 
 The reason of record is convergence and capability, in that order. The rest of the build already runs on oxc's neighbours — Vite 8 and Rolldown — and the lint and format pass was the piece that had not moved. On top of that, three things the repository wanted are things Biome could not give it: Tailwind classes sorted against the project's **real** v4 stylesheet rather than a hard-coded default, so that the `@theme` block and the custom utilities in `packages/ui` are visible to the sorter at all; Vitest rules that exist natively rather than arriving through dependency detection; and an open path to type-aware linting, which Biome's `types` domain does not lead anywhere near.
 
@@ -10,9 +10,9 @@ The reason of record is convergence and capability, in that order. The rest of t
 
 The rules that run are chosen rather than inherited. `correctness`, `suspicious` and `perf` are errors; `pedantic`, `restriction` and `nursery` stay off; and `style` is not enabled wholesale — the ten `style` rules the team had picked by hand while Biome ran this pass are named one by one, so an agreed-upon set of enforcement survives the swap without importing hundreds of decisions nobody made. The translation was manual, because there is no official Biome-to-oxlint migrator, and it is the part of this change most likely to need revisiting.
 
-## Why ESLint is still installed
+## Why ESLint outlived Biome
 
-ESLint carries `eslint-plugin-react-hooks`, which carries the React Compiler's diagnostics. This repository does not write memoization by hand ([ADR 0013](./0013-memoization-is-no-longer-written-by-hand.md)), which makes those diagnostics the thing that keeps the compiler's assumptions honest — they are not a style preference, they are the check that the code the compiler is trusted to memoize is code it can memoize.
+ESLint carried `eslint-plugin-react-hooks`, which carries the React Compiler's diagnostics. This repository does not write memoization by hand ([ADR 0013](./0013-memoization-is-no-longer-written-by-hand.md)), which makes those diagnostics the thing that keeps the compiler's assumptions honest — they are not a style preference, they are the check that the code the compiler is trusted to memoize is code it can memoize.
 
 The evaluation that kept ESLint alive is worth preserving, because it is the kind of work a future contributor will otherwise redo. Biome did grow a rule of its own, `useReactCompiler` in 2.5.8, and it was run against the same code on the same day as the plugin: it found **three of the seven breaches** the plugin found. It was in the nursery group, and it skipped itself entirely unless the nearest `package.json` named a React version it could parse — which `"react": "catalog:"` is not. A check that turns itself off in silence is worse than no check.
 
@@ -51,11 +51,41 @@ Two rules in the plugin's recommended set have no oxlint counterpart at all: `co
 
 **The decision is to retire ESLint**, and the conditions the retirement change must satisfy are the three above: `**/packages/ui` leaves `ignorePatterns`, the recommended set is named explicitly in `.oxlintrc.json` rather than left to whichever category currently happens to carry each rule, and the rules oxlint adds beyond the recommended set are decided on rather than inherited. `bun run check-react-rules` goes with it, and `bun run check` becomes the whole of the lint answer.
 
-## Why type-aware linting is out of scope
+## The retirement, and what it cost
 
-Type-aware linting is the largest capability oxlint offers and the one this change does not take. It runs on a TypeScript 7 tool chain, and there is no TypeScript 6 path to it. The workspace catalogue pins TypeScript 6.
+`eslint`, `eslint-plugin-react-hooks` and `typescript-eslint` leave `devDependencies`, `eslint.config.js` is deleted, and `check-react-rules` is gone from the root, from `apps/web`, from `packages/ui` and from `turbo.json`. `eslint-plugin-playwright` stays, because it is not ESLint here: oxlint loads it as a JavaScript plugin.
 
-Upgrading that major is not a lint decision. It pulls in every `check-types` task, the Vite build and the Tauri build, and doing it in the same change as a linter swap would make any breakage ambiguous — a type error after that commit could belong to either half. So the capability waits, and the constraint is written here rather than rediscovered: what blocks type-aware linting is a TypeScript major upgrade that has to be decided on its own merits.
+**ESLint's binary is still on disk, and that is not an oversight.** `eslint-plugin-playwright` declares ESLint as a peer dependency, so Bun installs it; `node_modules/.bin/eslint` exists and resolves to the same version this change removed. What is gone is every way the repository reaches it — no configuration file, no script, no task — so it is a package under a plugin rather than a tool in this toolchain. Uninstalling it would mean dropping the Playwright rules, which oxlint runs through that plugin and which were confirmed still firing after the change. Anyone auditing the tree for the string `eslint` will find it, and this paragraph is the answer.
+
+The three conditions the measurement attached to the retirement are met.
+
+`**/packages/ui` has left `ignorePatterns`, so the shadcn components are linted by the whole configuration and not just by the compiler rules ESLint used to reach them with. Uncovering the package produced no findings.
+
+The recommended set is named rule by rule in `.oxlintrc.json` — `react/hooks`, `react-hooks/exhaustive-deps`, `react/set-state-in-render`, `react/set-state-in-effect`, `react/purity`, `react/globals`, `react/refs`, `react/static-components`, `react/error-boundaries`, `react/immutability`, `react/preserve-manual-memoization`, `react/use-memo`, `react/unsupported-syntax` and `react/incompatible-library` — rather than left to whichever category currently carries each of them. A category reshuffle upstream can no longer switch one of them off in silence.
+
+The rules oxlint adds beyond that set are decided on. `react/exhaustive-effect-dependencies`, `react/no-deriving-state-in-effects` and `react/no-unstable-nested-components` are silent over this repository and guard the same assumptions, so they run. `react/todo` and `react/rule-suppression` do not, and both are refusals rather than deferrals: `todo` reports functions the compiler declines to compile rather than code that is wrong, and it fires on four hooks whose `try`/`finally` is the shape the cleanup wants — rewriting them is a change with its own reasons, not a linter's; `rule-suppression` objects to a suppression on principle, and this repository has three, each argued for in prose on the line above it, so the only answer it could be given is a second suppression.
+
+### The accepted losses
+
+- **`config` and `gating` have no oxlint counterpart**, and neither does **`component-hook-factories`**. The measurement named only the first two; the third surfaced in this change, when naming the recommended set rule by rule made oxlint reject `react/component-hook-factories` as a rule it does not have — which is the argument for naming them explicitly, arriving one commit after the argument was made. None of the three has anything to check here — there is no React Compiler configuration comment, no feature gate and no hook factory — so the loss is zero today and is a real one the day any of them is introduced. That day is the day to re-check whether oxlint has grown them.
+- **Suppression comments now name oxlint's rules.** The three `eslint-disable-next-line` comments in `apps/web/src` are `oxlint-disable-next-line`, and `react-hooks/set-state-in-effect` is written as `react/set-state-in-effect`. oxlint honours the `eslint-` spelling, so this is legibility rather than function: a directive naming a tool the repository no longer installs is a directive nobody can check.
+
+Nothing else the measurement flagged is lost. A deliberate breach — a Hook called inside a condition, and `Date.now()` during render — was dropped into `apps/web/src` and into `packages/ui/src` and failed `bun run check:ci` from both.
+
+## Type-aware linting, and what it cost
+
+Type-aware linting is the largest capability oxlint offers, and it is on: `bun run check` and `bun run check:ci` both pass `--type-aware`.
+
+This section previously recorded the opposite, and the reason it gave was wrong rather than merely out of date. It read the TypeScript 7 requirement as a requirement on *this* repository's tool chain. It is not one. The checker is `oxlint-tsgolint`, a devDependency that ships the Go port of the compiler as a binary of its own; it reads `tsconfig.json` and the source, and it has no opinion about which `typescript` the workspace catalogue pins. The catalogue stays on TypeScript 6, `check-types` still runs `tsc` from it, and the type-aware pass runs beside them. A major upgrade was never the blocker.
+
+Turning the flag on produced 107 findings. Twenty-one of them were code, and are fixed:
+
+- **Nine unnecessary assertions and two unnecessary boolean comparisons.** An `as` that asserted what the line above had already proved, and `checked === true` on a value that was already `boolean`.
+- **Twenty unbound methods, from one declaration habit.** A callback declared as a method — `onRename(name: string): boolean | void` — reads to the checker as something that might want a `this`, and reads to TypeScript as bivariant in its parameters. Both are wrong for a callback. The declarations became property signatures — `onRename: (name: string) => boolean | void` — which is what they meant, and which is checked contravariantly. The rule stays on because it has real work here: the Playwright Page Objects are classes, and an unbound method of one is a bug.
+
+The other four rules are off, each argued for on its line in `.oxlintrc.json`. In short: `no-unsafe-type-assertion` reads every `as` as a hole and finds sixty-three test fixtures and proven narrowings; `consistent-return` wants a `return` on the branch of an exhaustive `switch` that TypeScript has proved unreachable, and on a `useEffect` with no cleanup to give; `no-base-to-string` is right that `String(unknown)` can render `[object Object]`, which is the decision at all five sites; `no-unnecessary-type-parameters` counts a type parameter the caller passes explicitly as pointless.
+
+What the pass was turned on for is silent: `no-floating-promises`, `no-misused-promises` and `await-thenable` find nothing today. They are named in the configuration anyway. A promise dropped on the floor is what a Session dies of, and it is invisible to every rule that cannot see a type.
 
 ## Consequences
 
@@ -64,4 +94,5 @@ Upgrading that major is not a lint decision. It pulls in every `check-types` tas
 - **Named specifiers inside braces are no longer sorted.** oxfmt sorts import declarations; Biome's organize-imports assist sorted the names inside the braces too. The gap is accepted and must not be patched with a rule from the other linter: splitting one responsibility across two tools is the thing this change exists to stop doing.
 - **The formatter is pre-1.0.** oxfmt's remaining published work is finishing its Prettier port, so an upgrade may move the output. A reformat that appears after bumping the version is beta churn, not a regression, and the response is a new blame-ignore revision rather than an investigation.
 - **`bun run check` still means what it meant.** It rewrites files, now as the formatter followed by the linter with fixes applied. `bun run check:ci` answers the same question without touching anything and exits non-zero on any finding, so a complaint cannot be printed and scrolled past.
-- **Two commands remain, and the second one is now on its way out.** `bun run check-react-rules` is ESLint and only ESLint. The measurement above says it can go, so it goes in the change that satisfies the three conditions that measurement attached to it.
+- **The lint pass needs a second binary.** `oxlint-tsgolint` is a devDependency and `--type-aware` does nothing without it, so a checkout that skipped `bun install` runs a smaller pass and exits zero. The flag lives in the `check` scripts rather than in `.oxlintrc.json` because oxlint has no configuration key for it; running `oxlint` by hand is therefore not running the pass this repository has.
+- **One command makes the repository right, one says what is wrong.** `bun run check-react-rules` is gone with ESLint; `bun run check` and `bun run check:ci` are the whole of the lint answer.

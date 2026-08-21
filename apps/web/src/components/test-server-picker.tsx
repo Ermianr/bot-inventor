@@ -55,7 +55,7 @@ export type TestServerPickerProps = {
   testId: string
   /** The id currently chosen, which is what a Session registers to. */
   value: string
-  onChange(testServerId: string): void
+  onChange: (testServerId: string) => void
 }
 
 export function TestServerPicker({
@@ -118,9 +118,9 @@ export function TestServerPicker({
     if (projectId === undefined) return
     // The spinner goes up as the dialog opens: one render that says the list is
     // being fetched, not a cascade — nothing here re-runs on what it sets.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // oxlint-disable-next-line react/set-state-in-effect
     void look("")
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- explained above.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- explained above.
   }, [projectId])
 
   const chosen = servers.find(server => server.id === value) ?? null

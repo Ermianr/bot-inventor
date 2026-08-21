@@ -35,9 +35,9 @@ export type Importing = {
    * It is handed back rather than kept because the Dashboard is what does the
    * asking next, the same way creating hands back an id rather than navigating.
    */
-  choose(): Promise<Project | undefined>
+  choose: () => Promise<Project | undefined>
   /** Forgets the refusal, for when the user has been told and moved on. */
-  forgetProblem(): void
+  forgetProblem: () => void
 }
 
 export function useImport(imports: ImportGateway): Importing {

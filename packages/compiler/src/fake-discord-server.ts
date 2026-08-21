@@ -1,6 +1,5 @@
 import { once } from "node:events"
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http"
-import type { AddressInfo } from "node:net"
 
 import { WebSocketServer } from "ws"
 
@@ -295,5 +294,5 @@ function portOf(server: Server): number {
   if (address === null || typeof address === "string") {
     throw new Error("the fake Discord is not listening on a port")
   }
-  return (address as AddressInfo).port
+  return address.port
 }

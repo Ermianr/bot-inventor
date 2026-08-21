@@ -43,7 +43,7 @@ async function fillIn({ name, token }: { name: string; token: string }) {
 
 /** What is written in the creation dialog's name field. */
 async function nameField() {
-  return ((await screen.findByTestId("create-project-name")) as HTMLInputElement).value
+  return (await screen.findByTestId<HTMLInputElement>("create-project-name")).value
 }
 
 describe("the Dashboard", () => {
@@ -414,7 +414,7 @@ describe("the creation dialog, reopened", () => {
 
   /** What the token field is holding. */
   async function tokenField() {
-    return ((await screen.findByTestId("create-project-token")) as HTMLInputElement).value
+    return (await screen.findByTestId<HTMLInputElement>("create-project-token")).value
   }
 
   it("does not carry a token from one import into the next", async () => {

@@ -13,8 +13,7 @@ import {
   redactSecret,
   renderDevelopmentSession,
   SESSION_ENTRY_NAME,
-  type SessionMessage,
-  type SessionOutput
+  type SessionMessage
 } from "./development-session.js"
 import { type FakeDiscordServer, startFakeDiscordServer } from "./fake-discord-server.js"
 
@@ -169,7 +168,7 @@ function read(child: ChildProcess): void {
       if (line.length === 0) continue
       const message = readSessionLine(redactSecret(line, TOKEN))
       if (message === undefined) continue
-      if (message.kind === "output") panel.push((message as SessionOutput).text)
+      if (message.kind === "output") panel.push(message.text)
       else messages.push(message)
     }
   }

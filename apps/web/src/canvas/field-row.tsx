@@ -118,7 +118,7 @@ export function FieldRow({
         <Checkbox
           checked={value === true}
           id={inputId}
-          onCheckedChange={checked => setField(field.id, checked === true)}
+          onCheckedChange={checked => setField(field.id, checked)}
         />
         <Label className="text-xs" htmlFor={inputId}>
           {label}

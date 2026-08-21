@@ -55,7 +55,7 @@ export type Projects = {
    * under them about a Project they are no longer making is the application
    * refusing something nobody has asked for yet.
    */
-  forgetCreationProblem(): void
+  forgetCreationProblem: () => void
   /**
    * Why the last thing asked of one Project did not happen, and which Project
    * it was asked of.
@@ -66,9 +66,9 @@ export type Projects = {
    */
   manageProblem: ManageProblem | undefined
   /** The id of the Project that was made, or nothing when it was not. */
-  create(details: ProjectDetails): Promise<string | undefined>
+  create: (details: ProjectDetails) => Promise<string | undefined>
   /** Makes the demonstration Project, for a Dashboard with nothing on it. */
-  createExample(details: ProjectDetails): Promise<string | undefined>
+  createExample: (details: ProjectDetails) => Promise<string | undefined>
   /**
    * Makes a Project of the user's own out of one somebody sent, and says which
    * one it is.
@@ -77,13 +77,13 @@ export type Projects = {
    * `useImport`'s, and by the time this is called the questions the file cannot
    * answer have been asked.
    */
-  importProject(incoming: Project, details: ProjectDetails): Promise<string | undefined>
+  importProject: (incoming: Project, details: ProjectDetails) => Promise<string | undefined>
   /** Changes what a Project is called, in the list and in the document. */
-  rename(projectId: string, name: string): Promise<boolean>
+  rename: (projectId: string, name: string) => Promise<boolean>
   /** Copies a Project, untokened, and says which one the copy is. */
-  duplicate(projectId: string): Promise<string | undefined>
+  duplicate: (projectId: string) => Promise<string | undefined>
   /** Takes a Project, its Secret and its local settings out of storage. */
-  remove(projectId: string): Promise<boolean>
+  remove: (projectId: string) => Promise<boolean>
 }
 
 /** Why something asked of one Project did not happen. */
@@ -119,7 +119,7 @@ export function useProjects(store: ProjectStore): Projects {
   useEffect(() => {
     // `refresh` writes nothing down until the store has answered, which is
     // after this render either way. The rule cannot see that across the call.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // oxlint-disable-next-line react/set-state-in-effect
     void refresh()
   }, [refresh])
 

@@ -1,57 +1,233 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   // oxlint detects nothing about the dependency list, so every plugin the
-  // repository needs is named here. `typescript`, `unicorn` and `oxc` are on by
-  // default and are repeated so that this list is the whole of the answer.
-  "plugins": ["typescript", "unicorn", "oxc", "react", "vitest", "import"],
+  // repository needs is named here. `eslint`, `typescript`, `unicorn` and
+  // `oxc` are on by default and are repeated so that this list is the whole
+  // of the answer.
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "react",
+    "jsx-a11y",
+    "promise",
+    "vitest",
+    "import"
+  ],
   // Playwright has no native plugin. The upstream ESLint one runs through
   // oxlint's JS-plugin support, and its rules are turned on in the override
-  // below so that they reach the end-to-end specs and nothing else.
+  // below so that they reach the end-to-end specs and nothing else. Nothing
+  // here has a default severity: without that override no Playwright rule
+  // runs at all.
   "jsPlugins": [{ "name": "playwright", "specifier": "eslint-plugin-playwright" }],
-  // Three categories, chosen rather than inherited. `pedantic`, `restriction`
-  // and `nursery` stay off, and `style` is not enabled wholesale: the ten rules
-  // below are the ones the team picked by hand while Biome ran this pass.
+  // This is the body of the pass, not a detail: the three categories carry
+  // the bulk of the rules that run, and the `rules` block below is the list
+  // of exceptions to them. `pedantic`, `restriction` and `nursery` stay off,
+  // and `style` is not enabled wholesale — the rules the team picked by
+  // hand while Biome ran this pass are named one by one instead.
+  //
+  // Deleting this block is not "fewer rules", it is a different check:
+  // omitting the key leaves `correctness` at `warn` and drops `suspicious`
+  // and `perf` entirely, so the pass prints its complaints and still exits
+  // zero. A finding that can be scrolled past teaches the reader to scroll.
   "categories": {
     "correctness": "error",
     "suspicious": "error",
     "perf": "error"
   },
   "rules": {
+    // Style enforcement, which no category here brings. Remove one of
+    // these lines and the rule simply stops running.
+    // `correctness` brings this one; the option is what makes it usable. The
+    // rule exists to catch a link of a chain that forgets to pass the value
+    // on, leaving the next `then` holding `undefined`. Without the option it
+    // also fires on the last callback of a chain, which has nothing to pass it
+    // to. Every one it catches here is an effect reading something once and
+    // applying it only if it has not been torn down since — a cleanup has to
+    // be synchronous, so there is no `await` to reach for. Off entirely would
+    // give up the mid-chain finding, which is the real one.
+    "promise/always-return": ["error", { "ignoreLastCallback": true }],
     "eslint/no-param-reassign": "error",
-    "typescript/prefer-as-const": "error",
     "typescript/default-param-last": "error",
     "typescript/prefer-enum-initializers": "error",
     "react/self-closing-comp": "error",
     "eslint/one-var": ["error", "never"],
-    "typescript/no-unnecessary-template-expression": "error",
     "unicorn/prefer-number-properties": "error",
     "typescript/no-inferrable-types": "error",
     "eslint/no-else-return": "error",
 
-    // What the three categories bring that this repository does not want. Each
-    // is off for a reason, not to keep a migration's diff small.
+    // Four rules that are silent today. They are named because holding them
+    // at zero costs nothing and going back does; no category above carries
+    // any of them, so without these lines they do not run at all.
+    //
+    // `null` included: there is not one `== null` in the repository, so this
+    // is not hiding an exception it would have to be argued out of later.
+    "eslint/eqeqeq": "error",
+    // The `any` the type-aware pass reads about arrives from a library's own
+    // declarations, not from here: no `any` is written in this repository's
+    // source. The only one in the tree is in `routeTree.gen.ts`, which is
+    // generated and is in `ignorePatterns`.
+    "typescript/no-explicit-any": "error",
+    // This repository narrows with an `if` and keeps the `undefined` where
+    // there is one. `!` is how that conversation gets skipped.
+    "typescript/no-non-null-assertion": "error",
+    // `node:` says where an import comes from without the reader having to
+    // already know.
+    "unicorn/prefer-node-protocol": "error",
+    // These two come from `correctness` already. They are kept because
+    // they belong to the hand-picked set, not because they add anything.
+    "typescript/prefer-as-const": "error",
+    "typescript/no-unnecessary-template-expression": "error",
+
+    // What the three categories bring that this repository does not want.
+    // Each is off for a reason, not to keep a migration's diff small, and
+    // each carries what turning it back on costs today.
 
     // The editor compiles with the automatic JSX runtime.
     "react/react-in-jsx-scope": "off",
-    // Memoization is not written by hand here (ADR 0013), and what is left of
-    // it is `eslint-plugin-react-hooks`' ground, which still runs.
+    // Memoization is not written by hand here (ADR 0013), and what is left
+    // of it is the React Compiler set below.
     "react/memo-dependencies": "off",
-    // Steps that must happen in order are awaited in order. Turning those into
-    // `Promise.all` would change what the test or the Export means.
+    // Steps that must happen in order are awaited in order. Turning those
+    // into `Promise.all` would change what the test or the Export means.
     "eslint/no-await-in-loop": "off",
-    // A helper written inside the `describe` it serves is where a reader looks
-    // for it; hoisting it to the top of the file to satisfy a linter is worse.
+    // A helper written inside the `describe` it serves is where a reader
+    // looks for it; hoisting it to the top of the file to satisfy a linter
+    // is worse.
     "unicorn/consistent-function-scoping": "off",
-    // Narrowing a discriminated union before asserting on its payload reads as
-    // a conditional `expect` and is not one.
+    // Narrowing a discriminated union before asserting on its payload reads
+    // as a conditional `expect` and is not one.
     "vitest/no-conditional-expect": "off",
     // `vi.fn()` infers what it needs to from the call it replaces.
     "vitest/require-mock-type-parameters": "off",
     // A stylesheet is imported for its effect and has nothing to assign.
-    "import/no-unassigned-import": "off"
+    "import/no-unassigned-import": "off",
+    // The tag this rule names is wrong everywhere it fires: `img` needs a
+    // `src` and the mark is an inline SVG, `fieldset` would bring form
+    // semantics and user-agent styling to a layout wrapper, and `output` means
+    // the result of a calculation, which a refused connection is not. A role
+    // attribute is the honest spelling in each case.
+    "jsx-a11y/prefer-tag-over-role": "off",
+
+    // The React Compiler's diagnostics, which ESLint used to carry through
+    // `eslint-plugin-react-hooks` (ADR 0015). `correctness` already denies
+    // all of them but `unsupported-syntax`, so most of these lines change
+    // nothing today and are here anyway: they are experimental rules, and
+    // this repository does not write memoization by hand (ADR 0013), which
+    // makes them the check that the code the compiler is trusted to
+    // memoize is code it can memoize. Naming them is what stops a category
+    // reshuffle upstream from switching one off in silence.
+    "react/hooks": "error",
+    // The one rule oxlint keeps in a `react-hooks` namespace of its own,
+    // and not a leftover from the plugin: the prefix is oxlint's.
+    "react-hooks/exhaustive-deps": "error",
+    "react/set-state-in-render": "error",
+    "react/set-state-in-effect": "error",
+    "react/purity": "error",
+    "react/globals": "error",
+    "react/refs": "error",
+    "react/static-components": "error",
+    "react/error-boundaries": "error",
+    "react/immutability": "error",
+    "react/preserve-manual-memoization": "error",
+    "react/use-memo": "error",
+    // The one of these no category carries. This line is what runs it.
+    "react/unsupported-syntax": "error",
+    "react/incompatible-library": "error",
+
+    // What oxlint offers beyond the plugin's recommended set, decided on
+    // rather than inherited. These three are silent over this repository
+    // and guard the same assumptions, so they run.
+    "react/exhaustive-effect-dependencies": "error",
+    "react/no-deriving-state-in-effects": "error",
+    "react/no-unstable-nested-components": "error",
+
+    // The two that were rejected. No category carries either, so both
+    // lines are inert — they record a decision, and what it would cost to
+    // reverse it.
+    //
+    // `todo` reports functions the compiler declines to compile rather
+    // than code that is wrong, and what it fires on here are hooks whose
+    // `try`/`finally` is the shape the cleanup wants.
+    "react/todo": "off",
+    // `rule-suppression` objects to a suppression on principle, and every
+    // suppression in this repository is argued for in prose on the line above
+    // it. The only answer it could be given is a second suppression.
+    "react/rule-suppression": "off",
+
+    // The type-aware pass, which runs on `--type-aware` and needs
+    // `oxlint-tsgolint` present. Without the flag every rule from here down is
+    // simply not run, so `check` and `check:ci` both pass it: a rule that only
+    // fires on somebody else's machine is not a rule this repository has.
+    //
+    // The ones that follow are off. Each is a type-aware rule the categories
+    // above bring, and each is off because it is asking the wrong question of
+    // this code rather than because the answer would be expensive.
+
+    // Reads every `as` as a hole in the type system. Most of what it finds is
+    // a test building a fixture that stands for a shape the test does not need
+    // whole; most of the rest narrow a value the line above has just proved
+    // the shape of. `no-unnecessary-type-assertion`, which stays on, is the
+    // half of this that finds something.
+    //
+    // What this rule is right about, and is being given up: a few of the ones
+    // in production source are trust boundaries rather than proven
+    // narrowings. `rest.get(...) as RegisteredCommand[]` believes what the
+    // Discord API sent back, and `event.source as ChatInputCommandInteraction`
+    // believes that the only interactions reaching a reply are the slash
+    // commands this Runtime registered. Both hold today. Neither is checked,
+    // and turning the rule on would not check them either — it would only
+    // move them into a suppression. Validating a Discord response with the
+    // Zod that is already here is a real change and belongs in its own one.
+    "typescript/no-unsafe-type-assertion": "off",
+    // Fires on an exhaustive `switch` over a discriminated union, where the
+    // path it wants a `return` on is the one TypeScript has proved cannot be
+    // taken, and on a `useEffect` that returns a cleanup only when it has one
+    // to return. Both are the shape they should be.
+    "typescript/consistent-return": "off",
+    // Right that `String(unknown)` can render `[object Object]`, and that is
+    // the decision everywhere it fires: the Tracing panel and the Embed both
+    // take a value of a type the user was never asked for, and showing what
+    // JSON could not is better than showing nothing.
+    "typescript/no-base-to-string": "off",
+    // Counts a type parameter the caller passes explicitly as used once and
+    // therefore pointless. `subscribe<Event>` is named by its caller, which is
+    // the only place the payload of a Tauri event is known.
+    "typescript/no-unnecessary-type-parameters": "off",
+
+    // The type-aware rules worth naming because they are silent: these are
+    // what the pass was turned on for. A promise dropped on the floor is the
+    // bug a Session dies of, and not one of them can be seen without types.
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
+    "typescript/unbound-method": "error",
+    // Already on through a category — it is the rule that found the redundant
+    // assertions cleared out when the type-aware pass was turned on. It is
+    // named for the same reason the React ones are: so that a category
+    // reshuffle upstream cannot switch it off in silence.
+    "typescript/no-unnecessary-type-assertion": "error"
   },
   "overrides": [
     {
+      // The shadcn components are vendored, not written here, and these three
+      // rules misread them rather than finding anything. `Label` is a wrapper
+      // whose `htmlFor` arrives through props the rule cannot see; the addon's
+      // click handler moves focus into the input beside it, which a keyboard
+      // user reaches by tabbing, so a key handler would answer a question
+      // nobody asked. They stay on everywhere else, where they would be
+      // reading code this repository wrote.
+      "files": ["packages/ui/**/*.tsx"],
+      "rules": {
+        "jsx-a11y/label-has-associated-control": "off",
+        "jsx-a11y/click-events-have-key-events": "off",
+        "jsx-a11y/no-noninteractive-element-interactions": "off"
+      }
+    },
+    {
+      // Scoped by glob so Playwright's complaints never reach
+      // application code or the Vitest suites.
       "files": ["apps/web/e2e/**/*.ts"],
       "rules": {
         "playwright/expect-expect": "error",
@@ -73,7 +249,6 @@
     "**/node_modules",
     "**/dist",
     "**/.turbo",
-    "**/packages/ui",
     "**/routeTree.gen.ts",
     "**/src-tauri/target",
     "**/src-tauri/binaries",

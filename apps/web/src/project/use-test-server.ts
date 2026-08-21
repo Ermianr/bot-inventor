@@ -16,7 +16,7 @@ import type { ProjectStore } from "@/project/project-store"
  */
 export type TestServer = {
   testServerId: string
-  choose(testServerId: string): void
+  choose: (testServerId: string) => void
 }
 
 export function useTestServer(store: ProjectStore, projectId: string): TestServer {

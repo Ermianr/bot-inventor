@@ -40,40 +40,43 @@ export type ProjectEditor = {
   project: Project
   /** The Flow the Canvas is showing. */
   flow: Flow
-  openFlow(flowId: string): void
+  openFlow: (flowId: string) => void
   /**
    * Adds an empty Flow, opens it, and says which one it made so the list can
    * put the user straight into naming it.
    */
-  createFlow(): string
+  createFlow: () => string
   /**
    * Names a Flow. Says why a name was refused so the list can explain it, and
    * leaves the Project untouched when it was.
    */
-  renameFlow(flowId: string, name: string): FlowRename
+  renameFlow: (flowId: string, name: string) => FlowRename
   /**
    * Removes a Flow and opens whichever one the rule says comes next. Says when
    * it refused, so the list can tell the user why nothing happened.
    */
-  removeFlow(flowId: string): FlowRemoval
+  removeFlow: (flowId: string) => FlowRemoval
   /** Puts a Node of the catalogue on the open Flow, at a Canvas position. */
-  addNode(definition: NodeDefinition, position: Position): void
+  addNode: (definition: NodeDefinition, position: Position) => void
   /**
    * Takes a Node off the open Flow, and its Wires with it. Every route that
    * removes a Node comes through here, so no Wire is ever left pointing at
    * something that is gone.
    */
-  removeNode(nodeId: string): void
-  moveNode(nodeId: string, position: Position): void
-  setNodeField(nodeId: string, fieldId: string, value: FieldValue): void
+  removeNode: (nodeId: string) => void
+  moveNode: (nodeId: string, position: Position) => void
+  setNodeField: (nodeId: string, fieldId: string, value: FieldValue) => void
   /**
    * Drops a Wire onto a text field: the Slot and the Wire arrive together, or
    * neither does. Says why it was refused, so the Canvas can tell the user in
    * the same words it uses for a Wire refused at a Port.
    */
-  insertSlot(at: { node: string; field: string; caret: Caret }, from: PortReference): SlotInsertion
-  connectWire(wire: { kind: WireKind; from: PortReference; to: PortReference }): void
-  disconnectWire(wireId: string): void
+  insertSlot: (
+    at: { node: string; field: string; caret: Caret },
+    from: PortReference
+  ) => SlotInsertion
+  connectWire: (wire: { kind: WireKind; from: PortReference; to: PortReference }) => void
+  disconnectWire: (wireId: string) => void
 }
 
 /**
