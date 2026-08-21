@@ -16,7 +16,40 @@ ESLint carries `eslint-plugin-react-hooks`, which carries the React Compiler's d
 
 The evaluation that kept ESLint alive is worth preserving, because it is the kind of work a future contributor will otherwise redo. Biome did grow a rule of its own, `useReactCompiler` in 2.5.8, and it was run against the same code on the same day as the plugin: it found **three of the seven breaches** the plugin found. It was in the nursery group, and it skipped itself entirely unless the nearest `package.json` named a React version it could parse — which `"react": "catalog:"` is not. A check that turns itself off in silence is worse than no check.
 
-oxlint has React Compiler rules of its own, and they are experimental in the same way. **ESLint's retirement is gated on a measurement that has not been performed**: oxlint's rules run against the same code as the plugin, and the plugin goes only if the findings match. Until that number exists, two linters coexist and the second command is the price.
+oxlint has React Compiler rules of its own, and they are experimental in the same way. ESLint's retirement was gated on running them against the same code as the plugin and matching the findings. That measurement has now been made, and it is the section below.
+
+## The measurement, and what it decided
+
+The retirement gate above has now been run. Both checkers were pointed at the same two source directories — `apps/web/src` and `packages/ui/src` — and at the same probe file, and their findings were compared site by site rather than counted.
+
+Over the repository's real source both are silent: ESLint lints 127 files and reports nothing, and oxlint's React Compiler rules over the same two directories report nothing either. That agreement measures nothing on its own, which is why the comparison was made against a probe: a single file holding one deliberate breach for each rule in `eslint-plugin-react-hooks`' recommended set. ESLint found thirteen. Every one of the thirteen is also found by oxlint **under the configuration this repository already ships** — no rule had to be added to `.oxlintrc.json` to reach parity.
+
+| Probe | ESLint | oxlint |
+| --- | --- | --- |
+| Hook called inside a condition | `rules-of-hooks` | `react/hooks` |
+| `setState` during render | `set-state-in-render` | `react/set-state-in-render` |
+| `setState` in an effect | `set-state-in-effect` | `react/set-state-in-effect` (+ `no-deriving-state-in-effects`) |
+| `Date.now()` during render | `purity` | `react/purity` |
+| Module-scope variable reassigned in render | `globals` | `react/globals` |
+| `ref.current` read during render | `refs` | `react/refs` |
+| `useMemo` missing a dependency | `exhaustive-deps` | `react-hooks/exhaustive-deps` |
+| Component declared during render | `static-components` | `react/static-components` |
+| JSX constructed inside `try`/`catch` | `error-boundaries` | `react/error-boundaries` |
+| `useCallback` missing a dependency | `exhaustive-deps` | `react-hooks/exhaustive-deps` |
+| Derived state written from an effect | `set-state-in-effect` | `react/set-state-in-effect` (+ `no-deriving-state-in-effects`) |
+| `useEffect` missing a dependency | `exhaustive-deps` | `react-hooks/exhaustive-deps` |
+| Second derived-state effect | `set-state-in-effect` | `react/set-state-in-effect` (+ `no-deriving-state-in-effects`) |
+| Array prop mutated during render | *not reported* | *not reported* |
+| `useMemo` callback with an implicit `undefined` | *not reported* | *not reported* |
+| Lowercase function called through a capitalized binding | *not reported* | *not reported* |
+
+Thirteen of thirteen, and the two checkers also agree on the three probes neither of them catches. oxlint additionally reports what ESLint does not — `exhaustive-effect-dependencies`, `no-deriving-state-in-effects` and `no-unstable-nested-components` on the probe, and on real source `todo`, `rule-suppression` and extra-dependency findings from rules outside the recommended set. This is not a comparison result to celebrate; it is the reason the retirement is a change of its own rather than a deletion, because those extra rules have to be looked at before they are inherited.
+
+**One thing ESLint reports that oxlint does not, and it is not a rule.** `.oxlintrc.json` lists `**/packages/ui` in `ignorePatterns`, so oxlint does not lint the UI package at all — dropping the probe there produces `No files found to lint` from oxlint and the full thirteen findings from ESLint. ESLint's flat config covers `packages/ui/src` deliberately, because that is where the shadcn components live and they are compiled by the React Compiler like everything else. Retiring ESLint without removing that ignore pattern would silently uncover half the component code. This is a configuration difference, not a capability one, but it is the thing most likely to be missed, so it is written down here rather than left to the diff.
+
+Two rules in the plugin's recommended set have no oxlint counterpart at all: `config` and `gating`. Neither has anything to check here — this repository has no React Compiler configuration comment and no feature gate — so their absence costs nothing today and would cost something the day either is introduced.
+
+**The decision is to retire ESLint**, and the conditions the retirement change must satisfy are the three above: `**/packages/ui` leaves `ignorePatterns`, the recommended set is named explicitly in `.oxlintrc.json` rather than left to whichever category currently happens to carry each rule, and the rules oxlint adds beyond the recommended set are decided on rather than inherited. `bun run check-react-rules` goes with it, and `bun run check` becomes the whole of the lint answer.
 
 ## Why type-aware linting is out of scope
 
@@ -31,4 +64,4 @@ Upgrading that major is not a lint decision. It pulls in every `check-types` tas
 - **Named specifiers inside braces are no longer sorted.** oxfmt sorts import declarations; Biome's organize-imports assist sorted the names inside the braces too. The gap is accepted and must not be patched with a rule from the other linter: splitting one responsibility across two tools is the thing this change exists to stop doing.
 - **The formatter is pre-1.0.** oxfmt's remaining published work is finishing its Prettier port, so an upgrade may move the output. A reformat that appears after bumping the version is beta churn, not a regression, and the response is a new blame-ignore revision rather than an investigation.
 - **`bun run check` still means what it meant.** It rewrites files, now as the formatter followed by the linter with fixes applied. `bun run check:ci` answers the same question without touching anything and exits non-zero on any finding, so a complaint cannot be printed and scrolled past.
-- **Two commands remain, and the second one has a condition attached.** `bun run check-react-rules` is ESLint and only ESLint. It goes when the measurement above says it can, and not before.
+- **Two commands remain, and the second one is now on its way out.** `bun run check-react-rules` is ESLint and only ESLint. The measurement above says it can go, so it goes in the change that satisfies the three conditions that measurement attached to it.
