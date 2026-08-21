@@ -9,6 +9,7 @@ import { translate } from "@/i18n/messages"
 import { fakeImportGateway } from "@/project/fake-import-gateway"
 import { fakeProjectStore } from "@/project/fake-project-store"
 import { serializeProject } from "@/project/project-store"
+import { press } from "../../testing/press"
 import { settled } from "../../testing/settled"
 
 /**
@@ -101,19 +102,11 @@ describe("the Dashboard", () => {
 describe("managing a Project from its card", () => {
   /** Opens the menu in the corner of a card and picks one of the three things. */
   async function pick(projectId: string, what: "rename" | "duplicate" | "delete") {
-    const menu = await screen.findByTestId(`card-manage-${projectId}`)
-    // The card arrives with the list, so this menu is a control that has only
-    // just appeared: it is not attached to the Menu behind it until React runs
-    // the render it has scheduled, and a click before that is dropped.
-    await settled()
-    await act(async () => {
-      fireEvent.click(menu)
-    })
-
-    const item = await screen.findByTestId(`card-${what}-${projectId}`)
-    await act(async () => {
-      fireEvent.click(item)
-    })
+    // Both of these are controls that have only just appeared — the card
+    // arrives with the list, and the entry with the menu opening — which is
+    // what `press` is for.
+    await press(await screen.findByTestId(`card-manage-${projectId}`))
+    await press(await screen.findByTestId(`card-${what}-${projectId}`))
   }
 
   it("renames the Project the dialog was opened from", async () => {
@@ -190,13 +183,7 @@ describe("managing a Project from its card", () => {
     const { store } = show(fakeProjectStore([helloProject()]))
 
     await pick(helloProject().id, "delete")
-    // Found before the scope rather than inside it: `findBy…` turns the act
-    // environment off while it waits, and React then says the `act` around it
-    // is not one.
-    const confirm = await screen.findByTestId("delete-project-confirm")
-    await act(async () => {
-      fireEvent.click(confirm)
-    })
+    await press(await screen.findByTestId("delete-project-confirm"))
 
     expect(store.contents.has(helloProject().id)).toBe(false)
     expect(await screen.findByTestId("dashboard-empty")).toBeDefined()
@@ -207,10 +194,7 @@ describe("managing a Project from its card", () => {
     store.breaks.remove = "the folder is in use"
 
     await pick(helloProject().id, "delete")
-    const confirm = await screen.findByTestId("delete-project-confirm")
-    await act(async () => {
-      fireEvent.click(confirm)
-    })
+    await press(await screen.findByTestId("delete-project-confirm"))
 
     expect((await screen.findByTestId("delete-project-problem")).textContent).toContain(
       "the folder is in use"
