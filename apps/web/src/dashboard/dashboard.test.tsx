@@ -9,6 +9,8 @@ import { translate } from "@/i18n/messages"
 import { fakeImportGateway } from "@/project/fake-import-gateway"
 import { fakeProjectStore } from "@/project/fake-project-store"
 import { serializeProject } from "@/project/project-store"
+import { press } from "../../testing/press"
+import { settled } from "../../testing/settled"
 
 /**
  * The Dashboard as the user meets it, with the store in memory.
@@ -66,11 +68,16 @@ describe("the Dashboard", () => {
    * ten Projects that they have none, which is the one thing this screen must
    * never say.
    */
-  it("says nothing at all until the store has answered", () => {
+  it("says nothing at all until the store has answered", async () => {
     show(fakeProjectStore([helloProject()]))
 
     expect(screen.queryByTestId("dashboard-empty")).toBeNull()
     expect(screen.queryAllByTestId("card-name")).toEqual([])
+
+    // The store answers after the two assertions above, which is the whole
+    // point of them — but it answers, and the render it causes belongs to this
+    // test rather than to whichever one is running by the time it lands.
+    await settled()
   })
 
   it("opens the Project whose card was clicked", async () => {
@@ -95,15 +102,11 @@ describe("the Dashboard", () => {
 describe("managing a Project from its card", () => {
   /** Opens the menu in the corner of a card and picks one of the three things. */
   async function pick(projectId: string, what: "rename" | "duplicate" | "delete") {
-    const menu = await screen.findByTestId(`card-manage-${projectId}`)
-    await act(async () => {
-      fireEvent.click(menu)
-    })
-
-    const item = await screen.findByTestId(`card-${what}-${projectId}`)
-    await act(async () => {
-      fireEvent.click(item)
-    })
+    // Both of these are controls that have only just appeared — the card
+    // arrives with the list, and the entry with the menu opening — which is
+    // what `press` is for.
+    await press(await screen.findByTestId(`card-manage-${projectId}`))
+    await press(await screen.findByTestId(`card-${what}-${projectId}`))
   }
 
   it("renames the Project the dialog was opened from", async () => {
@@ -180,9 +183,7 @@ describe("managing a Project from its card", () => {
     const { store } = show(fakeProjectStore([helloProject()]))
 
     await pick(helloProject().id, "delete")
-    await act(async () => {
-      fireEvent.click(await screen.findByTestId("delete-project-confirm"))
-    })
+    await press(await screen.findByTestId("delete-project-confirm"))
 
     expect(store.contents.has(helloProject().id)).toBe(false)
     expect(await screen.findByTestId("dashboard-empty")).toBeDefined()
@@ -193,9 +194,7 @@ describe("managing a Project from its card", () => {
     store.breaks.remove = "the folder is in use"
 
     await pick(helloProject().id, "delete")
-    await act(async () => {
-      fireEvent.click(await screen.findByTestId("delete-project-confirm"))
-    })
+    await press(await screen.findByTestId("delete-project-confirm"))
 
     expect((await screen.findByTestId("delete-project-problem")).textContent).toContain(
       "the folder is in use"
