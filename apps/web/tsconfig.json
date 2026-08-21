@@ -11,6 +11,7 @@
     // refuses an extensionless one. Nothing here is emitted, so naming it costs
     // nothing.
     "allowImportingTsExtensions": true,
+    "noEmit": true,
     "skipLibCheck": true,
     "types": ["vite/client"],
     "rootDirs": ["."],
