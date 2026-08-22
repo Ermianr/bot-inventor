@@ -1,10 +1,8 @@
-// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 
 import type { ExportFormat } from "@bot-inventor/compiler"
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { MenuBar } from "@/components/menu-bar"
 import { translate } from "@/i18n/messages"
 import type { Exporting } from "@/project/use-export"
 import type { Sharing } from "@/project/use-share"
@@ -19,13 +17,20 @@ type Raised = {
 }
 const raised: Raised[] = []
 type Options = { action?: { label: string; onClick: () => void } }
-vi.mock("sonner", () => ({
+/**
+ * `mock.module` is not hoisted the way `vi.mock` was, so the Menu Bar is
+ * imported below it rather than beside it: a static import would have been
+ * evaluated first and would have closed over the real toaster.
+ */
+await mock.module("sonner", () => ({
   toast: {
     error: (message: string) => raised.push({ kind: "error", message }),
     success: (message: string, options?: Options) =>
       raised.push({ kind: "success", message, action: options?.action })
   }
 }))
+
+const { MenuBar } = await import("@/components/menu-bar")
 
 /**
  * The Project menu, opened the way a user opens it.

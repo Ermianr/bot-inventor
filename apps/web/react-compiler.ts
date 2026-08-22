@@ -1,13 +1,11 @@
 import { transformAsync } from "@babel/core"
-import babel from "@rolldown/plugin-babel"
-import { reactCompilerPreset } from "@vitejs/plugin-react"
 import reactCompilerBabelPlugin from "babel-plugin-react-compiler"
 import type { BunPlugin } from "bun"
 
 /**
  * A source tree the React Compiler owns, as a pattern Babel will match against
- * an absolute path on either kind of separator, with Vite's query suffix on the
- * end or nothing at all.
+ * an absolute path on either kind of separator, with a query suffix on the end
+ * or nothing at all.
  */
 const sourceTree = (packagePath: string) =>
   new RegExp(`[\\\\/]${packagePath.replaceAll("/", "[\\\\/]")}[\\\\/].*\\.[jt]sx?(?:\\?|$)`)
@@ -19,9 +17,8 @@ const reactSourceTrees = [sourceTree("apps/web/src"), sourceTree("packages/ui/sr
  * The same two trees as one pattern, for callers that accept a single regular
  * expression rather than a list.
  *
- * It is the `include` of `reactCompiler()` expressed the other way round, and it
- * is narrow for the same reason: Babel would otherwise run over the built `.js`
- * of every workspace package and over `node_modules`, which is both slow and
+ * It is narrow deliberately: Babel would otherwise run over the built `.js` of
+ * every workspace package and over `node_modules`, which is both slow and
  * wrong. Bun's own React Fast Refresh transform still runs on the files this
  * claims — that was measured, in case the breadth of this pattern ever looks
  * like the reason Fast Refresh has stopped working. It is not; check that
@@ -32,8 +29,8 @@ const reactSourceFilter = new RegExp(reactSourceTrees.map(tree => tree.source).j
 
 /**
  * How the React Compiler is configured, in one place because three callers now
- * mount it: the unit tests through Babel, the Bun dev server through Babel, and
- * the production bundle through `bun build --react-compiler`. The first two read
+ * mount it: the dev server and `bun test` through the Babel pass below, and the
+ * production bundle through `bun build --react-compiler`. The first two read
  * this; the third cannot, and that is the one seam to keep an eye on.
  *
  * The mode is `infer`, not the `all` that #86 asked for and #88 was to deliver.
@@ -67,31 +64,11 @@ export const reactCompilerOptions = {
 } as const
 
 /**
- * The React Compiler as a Babel pass, which is what the unit tests mount.
- * `vitest.config.ts` calls it once.
+ * The React Compiler as a Bun plugin around a Babel pass.
  *
- * `@vitejs/plugin-react` transforms JSX with oxc and has carried no Babel of
- * its own since v6, so the compiler is mounted as its own Babel pass and the
- * plugin only contributes the preset that describes it. Passing `babel` options
- * to the plugin, as the compiler's own documentation still shows, silently does
- * nothing here.
- *
- * Both the web app and the UI package are in scope. The UI package exports raw
- * `.tsx` from source, reached through its workspace symlink and resolved to its
- * real path outside `node_modules`. `include` names the two source trees rather
- * than leaning on that: Babel would otherwise also run over the built `.js` of
- * every other workspace package, none of which is React and one of which emits
- * code the compiler rewrites into an import it cannot resolve.
- */
-export const reactCompiler = () =>
-  babel({
-    include: reactSourceTrees,
-    presets: [reactCompilerPreset(reactCompilerOptions)]
-  })
-
-/**
- * The React Compiler for the Bun dev server, as a Bun plugin around the same
- * Babel pass and the same scope.
+ * Two callers mount it, and the shape is the same for both: `dev-server.ts`
+ * mounts it as a bundler plugin through `bunfig.toml`, and `bun-test.setup.ts`
+ * registers it as a runtime plugin so that `bun test` runs the compiled tree.
  *
  * It exists because Bun applies the compiler in its bundler and not in its dev
  * server: `bun build --react-compiler` performs the real transform, while the
@@ -102,9 +79,9 @@ export const reactCompiler = () =>
  * up when something actually loads the compiled output.
  *
  * `bun build --react-compiler` cannot read `reactCompilerOptions`, so the
- * production bundle takes the compiler's defaults while this pass and the unit
- * tests take ours. They agree today, `infer` and `none` being the defaults, and
- * `build.ts` says so where it passes the flag.
+ * production bundle takes the compiler's defaults while this pass takes ours.
+ * They agree today, `infer` and `none` being the defaults, and `build.ts` says
+ * so where it passes the flag.
  */
 export const reactCompilerBunPlugin: BunPlugin = {
   name: "react-compiler",

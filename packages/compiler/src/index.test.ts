@@ -1,3 +1,5 @@
+import { describe, expect, it } from "bun:test"
+
 import {
   buildCatalogue,
   type DataType,
@@ -23,7 +25,6 @@ import {
   slottedGreetingProject,
   unreachableNodeProject
 } from "@bot-inventor/schema/fixtures"
-import { describe, expect, it } from "vitest"
 
 import { compile } from "./compile.js"
 import { CompilerError } from "./errors.js"
@@ -713,7 +714,13 @@ describe("reading a slash command's parameters", () => {
     // Dropping it here instead would register a command quietly asking for
     // less than the Canvas says it does.
     const result = await runProject(project, [])
-    expect(declarations(result)[0]?.parameters).toEqual([
+    // `channel` is a parameter type this build knows nothing about, which is
+    // the whole of the case, so it is deliberately not one the declared union
+    // admits. `toEqual` is typed against what it compares, where Vitest's took
+    // anything, so what is widened here is the side being read — never the
+    // expectation, which would be casting the unknown type into a known one and
+    // asserting the opposite of the case.
+    expect(declarations(result)[0]?.parameters as readonly unknown[] | undefined).toEqual([
       { name: "where", description: "A channel", type: "channel", required: true }
     ])
     await expect(

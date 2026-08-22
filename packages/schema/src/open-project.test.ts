@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, mock } from "bun:test"
 
 import {
   danglingWireProject,
@@ -10,7 +10,7 @@ import type { Migration } from "./migrations.js"
 import { openProject } from "./open-project.js"
 import { CURRENT_SCHEMA_VERSION } from "./project.js"
 
-const writeBackup = () => vi.fn(async () => {})
+const writeBackup = () => mock(async () => {})
 
 /**
  * A document written at the format before this build's. The migration tests
@@ -67,7 +67,7 @@ describe("openProject", () => {
 
   it("backs the Project up before a migration touches it, then migrates", async () => {
     const order: string[] = []
-    const backup = vi.fn(async () => {
+    const backup = mock(async () => {
       order.push("backup")
     })
     const chain: Migration[] = [
@@ -98,7 +98,7 @@ describe("openProject", () => {
   })
 
   it("leaves the Project alone when its backup cannot be written", async () => {
-    const migrate = vi.fn(document => document)
+    const migrate = mock((document: unknown) => document)
     const chain: Migration[] = [{ from: 1, to: 2, migrate }]
 
     const result = await openProject(olderProject(), {

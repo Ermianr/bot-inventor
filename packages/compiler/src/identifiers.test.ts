@@ -1,5 +1,6 @@
+import { describe, expect, it } from "bun:test"
+
 import type { Node } from "@bot-inventor/schema"
-import { describe, expect, it } from "vitest"
 
 import { assignIdentifierPrefixes, literal } from "./identifiers.js"
 

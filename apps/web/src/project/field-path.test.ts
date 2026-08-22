@@ -1,5 +1,6 @@
+import { describe, expect, it } from "bun:test"
+
 import { literalText } from "@bot-inventor/schema"
-import { describe, expect, it } from "vitest"
 
 import {
   fieldPathId,

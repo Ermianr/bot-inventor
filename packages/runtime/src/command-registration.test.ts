@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "bun:test"
 
 import { type RegistrationTarget, registerCommands } from "./command-registration.js"
 import type { SlashCommandDefinition } from "./discord.js"

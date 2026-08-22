@@ -99,7 +99,7 @@
     // Narrowing a discriminated union before asserting on its payload reads
     // as a conditional `expect` and is not one.
     "vitest/no-conditional-expect": "off",
-    // `vi.fn()` infers what it needs to from the call it replaces.
+    // `mock()` infers what it needs to from the call it replaces.
     "vitest/require-mock-type-parameters": "off",
     // A stylesheet is imported for its effect and has nothing to assign.
     "import/no-unassigned-import": "off",
@@ -211,6 +211,17 @@
   },
   "overrides": [
     {
+      // `bun:test` types `expect(...).rejects.toThrowError()` as returning
+      // nothing, so every `await` in front of one reads as an await of a
+      // non-promise. The await is what makes the assertion wait, and dropping
+      // it would turn a rejection nobody caught into a passing test, so the
+      // rule is off where those matchers are written and on everywhere else.
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "typescript/await-thenable": "off"
+      }
+    },
+    {
       // The shadcn components are vendored, not written here, and these three
       // rules misread them rather than finding anything. `Label` is a wrapper
       // whose `htmlFor` arrives through props the rule cannot see; the addon's
@@ -227,7 +238,7 @@
     },
     {
       // Scoped by glob so Playwright's complaints never reach
-      // application code or the Vitest suites.
+      // application code or the `bun test` suites.
       "files": ["apps/web/e2e/**/*.ts"],
       "rules": {
         "playwright/expect-expect": "error",

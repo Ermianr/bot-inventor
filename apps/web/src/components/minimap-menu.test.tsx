@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 
 import {
   Menubar,
@@ -7,7 +7,6 @@ import {
   MenubarTrigger
 } from "@bot-inventor/ui/components/menubar"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { MinimapMenuItem } from "@/components/minimap-menu"
 import { translate } from "@/i18n/messages"

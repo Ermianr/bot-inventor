@@ -1,5 +1,6 @@
+import { describe, expect, it } from "bun:test"
+
 import type { NodeDefinition } from "@bot-inventor/nodes"
-import { describe, expect, it } from "vitest"
 
 import type { FlowNodeType } from "@/canvas/flow-node"
 import { minimapNodePaint } from "@/canvas/minimap"

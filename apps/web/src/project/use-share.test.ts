@@ -1,9 +1,8 @@
-// @vitest-environment jsdom
+import { describe, expect, it } from "bun:test"
 
 import { projectSchema } from "@bot-inventor/schema"
 import { helloProject } from "@bot-inventor/schema/fixtures"
 import { act, renderHook } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
 
 import type { ShareGateway } from "@/project/share-gateway"
 import { suggestedFileName, withProjectFileExtension } from "@/project/share-gateway"

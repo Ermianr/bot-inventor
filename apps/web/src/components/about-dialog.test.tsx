@@ -1,10 +1,8 @@
-// @vitest-environment jsdom
+import { afterEach, describe, expect, it, mock } from "bun:test"
 
 import { cleanup, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Application } from "@/about/application"
-import { AboutDialog } from "@/components/about-dialog"
 import { translate } from "@/i18n/messages"
 
 /**
@@ -22,11 +20,21 @@ let described: Application = { version: undefined, nodeVersion: undefined }
 /** Whether the shell took charge of the repository link, as it does on the desktop. */
 let opensRepository = false
 
-vi.mock("@/about/application", async importOriginal => ({
-  ...(await importOriginal<typeof import("@/about/application")>()),
+/**
+ * `mock.module` is not hoisted the way `vi.mock` was, so it runs where it is
+ * written and the dialog is imported after it rather than beside it. A static
+ * import would have been evaluated first and would have closed over the real
+ * module.
+ */
+const application = await import("@/about/application")
+
+await mock.module("@/about/application", () => ({
+  ...application,
   useApplication: () => described,
   openRepository: () => opensRepository
 }))
+
+const { AboutDialog } = await import("@/components/about-dialog")
 
 afterEach(() => {
   described = { version: undefined, nodeVersion: undefined }

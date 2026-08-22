@@ -1,7 +1,6 @@
-// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { translate } from "@/i18n/messages"
 import { Console } from "@/session/console"
@@ -16,8 +15,8 @@ import type { SessionEntry } from "@/session/use-session"
  * not.
  */
 
-/** jsdom lays nothing out, so the one thing scrolling can be held to is the ask. */
-const scroll = vi.fn()
+/** No DOM here lays anything out, so the one thing scrolling can be held to is the ask. */
+const scroll = mock()
 
 beforeEach(() => {
   scroll.mockClear()

@@ -6,10 +6,9 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    // `vite.config.ts` and `vitest.config.ts` import `./react-compiler.ts` by its
-    // real name: Vite's native config loader, which is to become the default,
-    // refuses an extensionless one. Nothing here is emitted, so naming it costs
-    // nothing.
+    // `bun-test.setup.ts` and `react-compiler-plugin.ts` import
+    // `./react-compiler.ts` by its real name. Nothing here is emitted, so
+    // naming it costs nothing.
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true,

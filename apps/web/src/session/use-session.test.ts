@@ -1,10 +1,9 @@
-// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test"
 
 import { SESSION_MESSAGE_PREFIX } from "@bot-inventor/compiler"
 import type { Project } from "@bot-inventor/schema"
 import { embedReplyProject, helloProject } from "@bot-inventor/schema/fixtures"
 import { act, renderHook, waitFor } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { SessionExitEvent, SessionId, SessionOutputEvent } from "@/session/events"
 import type { SessionGateway } from "@/session/session-gateway"
@@ -115,7 +114,10 @@ function withGreeting(project: Project, greeting: string): Project {
 const TEST_SERVER = "1"
 
 beforeEach(() => {
-  vi.useFakeTimers({ shouldAdvanceTime: true })
+  // No `shouldAdvanceTime`: Bun's fake timers leave the microtask queue alone,
+  // so an awaited promise still settles without the clock being nudged, and
+  // `settle()` is what moves the clock.
+  vi.useFakeTimers()
 })
 
 afterEach(() => {

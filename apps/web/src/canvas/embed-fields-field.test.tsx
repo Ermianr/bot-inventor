@@ -1,9 +1,8 @@
-// @vitest-environment jsdom
+import { describe, expect, it, mock } from "bun:test"
 
 import { EMBED_LIMITS } from "@bot-inventor/runtime/embed"
 import { type FieldValue, literalText } from "@bot-inventor/schema"
 import { fireEvent, render, screen, within } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
 
 import { EmbedFieldsField } from "@/canvas/embed-fields-field"
 
@@ -19,7 +18,7 @@ const twoPairs: FieldValue = [
 ]
 
 function draw(value: FieldValue, slotIsWired: (slot: string) => boolean = () => false) {
-  const onChange = vi.fn()
+  const onChange = mock()
   const { container } = render(
     <EmbedFieldsField
       fieldId="embedFields"
@@ -46,7 +45,7 @@ function button(container: HTMLElement, testId: string): HTMLButtonElement {
 }
 
 /** What one row's controls were written back as, out of the last edit. */
-function written(onChange: ReturnType<typeof vi.fn>): FieldValue {
+function written(onChange: ReturnType<typeof mock>): FieldValue {
   const last = onChange.mock.calls.at(-1)
   if (last === undefined) throw new Error("nothing was written back")
   return last[0] as FieldValue
@@ -66,10 +65,7 @@ describe("editing the Embed Fields of an Embed", () => {
 
     fireEvent.click(within(container).getByTestId("embed-field-add-embed-embedFields"))
 
-    expect(written(onChange)).toEqual([
-      ...(twoPairs as unknown[]),
-      { name: [], value: [], inline: false }
-    ])
+    expect(written(onChange)).toEqual([...twoPairs, { name: [], value: [], inline: false }])
   })
 
   it("stops the user at the twenty-five pairs Discord accepts", () => {
@@ -89,7 +85,7 @@ describe("editing the Embed Fields of an Embed", () => {
 
     fireEvent.click(within(container).getByTestId("embed-field-down-embed-embedFields-0"))
 
-    expect(written(onChange)).toEqual([(twoPairs as unknown[])[1], (twoPairs as unknown[])[0]])
+    expect(written(onChange)).toEqual([twoPairs[1], twoPairs[0]])
   })
 
   it("cannot move the first pair up or the last one down", () => {
@@ -104,7 +100,7 @@ describe("editing the Embed Fields of an Embed", () => {
 
     fireEvent.click(within(container).getByTestId("embed-field-remove-embed-embedFields-0"))
 
-    expect(written(onChange)).toEqual([(twoPairs as unknown[])[1]])
+    expect(written(onChange)).toEqual([twoPairs[1]])
   })
 
   it("asks before a removed pair takes the Wire feeding it away as well", () => {
@@ -144,7 +140,7 @@ describe("editing the Embed Fields of an Embed", () => {
 
     fireEvent.click(button(container, "embed-field-remove-embed-embedFields-0"))
 
-    expect(written(onChange)).toEqual([(twice as unknown[])[1]])
+    expect(written(onChange)).toEqual([twice[1]])
   })
 
   it("puts a pair beside its neighbours when the inline switch is turned on", () => {
@@ -153,7 +149,7 @@ describe("editing the Embed Fields of an Embed", () => {
     fireEvent.click(within(container).getByTestId("embed-field-inline-embed-embedFields-1"))
 
     expect(written(onChange)).toEqual([
-      (twoPairs as unknown[])[0],
+      twoPairs[0],
       { name: literalText("Rule 2"), value: literalText("Be brief"), inline: true }
     ])
   })

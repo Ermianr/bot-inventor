@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "bun:test"
 
 import { buildCatalogue, catalogue } from "./catalogue.js"
 import { applyCoercion, coercions, findCoercion } from "./coercions.js"
