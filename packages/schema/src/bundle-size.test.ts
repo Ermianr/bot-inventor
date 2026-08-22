@@ -1,15 +1,14 @@
 import { describe, expect, it } from "bun:test"
 
 /**
- * The ceiling is the gzipped size measured on `main` when this test landed
- * (64.6 KB), with just enough room above it that ordinary minifier drift does
- * not fail the build. It is not a fine-grained performance budget: it is a trap
- * for the two regressions issue #125 identified by name, a namespace `zod`
- * import and a `locales` namespace import, each of which costs tens of
- * kilobytes. The migration tickets that follow lower this number as they land,
- * and #125 carries the measurement table behind it.
+ * The ceiling is the gzipped size measured once the package moved to
+ * `zod/mini` (9.4 KB, down from 64.6 KB), with just enough room above it that
+ * ordinary minifier drift does not fail the build. It is not a
+ * fine-grained performance budget: it is a trap for the two regressions issue
+ * #125 identified by name, a namespace `zod` import and a `locales` namespace
+ * import, either of which alone would blow through it.
  */
-const CEILING_IN_BYTES = 66 * 1024
+const CEILING_IN_BYTES = 10 * 1024
 
 const formatKilobytes = (bytes: number) => `${(bytes / 1024).toFixed(1)} KB`
 
