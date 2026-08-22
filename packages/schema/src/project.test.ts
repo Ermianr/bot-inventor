@@ -52,21 +52,43 @@ describe("projectSchema", () => {
     )
   })
 
-  it("rejects a Node position that is not a point on the Canvas", () => {
+  /** A Project whose only Node sits at `x`, whatever `x` turns out to be. */
+  const projectWithNodeAtX = (x: unknown) => {
     const project = greetingProject()
     const flow = requireFirst(project.flows, "Flow")
-    const broken = {
+
+    return {
       ...project,
       flows: [
         {
           ...flow,
-          nodes: [{ ...requireFirst(flow.nodes, "Node"), position: { x: "left", y: 0 } }],
+          nodes: [{ ...requireFirst(flow.nodes, "Node"), position: { x, y: 0 } }],
           wires: []
         }
       ]
     }
+  }
 
-    const result = projectSchema.safeParse(broken)
+  it("rejects a Node position that is not a point on the Canvas", () => {
+    const result = projectSchema.safeParse(projectWithNodeAtX("left"))
+
+    expect(result.success).toBe(false)
+    expect(formatProjectIssues(result.error?.issues ?? []).join("\n")).toContain(
+      "flows.0.nodes.0.position.x"
+    )
+  })
+
+  it("rejects a Node position of Infinity", () => {
+    const result = projectSchema.safeParse(projectWithNodeAtX(Number.POSITIVE_INFINITY))
+
+    expect(result.success).toBe(false)
+    expect(formatProjectIssues(result.error?.issues ?? []).join("\n")).toContain(
+      "flows.0.nodes.0.position.x"
+    )
+  })
+
+  it("rejects a Node position of NaN", () => {
+    const result = projectSchema.safeParse(projectWithNodeAtX(Number.NaN))
 
     expect(result.success).toBe(false)
     expect(formatProjectIssues(result.error?.issues ?? []).join("\n")).toContain(
