@@ -12,8 +12,8 @@ const identifier = z.string().min(1, "an identifier must not be empty").describe
 
 /** A position on the Canvas, in Canvas coordinates. */
 export const positionSchema = z.object({
-  x: z.number().finite(),
-  y: z.number().finite()
+  x: z.number(),
+  y: z.number()
 })
 
 /** Any value a Node field can hold inline, i.e. anything JSON can carry. */
