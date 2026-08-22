@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import type { Validator } from "./validator.js"
+
 /**
  * The Project format version this build of the app reads and writes. Every
  * change to the shapes below raises it and ships a migration (see
@@ -25,7 +27,7 @@ export type FieldValue =
   | FieldValue[]
   | { [key: string]: FieldValue }
 
-export const fieldValueSchema: z.ZodType<FieldValue> = z.lazy(() =>
+export const fieldValueSchema: Validator<FieldValue> = z.lazy(() =>
   z.union([
     z.string(),
     z.number(),

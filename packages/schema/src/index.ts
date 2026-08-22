@@ -44,3 +44,4 @@ export {
   type TextSegment,
   textSegmentSchema
 } from "./slotted-text.js"
+export type { ValidationIssue, Validator } from "./validator.js"
