@@ -1,5 +1,5 @@
 import {
-  _default,
+  _default as defaultingTo,
   array,
   boolean,
   type core,
@@ -108,7 +108,7 @@ export const nodeSchema: Validator<Node> = object({
   /** The catalogue id of the Node, e.g. `discord.member.addRole`. */
   type: identifier,
   position: positionSchema,
-  fields: _default(record(string(), fieldValueSchema), {})
+  fields: defaultingTo(record(string(), fieldValueSchema), {})
 })
 
 /** The whole graph hanging off a single Trigger. */
