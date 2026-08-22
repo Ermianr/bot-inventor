@@ -1,6 +1,6 @@
 import { indent, type NodeCatalogue } from "@bot-inventor/nodes"
 import type { TraceEvent } from "@bot-inventor/runtime"
-import type { Project } from "@bot-inventor/schema"
+import type { Project, Validator } from "@bot-inventor/schema"
 import { z } from "zod"
 
 import { compile } from "./compile.js"
@@ -75,7 +75,7 @@ const traceEventSchema = z.discriminatedUnion("kind", [
     /** Already text: Tracing serialises a value for display before sending it. */
     value: z.string()
   })
-]) satisfies z.ZodType<TraceEvent>
+]) satisfies Validator<TraceEvent>
 
 const sessionMessageSchema = z.discriminatedUnion("kind", [
   /**

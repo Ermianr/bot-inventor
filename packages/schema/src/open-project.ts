@@ -1,5 +1,3 @@
-import type { z } from "zod"
-
 import {
   type Migration,
   MigrationChainError,
@@ -7,6 +5,7 @@ import {
   runMigrationChain
 } from "./migrations.js"
 import { CURRENT_SCHEMA_VERSION, type Project, projectSchemaForVersion } from "./project.js"
+import type { ValidationIssue } from "./validator.js"
 
 export type OpenProjectOptions = {
   /**
@@ -26,7 +25,7 @@ export type OpenProjectOptions = {
  */
 export type OpenProjectResult =
   | { status: "opened"; project: Project; migrated: boolean }
-  | { status: "malformed"; message: string; issues: z.core.$ZodIssue[] }
+  | { status: "malformed"; message: string; issues: ValidationIssue[] }
   | {
       status: "future-version"
       message: string
@@ -108,7 +107,7 @@ export async function openProject(
 }
 
 /** Renders the issues of a malformed Project as one line per problem. */
-export function formatProjectIssues(issues: readonly z.core.$ZodIssue[]): string[] {
+export function formatProjectIssues(issues: readonly ValidationIssue[]): string[] {
   return issues.map(issue => {
     const path = issue.path.join(".")
     return path.length > 0 ? `${path}: ${issue.message}` : issue.message

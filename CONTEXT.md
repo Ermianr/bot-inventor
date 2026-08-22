@@ -80,6 +80,10 @@ _Avoid_: bot, workspace, file
 The `.botinv` file a Project is written to. It holds the Project and nothing else: never a Secret, so it can be sent to somebody else as it is.
 _Avoid_: save file, document, botinv (on its own)
 
+**Validator**:
+A thing that checks an unknown value is what it claims to be, and reports why when it is not. It is what `@bot-inventor/schema` calls the objects it parses a Project with, so that the validation library stays this repository's own business and never appears in the package's public types. "Schema" is not that name: `schemaVersion` already means the version of the Project format, and one root cannot mean both.
+_Avoid_: schema, zod type, parser, shape
+
 **Share**:
 Writing a Project to a `.botinv` somewhere outside the application's own storage, for somebody else to import. What is shared is the Project and never a Secret. Sharing hands over a bot's design; an Export hands over a bot that runs.
 _Avoid_: export, publish, save as
