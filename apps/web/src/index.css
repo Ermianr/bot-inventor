@@ -1,1 +1,12 @@
 @import "@bot-inventor/ui/globals.css";
+
+/*
+  The editor's own source tree, named here because Tailwind resolves `@source`
+  relative to the file that declares it. The shared stylesheet's globs are
+  anchored in `packages/ui`, so they cover the components but never these
+  screens, and without this line every utility used only by the editor — the
+  spacing, the type scale, the Canvas grid tracks — is scanned out of the
+  build. `@tailwindcss/vite` used to hide that by anchoring sources at Vite's
+  root instead; the Bun dev server does not.
+*/
+@source "./**/*.{ts,tsx}";
