@@ -1,5 +1,6 @@
-import { z } from "zod"
+import { int, object, positive } from "zod/mini"
 
+import "./english-messages.js"
 import { toSlottedText } from "./migrate-to-slotted-text.js"
 import { CURRENT_SCHEMA_VERSION } from "./project.js"
 
@@ -21,7 +22,7 @@ export const migrations: readonly Migration[] = [toSlottedText]
 
 /** Reads the `schemaVersion` of a document without trusting the rest of it. */
 export function readSchemaVersion(document: unknown): number | undefined {
-  const parsed = z.object({ schemaVersion: z.int().positive() }).safeParse(document)
+  const parsed = object({ schemaVersion: int().check(positive()) }).safeParse(document)
   return parsed.success ? parsed.data.schemaVersion : undefined
 }
 

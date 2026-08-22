@@ -37,6 +37,25 @@ describe("projectSchema", () => {
     )
   })
 
+  /**
+   * The wording here is Zod's own, not ours: it is the check that the English
+   * error map is registered. Without it every issue reads "Invalid input".
+   */
+  it("words an issue it has no message of its own for in English", () => {
+    const project = greetingProject()
+    const broken = {
+      ...project,
+      flows: [{ ...requireFirst(project.flows, "Flow"), name: 42 }]
+    }
+
+    const result = projectSchema.safeParse(broken)
+
+    expect(result.success).toBe(false)
+    expect(formatProjectIssues(result.error?.issues ?? [])).toContain(
+      "flows.0.name: Invalid input: expected string, received number"
+    )
+  })
+
   it("names the field that is wrong", () => {
     const project = greetingProject()
     const broken = {

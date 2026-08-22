@@ -1,5 +1,6 @@
-import { z } from "zod"
+import { array, discriminatedUnion, literal, minLength, object, string } from "zod/mini"
 
+import "./english-messages.js"
 import type { FieldValue } from "./project.js"
 import type { Validator } from "./validator.js"
 
@@ -17,9 +18,9 @@ export type LiteralSegment = {
   text: string
 }
 
-const literalSegment = z.object({
-  kind: z.literal("literal"),
-  text: z.string()
+const literalSegment = object({
+  kind: literal("literal"),
+  text: string()
 })
 
 export const literalSegmentSchema: Validator<LiteralSegment> = literalSegment
@@ -29,9 +30,9 @@ export type SlotSegment = {
   slot: string
 }
 
-const slotSegment = z.object({
-  kind: z.literal("slot"),
-  slot: z.string().min(1, "a Slot id must not be empty")
+const slotSegment = object({
+  kind: literal("slot"),
+  slot: string().check(minLength(1, "a Slot id must not be empty"))
 })
 
 export const slotSegmentSchema: Validator<SlotSegment> = slotSegment
@@ -43,14 +44,14 @@ export type TextSegment = LiteralSegment | SlotSegment
  * aliases: `discriminatedUnion` needs to see the objects to find the
  * discriminant, and a `Validator` deliberately no longer says it is one.
  */
-const textSegment = z.discriminatedUnion("kind", [literalSegment, slotSegment])
+const textSegment = discriminatedUnion("kind", [literalSegment, slotSegment])
 
 export const textSegmentSchema: Validator<TextSegment> = textSegment
 
 /** A text field's whole value, in the order it reads. */
 export type SlottedText = TextSegment[]
 
-export const slottedTextSchema: Validator<SlottedText> = z.array(textSegment)
+export const slottedTextSchema: Validator<SlottedText> = array(textSegment)
 
 /**
  * The segments a field holds.

@@ -1,5 +1,21 @@
-import { z } from "zod"
+import {
+  _default,
+  array,
+  boolean,
+  type core,
+  enum as enumOf,
+  lazy,
+  literal,
+  minLength,
+  null as nullValue,
+  number,
+  object,
+  record,
+  string,
+  union
+} from "zod/mini"
 
+import "./english-messages.js"
 import type { Validator } from "./validator.js"
 
 /**
@@ -10,7 +26,7 @@ import type { Validator } from "./validator.js"
 export const CURRENT_SCHEMA_VERSION = 2
 
 /** Identifiers are opaque strings, unique within the collection that holds them. */
-const identifier = z.string().min(1, "an identifier must not be empty").describe("identifier")
+const identifier = string().check(minLength(1, "an identifier must not be empty"))
 
 /** A position on the Canvas, in Canvas coordinates. */
 export type Position = {
@@ -18,9 +34,9 @@ export type Position = {
   y: number
 }
 
-export const positionSchema: Validator<Position> = z.object({
-  x: z.number(),
-  y: z.number()
+export const positionSchema: Validator<Position> = object({
+  x: number(),
+  y: number()
 })
 
 /** Any value a Node field can hold inline, i.e. anything JSON can carry. */
@@ -32,14 +48,14 @@ export type FieldValue =
   | FieldValue[]
   | { [key: string]: FieldValue }
 
-export const fieldValueSchema: Validator<FieldValue> = z.lazy(() =>
-  z.union([
-    z.string(),
-    z.number(),
-    z.boolean(),
-    z.null(),
-    z.array(fieldValueSchema),
-    z.record(z.string(), fieldValueSchema)
+export const fieldValueSchema: Validator<FieldValue> = lazy(() =>
+  union([
+    string(),
+    number(),
+    boolean(),
+    nullValue(),
+    array(fieldValueSchema),
+    record(string(), fieldValueSchema)
   ])
 )
 
@@ -49,7 +65,7 @@ export type PortReference = {
   port: string
 }
 
-export const portReferenceSchema: Validator<PortReference> = z.object({
+export const portReferenceSchema: Validator<PortReference> = object({
   node: identifier,
   port: identifier
 })
@@ -68,9 +84,9 @@ export type Wire = {
 /** The kind of Wire, spelled the way `CONTEXT.md` spells it. */
 export type WireKind = "execution" | "data"
 
-export const wireSchema: Validator<Wire> = z.object({
+export const wireSchema: Validator<Wire> = object({
   id: identifier,
-  kind: z.enum(["execution", "data"]),
+  kind: enumOf(["execution", "data"]),
   from: portReferenceSchema,
   to: portReferenceSchema
 })
@@ -87,12 +103,12 @@ export type Node = {
   fields: Record<string, FieldValue>
 }
 
-export const nodeSchema: Validator<Node> = z.object({
+export const nodeSchema: Validator<Node> = object({
   id: identifier,
   /** The catalogue id of the Node, e.g. `discord.member.addRole`. */
   type: identifier,
   position: positionSchema,
-  fields: z.record(z.string(), fieldValueSchema).default({})
+  fields: _default(record(string(), fieldValueSchema), {})
 })
 
 /** The whole graph hanging off a single Trigger. */
@@ -103,43 +119,41 @@ export type Flow = {
   wires: Wire[]
 }
 
-export const flowSchema: Validator<Flow> = z
-  .object({
-    id: identifier,
-    name: z.string().min(1, "a Flow must have a name"),
-    nodes: z.array(nodeSchema),
-    wires: z.array(wireSchema)
-  })
-  .check(ctx => {
-    const flow = ctx.value
+export const flowSchema: Validator<Flow> = object({
+  id: identifier,
+  name: string().check(minLength(1, "a Flow must have a name")),
+  nodes: array(nodeSchema),
+  wires: array(wireSchema)
+}).check(ctx => {
+  const flow = ctx.value
 
-    reportDuplicates(
-      ctx,
-      flow.nodes.map(node => node.id),
-      "nodes",
-      "Node"
-    )
-    reportDuplicates(
-      ctx,
-      flow.wires.map(wire => wire.id),
-      "wires",
-      "Wire"
-    )
+  reportDuplicates(
+    ctx,
+    flow.nodes.map(node => node.id),
+    "nodes",
+    "Node"
+  )
+  reportDuplicates(
+    ctx,
+    flow.wires.map(wire => wire.id),
+    "wires",
+    "Wire"
+  )
 
-    const nodeIds = new Set(flow.nodes.map(node => node.id))
-    for (const [index, wire] of flow.wires.entries()) {
-      for (const end of ["from", "to"] as const) {
-        if (!nodeIds.has(wire[end].node)) {
-          ctx.issues.push({
-            code: "custom",
-            input: flow,
-            path: ["wires", index, end, "node"],
-            message: `Wire "${wire.id}" points at Node "${wire[end].node}", which is not in this Flow`
-          })
-        }
+  const nodeIds = new Set(flow.nodes.map(node => node.id))
+  for (const [index, wire] of flow.wires.entries()) {
+    for (const end of ["from", "to"] as const) {
+      if (!nodeIds.has(wire[end].node)) {
+        ctx.issues.push({
+          code: "custom",
+          input: flow,
+          path: ["wires", index, end, "node"],
+          message: `Wire "${wire.id}" points at Node "${wire[end].node}", which is not in this Flow`
+        })
       }
     }
-  })
+  }
+})
 
 /**
  * The complete definition of one bot at a given format version: the unit the
@@ -157,28 +171,26 @@ export type Project = {
 }
 
 export function projectSchemaForVersion(version: number): Validator<Project> {
-  return z
-    .object({
-      schemaVersion: z.literal(version),
-      id: identifier,
-      name: z.string().min(1, "a Project must have a name"),
-      flows: z.array(flowSchema)
-    })
-    .check(ctx => {
-      reportDuplicates(
-        ctx,
-        ctx.value.flows.map(flow => flow.id),
-        "flows",
-        "Flow"
-      )
-    })
+  return object({
+    schemaVersion: literal(version),
+    id: identifier,
+    name: string().check(minLength(1, "a Project must have a name")),
+    flows: array(flowSchema)
+  }).check(ctx => {
+    reportDuplicates(
+      ctx,
+      ctx.value.flows.map(flow => flow.id),
+      "flows",
+      "Flow"
+    )
+  })
 }
 
 /** The Project format this build reads and writes. This is what other packages parse with. */
 export const projectSchema: Validator<Project> = projectSchemaForVersion(CURRENT_SCHEMA_VERSION)
 
 function reportDuplicates(
-  ctx: { value: unknown; issues: z.core.$ZodRawIssue[] },
+  ctx: { value: unknown; issues: core.$ZodRawIssue[] },
   ids: string[],
   key: string,
   label: string
