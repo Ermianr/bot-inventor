@@ -1,7 +1,14 @@
-import { literalText, type SlottedText } from "@bot-inventor/schema"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "bun:test"
 
-import { type Block, formattedText, type Inline, plainText } from "@/canvas/discord-markup"
+import { literalText, type SlottedText } from "@bot-inventor/schema"
+
+import {
+  type Block,
+  formattedText,
+  type Inline,
+  type MarkupPill,
+  plainText
+} from "@/canvas/discord-markup"
 
 /**
  * What the preview paints, as a table of cases.
@@ -102,7 +109,7 @@ describe("the formatting Discord renders", () => {
   })
 })
 
-const pills: readonly { name: string; written: string; shape: string }[] = [
+const pills: readonly { name: string; written: string; shape: MarkupPill["shape"] }[] = [
   { name: "a member", written: "<@123>", shape: "mention" },
   { name: "a member the old way", written: "<@!123>", shape: "mention" },
   { name: "a role", written: "<@&123>", shape: "mention" },

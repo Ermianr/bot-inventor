@@ -1,10 +1,11 @@
+import { describe, expect, it } from "bun:test"
+
 import {
   emptyProject,
   greetingProject,
   helloProject,
   requireFirst
 } from "@bot-inventor/schema/fixtures"
-import { describe, expect, it } from "vitest"
 
 import {
   ENTRY_FILE_NAME,

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 
 import {
   Menubar,
@@ -7,7 +7,6 @@ import {
   MenubarTrigger
 } from "@bot-inventor/ui/components/menubar"
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { ThemeMenu } from "@/components/theme-menu"
 import { THEME_STORAGE_KEY, ThemeProvider } from "@/components/theme-provider"
@@ -23,22 +22,14 @@ import { translate } from "@/i18n/messages"
  * underneath it can catch.
  */
 
-// `next-themes` asks the browser what the operating system prefers, and jsdom
-// has no answer to that question at all.
+// `next-themes` asks the browser what the operating system prefers. jsdom had
+// no answer to that question and this stood in for one; happy-dom answers it,
+// and answers "light", which is what the stand-in said. So it is gone: a mock
+// of something the DOM implements is a mock that stops noticing when the real
+// answer changes.
 beforeEach(() => {
   window.localStorage.clear()
   document.documentElement.className = ""
-  window.matchMedia = (query: string) =>
-    ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: () => {},
-      removeListener: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      dispatchEvent: () => false
-    }) as MediaQueryList
 })
 
 afterEach(cleanup)
@@ -70,6 +61,15 @@ async function pick(label: string) {
 }
 
 describe("View ▸ Theme", () => {
+  it("runs on a DOM that says the operating system prefers light", () => {
+    // `next-themes` asks the browser this, and jsdom had no answer at all, so a
+    // stand-in used to supply one. happy-dom answers, and this pins the answer
+    // the rest of the file is written against: a default that flips one day
+    // should fail here and say so, rather than quietly change what "System"
+    // resolves to underneath every test below.
+    expect(window.matchMedia("(prefers-color-scheme: dark)").matches).toBe(false)
+  })
+
   for (const [choice, key] of [
     ["light", "theme.light"],
     ["dark", "theme.dark"]

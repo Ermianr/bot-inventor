@@ -1,10 +1,10 @@
+import { afterAll, beforeAll, describe, expect, it } from "bun:test"
 import { type ChildProcess, spawn } from "node:child_process"
 import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { helloProject } from "@bot-inventor/schema/fixtures"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { delay, died, stop } from "./child-process.js"
 import { bundleDevelopmentRuntime } from "./development-runtime.js"

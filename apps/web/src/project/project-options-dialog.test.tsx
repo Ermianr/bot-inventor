@@ -1,8 +1,7 @@
-// @vitest-environment jsdom
+import { afterEach, describe, expect, it } from "bun:test"
 
 import { helloProject } from "@bot-inventor/schema/fixtures"
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
 
 import { translate } from "@/i18n/messages"
 import { type FakeProjectStore, fakeProjectStore } from "@/project/fake-project-store"

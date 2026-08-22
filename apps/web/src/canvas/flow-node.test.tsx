@@ -1,11 +1,10 @@
-// @vitest-environment jsdom
+import { describe, expect, it } from "bun:test"
 
 import { catalogue, type NodeDefinition } from "@bot-inventor/nodes"
 import { type FieldValue, literalText } from "@bot-inventor/schema"
 import { fireEvent, render, within } from "@testing-library/react"
 import { ReactFlowProvider } from "@xyflow/react"
 import type { ComponentProps } from "react"
-import { describe, expect, it } from "vitest"
 
 import { FlowNode, type FlowNodeData } from "@/canvas/flow-node"
 import type { NodeRunState } from "@/session/trace"
@@ -229,7 +228,10 @@ describe("a Node the Canvas only summarises", () => {
     const container = drawEmbed({ title: literalText("Rules"), colour: 5793266 })
     const bar = within(container).getByTestId("node-summary-colour-embed")
 
-    expect(bar.style.backgroundColor).toBe("rgb(88, 101, 242)")
+    // happy-dom returns a colour as it was written, where jsdom rewrote every
+    // one into `rgb()`. The component writes the hex, so this is the same
+    // assertion the jsdom run made, spelled the way the DOM now answers it.
+    expect(bar.style.backgroundColor).toBe("#5865f2")
   })
 
   it("draws the title beside it, with no formatting in it at all", () => {

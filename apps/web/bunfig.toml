@@ -1,0 +1,11 @@
+# `bun test` for the editor. It reads this file because `apps/web` is where the
+# `test` script runs Bun from.
+#
+# The preload is the whole configuration: `bun test` has no per-file environment
+# and no plugin option, so the DOM and the React Compiler pass are registered in
+# `bun-test.setup.ts` for the whole run.
+[test]
+preload = ["./bun-test.setup.ts"]
+# The unit tests are the ones under `src`. Without this, `bun test` also picks
+# up `e2e/`, which only Playwright knows how to run.
+root = "src"

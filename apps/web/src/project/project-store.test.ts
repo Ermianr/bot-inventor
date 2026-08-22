@@ -1,7 +1,8 @@
+import { describe, expect, it } from "bun:test"
+
 import type { Migration } from "@bot-inventor/schema"
 import { CURRENT_SCHEMA_VERSION } from "@bot-inventor/schema"
 import { helloProject } from "@bot-inventor/schema/fixtures"
-import { describe, expect, it } from "vitest"
 
 import { fakeProjectStore } from "@/project/fake-project-store"
 import { listProjects, readStoredProject, serializeProject } from "@/project/project-store"

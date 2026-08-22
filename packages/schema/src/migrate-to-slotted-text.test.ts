@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, mock } from "bun:test"
 
 import { helloProject } from "./fixtures.js"
 import { toSlottedText } from "./migrate-to-slotted-text.js"
@@ -57,7 +57,7 @@ describe("toSlottedText", () => {
 describe("opening a Project written at the previous version", () => {
   it("backs it up, migrates every text field and opens it", async () => {
     const document = version1Hello()
-    const backup = vi.fn(async () => {})
+    const backup = mock(async () => {})
 
     const result = await openProject(document, { writeBackup: backup })
 

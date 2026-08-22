@@ -1,5 +1,6 @@
+import { describe, expect, it } from "bun:test"
+
 import type { TraceEvent } from "@bot-inventor/compiler"
-import { describe, expect, it } from "vitest"
 
 import { type RunTrace, watchFailure, watchTrace } from "@/session/trace"
 

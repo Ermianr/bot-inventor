@@ -1,8 +1,7 @@
-// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 
 import { helloProject } from "@bot-inventor/schema/fixtures"
 import { act, cleanup, renderHook } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { MINIMAP_STORAGE_KEY, useMinimap } from "@/preferences/minimap"
 import { serializeProject } from "@/project/project-store"

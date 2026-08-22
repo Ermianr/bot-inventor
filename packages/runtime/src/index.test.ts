@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, mock } from "bun:test"
 
 import { coercions } from "./coercions.js"
 import type { SlashCommandEvent } from "./discord.js"
@@ -7,7 +7,7 @@ import { createFakeRuntime } from "./testing.js"
 describe("the fake Runtime", () => {
   it("records the slash commands a bot declares and runs them on demand", async () => {
     const runtime = createFakeRuntime()
-    const handler = vi.fn(async () => {})
+    const handler = mock(async () => {})
 
     runtime.discord.registerSlashCommand({ name: "hello", description: "Says hello" }, handler)
     await runtime.dispatchSlashCommand({ command: "hello", user: { displayName: "Ada" } })
@@ -33,7 +33,11 @@ describe("the fake Runtime", () => {
       method: "reply",
       commandName: "hello",
       content: "Hello!",
-      ephemeral: true
+      ephemeral: true,
+      // The reply answered in plain text. It is spelled out because
+      // `toContainEqual` compares the whole recorded call and is typed against
+      // it, where Vitest's took a partial and let the field go unmentioned.
+      embed: undefined
     })
   })
 

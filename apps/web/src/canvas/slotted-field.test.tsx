@@ -1,8 +1,7 @@
-// @vitest-environment jsdom
+import { afterEach, describe, expect, it } from "bun:test"
 
 import type { SlottedText } from "@bot-inventor/schema"
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
 
 import { SlottedField } from "@/canvas/slotted-field"
 

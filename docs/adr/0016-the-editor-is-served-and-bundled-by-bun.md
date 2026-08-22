@@ -4,7 +4,7 @@ Vite ran the editor's dev server and produced its production bundle. Both now ru
 
 `tauri.conf.json` did not change, and that is the shape of the seam rather than a coincidence: `beforeDevCommand` is `bun run dev`, `devUrl` is `http://localhost:3001` and `beforeBuildCommand` is `bun run build`. Tauri names scripts; this change rewrote what those scripts run.
 
-**Vitest keeps Vite, and Vite therefore stays a devDependency.** The unit tests mount the React Compiler on purpose ([ADR 0013](./0013-memoization-is-no-longer-written-by-hand.md) is why they must), and moving the test runner is a separate change with separate risks. Anyone auditing the tree for `vite` will find it; this paragraph is the answer.
+**Vitest keeps Vite, and Vite therefore stays a devDependency.** (No longer true: [ADR 0017](./0017-the-test-runner-is-bun.md) moved the test runner to `bun test` and Vite left with Vitest. The rest of this paragraph is the state at the time.) The unit tests mount the React Compiler on purpose ([ADR 0013](./0013-memoization-is-no-longer-written-by-hand.md) is why they must), and moving the test runner is a separate change with separate risks. Anyone auditing the tree for `vite` will find it; this paragraph is the answer.
 
 ## The reason of record, and what it is not
 

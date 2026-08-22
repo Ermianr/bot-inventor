@@ -1,8 +1,7 @@
+import { describe, expect, it } from "bun:test"
 import { readFileSync } from "node:fs"
 import { createRequire } from "node:module"
 import path from "node:path"
-
-import { describe, expect, it } from "vitest"
 
 /**
  * A guard on the patch `@tanstack/router-core` carries, which is what lets the

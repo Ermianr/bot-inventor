@@ -1,9 +1,8 @@
-// @vitest-environment jsdom
+import { describe, expect, it } from "bun:test"
 
 import type { ExportRequest, ExportResult } from "@bot-inventor/compiler"
 import { helloProject } from "@bot-inventor/schema/fixtures"
 import { act, renderHook } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
 
 import type { ExportGateway } from "@/project/export-gateway"
 import { useExport } from "@/project/use-export"

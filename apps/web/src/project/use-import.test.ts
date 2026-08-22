@@ -1,9 +1,8 @@
-// @vitest-environment jsdom
+import { describe, expect, it } from "bun:test"
 
 import { CURRENT_SCHEMA_VERSION, type Project } from "@bot-inventor/schema"
 import { helloProject } from "@bot-inventor/schema/fixtures"
 import { act, renderHook } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
 
 import { fakeImportGateway } from "@/project/fake-import-gateway"
 import { serializeProject } from "@/project/project-store"

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "bun:test"
+
 import { catalogue } from "@bot-inventor/nodes"
 import { literalText } from "@bot-inventor/schema"
 import {
@@ -6,7 +8,6 @@ import {
   helloProject,
   unreachableNodeProject
 } from "@bot-inventor/schema/fixtures"
-import { describe, expect, it } from "vitest"
 
 import {
   addNode,

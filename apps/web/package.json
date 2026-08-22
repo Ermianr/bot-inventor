@@ -10,7 +10,7 @@
     "routes": "bun run ../../scripts/route-tree.ts",
     "build": "bun run routes && bun run build.ts",
     "check-types": "bun run build && tsc --noEmit",
-    "test": "vitest run",
+    "test": "bun test",
     "test:e2e": "playwright test",
     "tauri": "tauri",
     "sidecar": "bun run ../../scripts/prepare-sidecar.ts",
@@ -39,24 +39,20 @@
   "devDependencies": {
     "@babel/core": "^8.0.1",
     "@bot-inventor/config": "workspace:*",
+    "@happy-dom/global-registrator": "^20.11.6",
     "@playwright/test": "^1.62.1",
-    "@rolldown/plugin-babel": "^0.2.3",
     "@tanstack/react-router-devtools": "^1.167.0",
     "@tanstack/router-cli": "^1.167.32",
     "@tauri-apps/cli": "^2.11.4",
     "@testing-library/react": "^16.3.2",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@vitejs/plugin-react": "^6.0.4",
     "babel-plugin-react-compiler": "^1.0.0",
     "bun-plugin-tailwind": "^0.1.2",
-    "jsdom": "^30.0.1",
     "postcss": "^8.5.24",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:",
-    "vite": "^8.1.5",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   }
 }

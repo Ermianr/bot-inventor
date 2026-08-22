@@ -12,7 +12,7 @@ Bun is the package manager and Turborepo the task runner; run everything from th
 bun install
 bun run desktop:dev    # the real app: builds the sidecar, then tauri dev
 bun run dev:web        # the editor in a browser, no Tauri shell
-bun run test           # vitest across every package
+bun run test           # bun test across every package
 bun run check-types
 bun run check          # oxfmt then oxlint --fix — this one rewrites files
 bun run check:ci       # the same pass in reporting mode: writes nothing, fails on any finding
@@ -54,7 +54,7 @@ Branch names use the same vocabulary: `type/short-description` in kebab-case, su
 
 Bun workspaces + Turborepo. React 19, TanStack Router, Tailwind 4, shadcn/ui in `packages/ui`, Tauri v2, oxfmt for formatting and oxlint for the whole lint pass, the Rules of React included, Zod for schemas.
 
-The editor is served and bundled by Bun: `apps/web/dev-server.ts` is the dev server `tauri dev` points at, and `apps/web/build.ts` writes the bundle `frontendDist` embeds. Three things Vite used to do for free are ours now, and each says why in its own file: `scripts/route-tree.ts` generates the Route tree, `react-compiler.ts` mounts the React Compiler on the dev server, and Routes worth splitting declare it with `createLazyFileRoute`. Vite remains a dependency for one reason — Vitest runs on it.
+The editor is served and bundled by Bun: `apps/web/dev-server.ts` is the dev server `tauri dev` points at, and `apps/web/build.ts` writes the bundle `frontendDist` embeds. Three things Vite used to do for free are ours now, and each says why in its own file: `scripts/route-tree.ts` generates the Route tree, `react-compiler.ts` mounts the React Compiler on the dev server, and Routes worth splitting declare it with `createLazyFileRoute`. Vite is gone entirely: the test runner is Bun too, which is what took the last reason to keep it (see ADR 0017).
 
 ## Package layout
 
@@ -69,9 +69,9 @@ The editor is served and bundled by Bun: `apps/web/dev-server.ts` is the dev ser
 
 ## Testing
 
-Unit tests are Vitest and sit next to what they test, as `src/**/*.test.ts` — `.test.tsx` when the test renders a component. Playwright specs live in `apps/web/e2e`, with their Page Objects in `apps/web/e2e/pages`.
+Unit tests are `bun test` and sit next to what they test, as `src/**/*.test.ts` — `.test.tsx` when the test renders a component. `apps/web` needs a DOM and the React Compiler, and both are registered in `apps/web/bun-test.setup.ts`, which `apps/web/bunfig.toml` preloads; there is no other test configuration. Playwright specs live in `apps/web/e2e`, with their Page Objects in `apps/web/e2e/pages`.
 
-`test` and `check-types` depend on `^build` in `turbo.json`, so a package's workspace dependencies must be built before its tests can resolve them — prefer `bun run test` at the root over calling `vitest` inside a package. In `apps/web`, `check-types` deliberately runs a full `bun run build` before `tsc --noEmit`; it is slow on purpose.
+`test` and `check-types` depend on `^build` in `turbo.json`, so a package's workspace dependencies must be built before its tests can resolve them — prefer `bun run test` at the root over calling `bun test` inside a package. In `apps/web`, `check-types` deliberately runs a full `bun run build` before `tsc --noEmit`; it is slow on purpose.
 
 ## Non-negotiables
 
