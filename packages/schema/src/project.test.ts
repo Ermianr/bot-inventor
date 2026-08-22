@@ -69,26 +69,14 @@ describe("projectSchema", () => {
     }
   }
 
-  it("rejects a Node position that is not a point on the Canvas", () => {
-    const result = projectSchema.safeParse(projectWithNodeAtX("left"))
+  const rejectedPositions: { label: string; x: unknown }[] = [
+    { label: "a value that is not a number", x: "left" },
+    { label: "Infinity", x: Number.POSITIVE_INFINITY },
+    { label: "NaN", x: Number.NaN }
+  ]
 
-    expect(result.success).toBe(false)
-    expect(formatProjectIssues(result.error?.issues ?? []).join("\n")).toContain(
-      "flows.0.nodes.0.position.x"
-    )
-  })
-
-  it("rejects a Node position of Infinity", () => {
-    const result = projectSchema.safeParse(projectWithNodeAtX(Number.POSITIVE_INFINITY))
-
-    expect(result.success).toBe(false)
-    expect(formatProjectIssues(result.error?.issues ?? []).join("\n")).toContain(
-      "flows.0.nodes.0.position.x"
-    )
-  })
-
-  it("rejects a Node position of NaN", () => {
-    const result = projectSchema.safeParse(projectWithNodeAtX(Number.NaN))
+  it.each(rejectedPositions)("rejects a Node position of $label, naming the field", ({ x }) => {
+    const result = projectSchema.safeParse(projectWithNodeAtX(x))
 
     expect(result.success).toBe(false)
     expect(formatProjectIssues(result.error?.issues ?? []).join("\n")).toContain(
