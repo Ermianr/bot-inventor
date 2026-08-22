@@ -42,13 +42,22 @@
   "devDependencies": {
     "@bot-inventor/compiler": "workspace:*",
     "@bot-inventor/config": "workspace:*",
+    "@tanstack/router-generator": "^1.167.32",
     "@types/node": "catalog:",
+    "bun-plugin-tailwind": "^0.1.2",
     "eslint-plugin-playwright": "^2.11.0",
     "oxfmt": "^0.64.0",
     "oxlint": "^1.79.0",
     "oxlint-tsgolint": "^7.0.2001",
+    "react-refresh": "^0.18.0",
     "turbo": "^2.10.7",
     "typescript": "catalog:"
   },
-  "packageManager": "bun@1.4.0"
+  "packageManager": "bun@1.4.0",
+  "patchedDependencies": {
+    "@tanstack/router-core@1.171.26": "patches/@tanstack%2Frouter-core@1.171.26.patch"
+  },
+  "overrides": {
+    "@tanstack/router-core": "1.171.26"
+  }
 }

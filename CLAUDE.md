@@ -52,7 +52,9 @@ Branch names use the same vocabulary: `type/short-description` in kebab-case, su
 
 ## Stack
 
-Bun workspaces + Turborepo. Vite 8, React 19, TanStack Router, Tailwind 4, shadcn/ui in `packages/ui`, Tauri v2, oxfmt for formatting and oxlint for the whole lint pass, the Rules of React included, Zod for schemas.
+Bun workspaces + Turborepo. React 19, TanStack Router, Tailwind 4, shadcn/ui in `packages/ui`, Tauri v2, oxfmt for formatting and oxlint for the whole lint pass, the Rules of React included, Zod for schemas.
+
+The editor is served and bundled by Bun: `apps/web/dev-server.ts` is the dev server `tauri dev` points at, and `apps/web/build.ts` writes the bundle `frontendDist` embeds. Three things Vite used to do for free are ours now, and each says why in its own file: `scripts/route-tree.ts` generates the Route tree, `react-compiler.ts` mounts the React Compiler on the dev server, and Routes worth splitting declare it with `createLazyFileRoute`. Vite remains a dependency for one reason — Vitest runs on it.
 
 ## Package layout
 
@@ -69,7 +71,7 @@ Bun workspaces + Turborepo. Vite 8, React 19, TanStack Router, Tailwind 4, shadc
 
 Unit tests are Vitest and sit next to what they test, as `src/**/*.test.ts` — `.test.tsx` when the test renders a component. Playwright specs live in `apps/web/e2e`, with their Page Objects in `apps/web/e2e/pages`.
 
-`test` and `check-types` depend on `^build` in `turbo.json`, so a package's workspace dependencies must be built before its tests can resolve them — prefer `bun run test` at the root over calling `vitest` inside a package. In `apps/web`, `check-types` deliberately runs a full `vite build` before `tsc --noEmit`; it is slow on purpose.
+`test` and `check-types` depend on `^build` in `turbo.json`, so a package's workspace dependencies must be built before its tests can resolve them — prefer `bun run test` at the root over calling `vitest` inside a package. In `apps/web`, `check-types` deliberately runs a full `bun run build` before `tsc --noEmit`; it is slow on purpose.
 
 ## Non-negotiables
 

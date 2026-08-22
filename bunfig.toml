@@ -1,0 +1,11 @@
+# The dev server's bundler plugins. They live at the repository root because
+# that is where `apps/web`'s `dev:server` script runs Bun from, and Bun reads
+# `bunfig.toml` from the working directory. Running it from `apps/web` instead
+# would put `packages/ui` outside Bun's watch scope and stop HMR on every shared
+# component, so the root is the working directory and this file follows it.
+#
+# `Bun.serve` accepts no `plugins` option, so this is the only way to mount them
+# on the dev server. `apps/web/build.ts` passes its own plugins directly and does
+# not read this file.
+[serve.static]
+plugins = ["bun-plugin-tailwind", "./apps/web/react-compiler-plugin.ts"]

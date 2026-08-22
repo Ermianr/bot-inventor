@@ -1,0 +1,21 @@
+diff --git a/dist/esm/router.js b/dist/esm/router.js
+index 242c28fabe0e591044f49c08451f68bfc6cb8f9a..276720e4e59693414ad5ec31c03cbd1873742ddc 100644
+--- a/dist/esm/router.js
++++ b/dist/esm/router.js
+@@ -814,7 +814,15 @@ var RouterCore = class {
+ * dedicated to HMR.
+ */
+ if (process.env.NODE_ENV !== "production") {
+-	RouterCore.prototype._replaceRouteChunk = replaceRouteChunk;
++	// Patched: read `replaceRouteChunk` when the method is called rather than
++	// while this module initialises. `router.js` and `load-client.js` import
++	// each other, and Bun's dev-server bundler resolves a cyclic import to a
++	// namespace object that is still null during init, so the eager read threw
++	// `Cannot read properties of null` and the editor never mounted. Guarded by
++	// `apps/web/src/router-core-patch.test.ts`, which fails if a bump drops it.
++	RouterCore.prototype._replaceRouteChunk = function (...args) {
++		return replaceRouteChunk.apply(this, args);
++	};
+ 	RouterCore.prototype._refreshRoute = async function() {
+ 		this._serverResult = void 0;
+ 		this.updateLatestLocation();
