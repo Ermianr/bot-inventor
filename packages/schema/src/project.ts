@@ -13,7 +13,12 @@ export const CURRENT_SCHEMA_VERSION = 2
 const identifier = z.string().min(1, "an identifier must not be empty").describe("identifier")
 
 /** A position on the Canvas, in Canvas coordinates. */
-export const positionSchema = z.object({
+export type Position = {
+  x: number
+  y: number
+}
+
+export const positionSchema: Validator<Position> = z.object({
   x: z.number(),
   y: z.number()
 })
@@ -39,7 +44,12 @@ export const fieldValueSchema: Validator<FieldValue> = z.lazy(() =>
 )
 
 /** One end of a Wire: a Port on a Node. */
-export const portReferenceSchema = z.object({
+export type PortReference = {
+  node: string
+  port: string
+}
+
+export const portReferenceSchema: Validator<PortReference> = z.object({
   node: identifier,
   port: identifier
 })
@@ -48,7 +58,17 @@ export const portReferenceSchema = z.object({
  * A Wire between two Ports. An Execution Wire defines the order things happen
  * in; a Data Wire carries a value from one Node's output to another's input.
  */
-export const wireSchema = z.object({
+export type Wire = {
+  id: string
+  kind: WireKind
+  from: PortReference
+  to: PortReference
+}
+
+/** The kind of Wire, spelled the way `CONTEXT.md` spells it. */
+export type WireKind = "execution" | "data"
+
+export const wireSchema: Validator<Wire> = z.object({
   id: identifier,
   kind: z.enum(["execution", "data"]),
   from: portReferenceSchema,
@@ -59,7 +79,15 @@ export const wireSchema = z.object({
  * A Node instance placed on a Canvas: which Node of the catalogue it is, where
  * it sits, and the values typed into its fields.
  */
-export const nodeSchema = z.object({
+export type Node = {
+  id: string
+  /** The catalogue id of the Node, e.g. `discord.member.addRole`. */
+  type: string
+  position: Position
+  fields: Record<string, FieldValue>
+}
+
+export const nodeSchema: Validator<Node> = z.object({
   id: identifier,
   /** The catalogue id of the Node, e.g. `discord.member.addRole`. */
   type: identifier,
@@ -68,7 +96,14 @@ export const nodeSchema = z.object({
 })
 
 /** The whole graph hanging off a single Trigger. */
-export const flowSchema = z
+export type Flow = {
+  id: string
+  name: string
+  nodes: Node[]
+  wires: Wire[]
+}
+
+export const flowSchema: Validator<Flow> = z
   .object({
     id: identifier,
     name: z.string().min(1, "a Flow must have a name"),
@@ -114,7 +149,14 @@ export const flowSchema = z
  * newer build is refused instead of parsed optimistically, and so a migration
  * that forgets to raise `schemaVersion` fails loudly.
  */
-export function projectSchemaForVersion(version: number) {
+export type Project = {
+  schemaVersion: number
+  id: string
+  name: string
+  flows: Flow[]
+}
+
+export function projectSchemaForVersion(version: number): Validator<Project> {
   return z
     .object({
       schemaVersion: z.literal(version),
@@ -133,17 +175,7 @@ export function projectSchemaForVersion(version: number) {
 }
 
 /** The Project format this build reads and writes. This is what other packages parse with. */
-export const projectSchema = projectSchemaForVersion(CURRENT_SCHEMA_VERSION)
-
-export type Position = z.infer<typeof positionSchema>
-export type PortReference = z.infer<typeof portReferenceSchema>
-export type Wire = z.infer<typeof wireSchema>
-export type Node = z.infer<typeof nodeSchema>
-export type Flow = z.infer<typeof flowSchema>
-export type Project = z.infer<typeof projectSchema>
-
-/** The kind of Wire, spelled the way `CONTEXT.md` spells it. */
-export type WireKind = Wire["kind"]
+export const projectSchema: Validator<Project> = projectSchemaForVersion(CURRENT_SCHEMA_VERSION)
 
 function reportDuplicates(
   ctx: { value: unknown; issues: z.core.$ZodRawIssue[] },

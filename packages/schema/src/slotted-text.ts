@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import type { FieldValue } from "./project.js"
+import type { Validator } from "./validator.js"
 
 /**
  * The value of a text field: a sequence of literal text and Slots (ADR 0010).
@@ -11,28 +12,45 @@ import type { FieldValue } from "./project.js"
  * appear in more than one segment and in more than one field of a Node.
  */
 
-export const literalSegmentSchema = z.object({
+export type LiteralSegment = {
+  kind: "literal"
+  text: string
+}
+
+const literalSegment = z.object({
   kind: z.literal("literal"),
   text: z.string()
 })
 
-export const slotSegmentSchema = z.object({
+export const literalSegmentSchema: Validator<LiteralSegment> = literalSegment
+
+export type SlotSegment = {
+  kind: "slot"
+  slot: string
+}
+
+const slotSegment = z.object({
   kind: z.literal("slot"),
   slot: z.string().min(1, "a Slot id must not be empty")
 })
 
-export const textSegmentSchema = z.discriminatedUnion("kind", [
-  literalSegmentSchema,
-  slotSegmentSchema
-])
+export const slotSegmentSchema: Validator<SlotSegment> = slotSegment
+
+export type TextSegment = LiteralSegment | SlotSegment
+
+/**
+ * The union is built from the object schemas rather than from the exported
+ * aliases: `discriminatedUnion` needs to see the objects to find the
+ * discriminant, and a `Validator` deliberately no longer says it is one.
+ */
+const textSegment = z.discriminatedUnion("kind", [literalSegment, slotSegment])
+
+export const textSegmentSchema: Validator<TextSegment> = textSegment
 
 /** A text field's whole value, in the order it reads. */
-export const slottedTextSchema = z.array(textSegmentSchema)
+export type SlottedText = TextSegment[]
 
-export type LiteralSegment = z.infer<typeof literalSegmentSchema>
-export type SlotSegment = z.infer<typeof slotSegmentSchema>
-export type TextSegment = z.infer<typeof textSegmentSchema>
-export type SlottedText = z.infer<typeof slottedTextSchema>
+export const slottedTextSchema: Validator<SlottedText> = z.array(textSegment)
 
 /**
  * The segments a field holds.
