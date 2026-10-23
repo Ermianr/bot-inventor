@@ -1,0 +1,12 @@
+[package]
+name = "graph"
+description = "The project and payload types, their versions and their files."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
