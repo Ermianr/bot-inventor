@@ -1,0 +1,32 @@
+[package]
+name = "runner"
+description = "The binary that runs a bot: reads its payload and .env, and wires the runtime to Discord and SQLite."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "runner"
+path = "src/main.rs"
+
+[dependencies]
+platform-discord = { path = "../platform-discord" }
+runtime = { path = "../runtime" }
+serde_json.workspace = true
+storage-sqlite = { path = "../storage-sqlite" }
+thiserror.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "signal", "time"] }
+
+[dev-dependencies]
+proptest.workspace = true
+rmp-serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "test-util"] }
+zstd.workspace = true

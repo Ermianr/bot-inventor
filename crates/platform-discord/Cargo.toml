@@ -24,4 +24,4 @@ twilight-http = "0.17"
 twilight-model = "0.17"
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["io-util", "macros", "net", "rt", "rt-multi-thread", "signal", "test-util"] }
+tokio = { workspace = true, features = ["io-util", "macros", "net", "rt", "rt-multi-thread", "test-util"] }

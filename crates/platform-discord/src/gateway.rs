@@ -59,10 +59,29 @@ impl Discord {
         token: &Token,
         requirements: &Requirements,
     ) -> Result<(Self, DiscordPlatform), AdapterError> {
+        Self::connect_via(token, requirements, None).await
+    }
+
+    /// Like [`connect`](Self::connect), with the HTTP requests sent to `proxy` (a `host:port`,
+    /// over plain HTTP) instead of Discord. It is how a test stands a fake server in for
+    /// Discord; the gateway connection is not affected.
+    ///
+    /// # Errors
+    ///
+    /// As [`connect`](Self::connect).
+    pub async fn connect_via(
+        token: &Token,
+        requirements: &Requirements,
+        proxy: Option<&str>,
+    ) -> Result<(Self, DiscordPlatform), AdapterError> {
         let intents = intents::intents(&requirements.intents)?;
         crate::tls::install();
         let cache = intents::cache(&requirements.cache)?;
-        let client = Arc::new(Client::new(token.expose().to_owned()));
+        let mut builder = Client::builder().token(token.expose().to_owned());
+        if let Some(proxy) = proxy {
+            builder = builder.proxy(proxy.to_owned(), true).ratelimiter(None);
+        }
+        let client = Arc::new(builder.build());
         let application = client
             .current_user_application()
             .await
@@ -204,10 +223,20 @@ impl Discord {
 fn warn(log: &dyn RunLog, message: &str) {
     log.record(LogRecord {
         level: Level::Warn,
+        run: None,
         flow: None,
         node: None,
         message: message.to_owned(),
     });
+}
+
+/// Checks that `text` is a server id, as `DISCORD_DEV_GUILD_ID` must be.
+///
+/// # Errors
+///
+/// [`AdapterError::InvalidGuildId`] when it is not.
+pub fn check_guild_id(text: &str) -> Result<(), AdapterError> {
+    guild_id(text).map(|_| ())
 }
 
 /// A server id: digits only, as Discord ids are.

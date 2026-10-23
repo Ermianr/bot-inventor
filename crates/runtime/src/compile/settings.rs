@@ -198,8 +198,10 @@ impl Cx<'_> {
     }
 }
 
-/// Why a path cannot name a file inside `assets/`, or `None` when it can.
-fn unsafe_asset_path(path: &str) -> Option<&'static str> {
+/// Why a path cannot name a file inside `assets/`, or `None` when it can. The runner asks it
+/// again for every asset of a payload, which may not have gone through compile.
+#[must_use]
+pub fn unsafe_asset_path(path: &str) -> Option<&'static str> {
     if path.is_empty() {
         return Some("the path is empty");
     }
