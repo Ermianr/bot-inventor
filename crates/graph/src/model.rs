@@ -167,10 +167,13 @@ fn serialize_sorted_entries<S: Serializer>(
     out.end()
 }
 
-fn sorted_map<S: Serializer>(map: &Map<String, Value>, serializer: S) -> Result<S::Ok, S::Error> {
+pub(crate) fn sorted_map<S: Serializer>(
+    map: &Map<String, Value>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
     serialize_sorted_entries(map, serializer)
 }
 
-fn sorted_value<S: Serializer>(value: &Value, serializer: S) -> Result<S::Ok, S::Error> {
+pub(crate) fn sorted_value<S: Serializer>(value: &Value, serializer: S) -> Result<S::Ok, S::Error> {
     Sorted(value).serialize(serializer)
 }

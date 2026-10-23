@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 
 use crate::{layers, root, run, run_capture, run_in};
 
@@ -149,6 +149,31 @@ pub fn test() -> Result<()> {
         ("doc tests", doc_tests),
         ("vitest", vitest),
     ])
+}
+
+/// Prints a payload as JSON. It does not echo the command, so the output can be piped.
+pub fn dump(args: &[String]) -> Result<()> {
+    let [file] = args else {
+        bail!("usage: cargo xtask dump <payload or exported bot>");
+    };
+    let status = crate::command("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--package",
+            "graph",
+            "--example",
+            "dump",
+            "--",
+            file,
+        ])
+        .current_dir(root())
+        .status()
+        .context("could not start `cargo`")?;
+    if !status.success() {
+        bail!("could not dump {file} ({status})");
+    }
+    Ok(())
 }
 
 /// Regenerates the TypeScript types from Rust. With `--check`, fails when the committed file
