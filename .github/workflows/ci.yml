@@ -26,14 +26,45 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The Ubuntu mirror can stall; retry a failed download and give up on a silent one.
+      # The Ubuntu mirror can stall, so the downloaded packages are cached by week: a run only
+      # downloads what is not there, and a run that times out still saves what it got, so the next
+      # one gets further. apt checks every cached package against the signed index, so a stale or
+      # altered file is downloaded again, never installed.
+      - name: Week of the package cache
+        id: week
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the system packages
+        id: apt-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: apt-tauri-${{ steps.week.outputs.week }}
+          restore-keys: apt-tauri-
+
+      # Retry a failed download and give up on a silent one.
       - name: Install Tauri's system libraries
         timeout-minutes: 10
         run: |
+          sudo cp -n ~/apt-archives/*.deb /var/cache/apt/archives/ 2>/dev/null || true
           APT="sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
           $APT update
           $APT install --no-install-recommends -y \
             build-essential libwebkit2gtk-4.1-dev libsoup-3.0-dev librsvg2-dev libssl-dev patchelf
+
+      - name: Collect the downloaded packages
+        if: always() && steps.apt-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/apt-archives
+          sudo cp -n /var/cache/apt/archives/*.deb ~/apt-archives/ || true
+          sudo chown -R "$USER" ~/apt-archives
+
+      - name: Save the system packages
+        if: always() && steps.apt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: apt-tauri-${{ steps.week.outputs.week }}
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
