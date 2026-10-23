@@ -5,7 +5,10 @@
 //! the `settings` are opaque here, as in the project; `runtime` gives them a meaning.
 //! Building a payload from a project is the compile step of `runtime`.
 
-use serde::{Deserialize, Serialize};
+use std::fmt;
+
+use serde::de::{MapAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{Map, Value};
 
 use crate::codec::PayloadError;
@@ -120,7 +123,7 @@ pub struct PayloadNode {
     #[serde(rename = "type")]
     pub kind: String,
     pub type_version: u32,
-    #[serde(serialize_with = "sorted_map")]
+    #[serde(serialize_with = "sorted_map", deserialize_with = "strict_map")]
     pub settings: Map<String, Value>,
     /// The expressions and templates of the settings, as text. The runner parses them
     /// once when it starts; the syntax tree is not stored.
@@ -165,7 +168,7 @@ pub struct CommandDef {
     /// A hash of the definition, so a start can send only the commands that changed.
     pub hash: String,
     /// The definition as the platform expects it.
-    #[serde(serialize_with = "sorted_map")]
+    #[serde(serialize_with = "sorted_map", deserialize_with = "strict_map")]
     pub definition: Map<String, Value>,
 }
 
@@ -179,4 +182,28 @@ pub struct Requirements {
     pub cache: Vec<String>,
     /// The files of `assets/` that the nodes reference.
     pub assets: Vec<String>,
+}
+
+/// An object and nothing else. `serde_json::Map` also reads `null` (a MessagePack nil) as an
+/// empty object, which would make the payload accept a value that `encode` never writes.
+fn strict_map<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Map<String, Value>, D::Error> {
+    struct Object;
+
+    impl<'de> Visitor<'de> for Object {
+        type Value = Map<String, Value>;
+
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("a map")
+        }
+
+        fn visit_map<A: MapAccess<'de>>(self, mut access: A) -> Result<Self::Value, A::Error> {
+            let mut map = Map::new();
+            while let Some((key, value)) = access.next_entry::<String, Value>()? {
+                map.insert(key, value);
+            }
+            Ok(map)
+        }
+    }
+
+    deserializer.deserialize_map(Object)
 }

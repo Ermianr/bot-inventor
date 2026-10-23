@@ -259,6 +259,16 @@ fn bad_shapes() -> Vec<Case> {
             "not valid",
         ),
         case(
+            "settings as null",
+            |v| v["flows"][0]["nodes"][0]["settings"] = Value::Null,
+            "not valid",
+        ),
+        case(
+            "a command definition as null",
+            |v| v["commands"][0]["definition"] = Value::Null,
+            "not valid",
+        ),
+        case(
             "settings as a list",
             |v| {
                 v["flows"][0]["nodes"][0]["settings"] = json!([1]);
