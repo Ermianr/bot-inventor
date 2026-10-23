@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "app_version": "0.1.0",
+  "flows": [
+    {
+      "name": "ping",
+      "trigger": 0,
+      "nodes": [
+        {
+          "id": "n1",
+          "alias": "ping_command",
+          "type": "discord.slash_command",
+          "type_version": 1,
+          "settings": {
+            "description": "Replies with pong",
+            "ephemeral": false,
+            "name": "ping"
+          },
+          "expressions": [],
+          "next": [
+            {
+              "port": "next",
+              "to": [
+                1
+              ]
+            }
+          ]
+        },
+        {
+          "id": "n2",
+          "alias": "reply",
+          "type": "discord.reply",
+          "type_version": 1,
+          "settings": {
+            "content": "Pong!"
+          },
+          "expressions": [],
+          "next": []
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "event": "slash_command",
+      "flows": [
+        0
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "name": "ping",
+      "flow": 0,
+      "hash": "ping-v1",
+      "definition": {
+        "description": "Replies with pong",
+        "name": "ping",
+        "type": 1
+      }
+    }
+  ],
+  "variables": [],
+  "requirements": {
+    "intents": [
+      "guilds"
+    ],
+    "cache": [],
+    "assets": []
+  }
+}

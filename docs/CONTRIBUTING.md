@@ -34,6 +34,7 @@ cargo xtask lint && cargo xtask test
 | `cargo xtask build` | Build the app (the runner joins it in a later milestone) |
 | `cargo xtask layers` | Check the crate dependency rules of `ARCHITECTURE.md` §2 |
 | `cargo xtask bindings` | Regenerate the TypeScript types from Rust; `--check` fails if they differ from the committed ones (what CI runs) |
+| `cargo xtask dump <file>` | Print a payload, or the payload at the end of an exported bot, as JSON |
 
 The first run installs the frontend dependencies and, if missing, `cargo-nextest` and `cargo-deny`, so Rust and `pnpm` are all you need besides Tauri's system libraries.
 
