@@ -7,27 +7,14 @@ Central place for the best practices of the languages and frameworks used in the
 Every rule carries one of these tags, so you can tell where it comes from:
 
 - **[official]**: taken from the maintainers' own documentation or source (sources are listed at the end of each section).
-- **[project]**: a convention we chose for this repository. It is a proposal until it is moved to `DECISIONS.md`.
+- **[project]**: a convention we chose for this repository.
 - **[verify]**: believed to be correct but not checked against a source or in code yet. Do not rely on it without checking.
 
-Rules are only added to a section after that technology has been researched. Sections that have not been researched yet say so instead of guessing.
+Rules are only added to a section after that technology has been researched.
 
 ## Contents
 
-| # | Section | Status |
-|---|---|---|
-| 1 | [Effect (frontend)](#1-effect-frontend) | Written (researched 2026-10-22) |
-| 2 | [TypeScript](#2-typescript) | Written (2026-10-22) |
-| 3 | [Svelte 5 and the Tauri frontend](#3-svelte-5-and-the-tauri-frontend) | Written (2026-10-22); Svelte Flow patterns not researched |
-| 4 | [Tailwind CSS v4 and `bits-ui`](#4-tailwind-css-v4-and-bits-ui) | Written (2026-10-22); theming not researched |
-| 5 | [ESLint and Prettier](#5-eslint-and-prettier-for-svelte-and-typescript) | Written (2026-10-22); generated config to inspect when scaffolding |
-| 6 | [Rust](#6-rust) | Written (2026-10-22); async, secrets and testing not researched |
-| 7 | [Tauri v2](#7-tauri-v2) | Written (2026-10-22); CSP key path and dev server to verify |
-| 8 | [twilight](#8-twilight) | Written (2026-10-22); sharding, rate limits, slash commands not researched |
-| 9 | [SQLite with `rusqlite`](#9-sqlite-with-rusqlite) | Written (2026-10-22); several settings to verify |
-| 10 | [Testing](#10-testing-across-rust-and-typescript) | Partly written (Effect testing in 1.11) |
-| 11 | [Repository tooling and the minimal baseline](#11-repository-tooling-and-the-minimal-baseline) | Written (2026-10-22) |
-| 12 | [Expressions (CEL)](#12-expressions-cel) | Written (2026-10-22) |
+[1 Effect](#1-effect-frontend) · [2 TypeScript](#2-typescript) · [3 Svelte 5 and the Tauri frontend](#3-svelte-5-and-the-tauri-frontend) · [4 Tailwind CSS v4 and `bits-ui`](#4-tailwind-css-v4-and-bits-ui) · [5 ESLint and Prettier](#5-eslint-and-prettier-for-svelte-and-typescript) · [6 Rust](#6-rust) · [7 Tauri v2](#7-tauri-v2) · [8 twilight](#8-twilight) · [9 SQLite with `rusqlite`](#9-sqlite-with-rusqlite) · [10 Testing](#10-testing-across-rust-and-typescript) · [11 Repository tooling and the minimal baseline](#11-repository-tooling-and-the-minimal-baseline) · [12 Expressions (CEL)](#12-expressions-cel)
 
 ---
 
@@ -139,7 +126,7 @@ export class ProjectLoadError extends Schema.TaggedError<ProjectLoadError>()(
 - **[official]** Dispose the runtime with `dispose` / `disposeEffect` when the application shuts down. Run with `runPromise`, `runFork`, `runCallback` or `runSync` at the edges.
 - **[project]** `runtime.run*` is called only from the **bridge layer** (event handlers, `onMount`, stores in `.svelte.ts` files), never scattered through components or services.
 - **[project]** Keep the application layer in a single file (`src/app/runtime.ts`) so the dependency graph is visible in one place.
-- **[verify]** No official guidance was found for creating, disposing and hot-reloading a `ManagedRuntime` inside a Svelte/Vite app. Decide when scaffolding and record it here.
+- **[project]** Create the single `ManagedRuntime` at module scope and dispose it in `import.meta.hot.dispose`, Vite's cleanup hook for hot reload, inside an `if (import.meta.hot)` guard so a reload does not leave a second runtime alive. Vite documents the hook; pairing it with `ManagedRuntime` is our own inference, so check it when scaffolding.
 
 ### 1.8 Svelte 5 integration
 
@@ -263,7 +250,8 @@ All **[official]** rules below come from the Svelte documentation ("Best practic
 
 **Node editor**
 - **[official, npm]** `@xyflow/svelte@1.7.0` (published 2026-09-24) declares the peer dependency `svelte ^5.25.0`, so it targets Svelte 5.
-- **[verify]** Patterns for large graphs (memoizing node components, virtualization) are not researched yet.
+- **[project]** Svelte Flow's `onlyRenderVisibleElements` (off by default; it renders only what is in the viewport but adds overhead) is for flows of hundreds of nodes; a typical bot is far below that, so leave it off until a measurement says otherwise. Keep custom node components simple.
+- **[official]** Internationalization uses `@inlang/paraglide-js` with its Vite plugin (`paraglideVitePlugin({ project: "./project.inlang" })`, compiler options `outdir` and `emitTsDeclarations` in `project.inlang/paraglide.config.js`); messages are used as `m.name({ ... })` and the locale is read with `getLocale()` and set with `setLocale()`. With no server, the strategies `localStorage`, `preferredLanguage` and `baseLocale` apply (in that order).
 
 **Tauri SPA**
 - **[project]** The frontend is a static single-page app; the Svelte code never touches the filesystem or the network directly, only through `TauriBackend` (1.9).
@@ -356,7 +344,6 @@ todo = "warn"
 - **[project]** Start from the file `cargo deny init` generates, allow only the licenses compatible with `MIT OR Apache-2.0`, and run `cargo deny check` in CI. This replaces separate `cargo-audit` runs, because its advisories check already covers vulnerable crates (**[verify]**: the RustSec database is the source of that check).
 - **[project]** Commit `Cargo.lock`. Add a dependency only when the standard library or an existing dependency cannot do the job; the runner's size and RAM matter.
 
-**Not researched yet:** async and tokio configuration, testing with `nextest` and `insta`.
 
 Sources: https://doc.rust-lang.org/clippy/lints.html, https://doc.rust-lang.org/cargo/reference/workspaces.html, https://rust-lang.github.io/api-guidelines/checklist.html, https://embarkstudios.github.io/cargo-deny/.
 
@@ -380,12 +367,18 @@ Sources: https://doc.rust-lang.org/clippy/lints.html, https://doc.rust-lang.org/
 - A restrictive CSP from the first build: `default-src 'self'`, no remote scripts, and fonts and icons bundled with the app, not loaded from a CDN.
 - Project folders are opened through the dialog plugin or file association, with access limited to the folder the user chose (**[verify]**: how scopes and file associations work for a project folder).
 
+**Sidecar (the runner)**
+- **[official]** Bundle an external binary with `bundle.externalBin` in `tauri.conf.json` (for example `"binaries/runner"`). The file must exist with the target triple appended, such as `src-tauri/binaries/runner-x86_64-unknown-linux-gnu`; `rustc --print host-tuple` gives the triple. Start it with `app.shell().sidecar("runner")` from `tauri-plugin-shell`, passing only the file name.
+- **[official]** `tauri_plugin_shell::process::Command` supports `env`, `envs`, `env_clear`, `current_dir` and `args`; `spawn()` returns a receiver of `CommandEvent` (standard output arrives as raw bytes) and a child handle.
+- **[project]** Call the plugin only from Rust and grant the webview no `shell:*` permission, so the frontend cannot start processes. Start the runner with `env_clear()` and only the variables it needs.
+- **[verify]** Where the installed sidecar ends up in the AppImage and `.deb` packages and that it starts there; the pages read cover the bundling, not the installed layout.
+
 **Types shared with the frontend**
 - **[official]** `tauri-specta` for Tauri v2 generates TypeScript bindings from Rust. Annotate each command with `#[tauri::command]` and `#[specta::specta]`, register commands with `collect_commands![...]` and events with `collect_events![...]` (events derive `Event`), and export with `builder.export(Typescript::default(), "<path>")` from `specta-typescript`. The generated file exposes `commands.<name>` and `events.<name>`. Top-level `Channel<T>` arguments and return values are typed as `Channel<T>`. Large integers (BigInt) are forbidden by default.
 - **[official]** `tauri-specta` v2 is **still in beta** (checked: `2.0.0-rc.26`, published 2026-10-21; `specta 2.0.0-rc.27`; `specta-typescript 0.0.14`). Its documentation advises pinning exact versions with `=`, for example `specta@=2.0.0-rc.26`. The `1.0.2` shown on crates.io is the Tauri v1 line and must not be used.
 - **[project]** Pin `tauri-specta`, `specta` and `specta-typescript` with `=`. Export the bindings in debug builds (the documentation's example exports under `#[cfg(debug_assertions)]`), commit the generated file, and make CI regenerate it and fail if it differs from the committed one.
 - **[project]** Use 64-bit integers carefully: either avoid them in shared types or convert them explicitly (for example Discord ids as strings), never with the option that casts BigInts to numbers.
-- **[verify]** How `Result<T, E>` errors appear in the generated bindings (the documentation lists an error-handling mode without describing it), and whether `Channel<T>` suits live bot logs better than events. Settle both when scaffolding.
+- **[official]** A command that returns `Result<T, E>` with an error type deriving the specta type is generated as a function that resolves to `{ status: "ok", data } | { status: "error", error }`, so the frontend handles failures as values and not as exceptions; `Channel<T>` arguments are typed as `Channel<T>`. For live bot logs use a `Channel`: Tauri documents events as unsuited to ordered, high-volume data.
 
 **[verify]**
 - The exact key path for the CSP in `tauri.conf.json` and how CSP interacts with the Vite dev server (the page read does not cover either). Check the configuration reference when scaffolding.
@@ -405,7 +398,6 @@ Sources: https://v2.tauri.app/security/, https://v2.tauri.app/security/capabilit
 - **[official]** The in-memory cache is configured through `ResourceType` bitflags: `CHANNEL`, `EMOJI`, `GUILD`, `MEMBER`, `MESSAGE`, `PRESENCE`, `REACTION`, `ROLE`, `USER`, `USER_CURRENT`, `VOICE_STATE`, `STAGE_INSTANCE`, `INTEGRATION`, `STICKER` and `GUILD_SCHEDULED_EVENT`. The builder's `resource_types` method sets which are cached (**default: all**) and `message_cache_size` sets how many messages are kept per channel (**default: 100**). For example, enabling `CHANNEL` without `MESSAGE` caches channels but not their messages. This confirms that the cache can be limited to what the nodes use.
 - **[project]** Build the cache with only the resource types the bot's nodes need, and set `message_cache_size` explicitly. A bot without nodes that need a cache runs without one.
 - **[project]** Feed the cache with `cache.update(&event)` for every event received, before the node logic runs.
-- **Not researched yet:** sharding for large bots, HTTP rate limits, and registering slash commands at runtime with `twilight-http`.
 
 Sources: https://twilight.rs/chapter_1_crates/section_3_gateway.html, https://twilight.rs/chapter_1_crates/section_4_cache_inmemory.html, https://docs.rs/twilight-cache-inmemory/latest/twilight_cache_inmemory/struct.ResourceType.html, https://docs.rs/twilight-cache-inmemory/latest/twilight_cache_inmemory/struct.InMemoryCacheBuilder.html, GitHub and crates.io metadata.
 
@@ -433,7 +425,6 @@ Sources: https://sqlite.org/wal.html, https://docs.rs/rusqlite/latest/rusqlite/ 
 
 - Frontend Effect testing is in 1.11; frontend tests use `vitest` with `@effect/vitest` for Effect code.
 - **[project]** Rust tests are run with `cargo nextest`, and each service trait (`Platform`, `Storage`) has an in-memory test implementation so logic is tested without the network or a database file.
-- **Not researched yet:** snapshot tests (`insta`), property tests (`proptest`) and end-to-end tests.
 
 ---
 
@@ -490,7 +481,6 @@ Decision: see *No code node; CEL expressions* in `DECISIONS.md`. Conditions and 
 - **[project]** CEL ending is not the same as CEL being cheap. Cap the length of an expression's source and the size of values passed into a context (Discord already limits message sizes).
 - **[project]** The editor checks an expression as the user types, using the same compilation step as the exporter, so a bot with an invalid expression cannot be exported.
 - **[project]** Text templates: split the text on `{{ ... }}`, evaluate each segment as an expression, and convert the result to text. A template with no segments is plain text and costs nothing.
-- **[verify]** Cost of creating an evaluation context for every incoming event; whether one can be reused. Measure before optimizing.
-- **[verify]** How typed node ports (graph model, `ARCHITECTURE.md`) relate to CEL's types.
+- **[official]** `Program::references()` returns the variables and functions an expression uses, so compile needs no tree walker of its own, and `Program` is `Send + Sync`. Build one base `Context::with_env(env)` and give each event a child with `new_inner_scope()`, which borrows the parent.
 
 Sources: https://github.com/google/cel-spec (language definition), https://github.com/cel-rust/cel-rust, crates.io metadata for `cel`, and the size comparison in `DECISIONS.md`.

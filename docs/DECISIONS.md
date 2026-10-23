@@ -7,7 +7,8 @@ The decisions that shape the project: the ones that change how it behaves or tha
 - **Decision.** A bot is exported as a prebuilt, GUI-less `runner` binary with the bot's compiled graph (the payload) appended. Local run uses the same binary: the app compiles the project to a payload file and starts the runner as a child process; the runner prints logs as JSON lines on standard output and the app forwards them to the interface through a Tauri `Channel`. Stopping sends a termination signal, then kills the process after a timeout.
 - **Why.** No Rust toolchain on the user's machine, export takes seconds, and what is tested locally is exactly what is exported. A crash in the bot cannot take the app down, and the token exists only in the child's environment. The cost is one extra process (about 12 MiB in a minimal program).
 - **Revisit if.** Users need native, non-extractable code per bot; keep the graph model clean so generating a Rust project stays possible. Rejected for now: generating Rust and running `cargo build` (a ~1 GB toolchain, minutes per export), and bundling a headless copy of the app (large, includes the webview).
-- **To verify.** How Tauri bundles and locates the runner (the sidecar mechanism), and that the child starts with a cleared environment.
+- **How the app starts it.** The runner is bundled as a sidecar (`externalBin`, named with the target triple) and started with `tauri-plugin-shell` from Rust only: the webview is granted no shell permission, so only the app's Rust code can start processes. The child gets a cleared environment plus the variables it needs.
+- **To verify.** That the sidecar is found and starts in the AppImage and `.deb` packages.
 - **Details.** `ARCHITECTURE.md` §1, §9.
 
 ## Project and payload formats
@@ -31,7 +32,8 @@ The decisions that shape the project: the ones that change how it behaves or tha
 - **Decision.** Bots are strictly no-code. Conditions and formulas are written in CEL, run by the `cel` crate behind an `ExpressionEngine` trait. Text is a template: plain text with `{{ expression }}` segments evaluated by the same engine. Expressions are stored as source and parsed once at startup, and also checked at compile time. Registered functions are pure (no I/O, clock or randomness). Text written by Discord users is inserted as data and never evaluated.
 - **Why.** CEL programs are side-effect-free, always terminate and are deterministic by specification, so safety does not depend on limits we must remember to set. Rhai is smaller (+1.7 MiB against +4.2 MiB for CEL in a minimal runner) but Turing-complete; `evalexpr` is AGPL-3.0, incompatible with our license; `minijinja` adds loops and macros a no-code bot does not need. Peak memory was the same for all.
 - **Revisit if.** Users need logic CEL cannot express (then consider Rhai, or WebAssembly for real sandboxing), or the pre-1.0 `cel` crate becomes a problem; the trait boundary and a pinned minor version limit the damage.
-- **To verify.** The cost of building an evaluation context per event; which `cel` features are needed; whether `cel` exposes the references of a parsed expression.
+- **Checked.** `cel` 0.15 exposes `Program::references()` (the variables and functions an expression uses), `Program` is `Send + Sync`, and a base `Context` can be built once and borrowed per event with `new_inner_scope()`.
+- **To verify.** Which `cel` features are needed (`regex`, `chrono` are optional); that the real conditions of the reference bots evaluate (milestone M3).
 - **Details.** `ARCHITECTURE.md` §6, `DEVELOPMENT-GUIDE.md` §12.
 
 ## Graph model and variables
@@ -39,7 +41,7 @@ The decisions that shape the project: the ones that change how it behaves or tha
 - **Decision.** Lines between nodes define execution order only. Data is not wired: each node exposes named outputs that later nodes read by name (`steps.<alias>.<output>`), in fields or expressions. Every node has a unique, renamable alias; renaming makes the editor rewrite the expressions that use it by parsing them. A flow is acyclic; repetition is a structured node with a maximum count.
 - **Variables** are declared in the project with a name, a type (integer, decimal, text, boolean), a scope and an initial value, and are read as `vars.<scope>.<name>`. The builder chooses the scope per variable: `run`, `bot`, `server`, `member` (server + user) or `user` (global); all but `run` persist. Writes go through the *Set variable* node; counters are an atomic operation.
 - **Why.** Fewer cables and a simpler canvas for people who do not program, matching `{{ }}` templates. Acyclic flows plus CEL mean a run always ends. Declared variables let the condition builder offer them in lists, let compile check types and spelling, and let the database know what to expect.
-- **Cost.** Changing a variable's type later needs a migration; the runner refuses to start on a mismatch.
+- **Cost.** Changing a variable's type later needs care: on a mismatch the runner refuses to start with a message that names the variable. Integer to decimal converts by itself (no data is lost); any other change needs the explicit command `runner --reset-variable <scope>.<name>`, which deletes the stored values of that variable. Data is never lost silently.
 - **Details.** `ARCHITECTURE.md` §4.
 
 ## Node definitions
@@ -51,7 +53,7 @@ The decisions that shape the project: the ones that change how it behaves or tha
 ## Run model and Discord behavior
 
 - **Decision.**
-  - Every event starts an independent run (a tokio task) in parallel, with a global cap on simultaneous runs and limits on steps and time per run (numbers to be measured).
+  - Every event starts an independent run (a tokio task) in parallel, with a global cap on simultaneous runs and limits on steps and time per run. Provisional values, to be adjusted by measurement: 64 simultaneous runs, 500 steps and 60 seconds per run, and 10 seconds of waiting on shutdown.
   - Discord requires a first response within 3 seconds: after 2 seconds without one the runner defers by itself, using the visibility (public or ephemeral) set on the command node.
   - A run that fails with no error path logs the detail and replies with a generic ephemeral message with no internal data.
   - Messages sent by the bot ping nobody by default; a node option enables user or role mentions.
@@ -111,10 +113,15 @@ The decisions that shape the project: the ones that change how it behaves or tha
 - **Decision.** One SemVer version for the whole workspace, so the runner embedded in an exported bot always matches the app that exported it. It starts at `0.1.0` and stays `0.y.z` until the maintainer decides to publish `1.0.0`, with no target date. `release-plz` runs on Conventional Commits with its default rules: a breaking change (`!` or a `BREAKING CHANGE:` footer) bumps the minor number and a feature only the patch, so changes to the project format, the payload or a node's behavior must be marked breaking. Compatibility is guarded by the integer format and payload versions, not by the app version.
 - **Later.** Each node type may carry its own version so a node can change without breaking old projects.
 
+## Identity
+
+- **Decision.** The product is **Bot Inventor**. The repository is `github.com/Ermianr/bot-inventor` and the Tauri application identifier is `io.github.ermianr.bot-inventor`. Environment variables follow the Discord convention for the token (`DISCORD_TOKEN`) and use the prefix `BOT_INVENTOR_` for the rest (`ARCHITECTURE.md` §9.1).
+- **Why fixed now.** Changing the identifier later changes the app's data directory and bundle id; the name is used in crates, packages and paths.
+
 ## Open
 
-- **Application identifier.** Tauri needs a reverse-domain identifier. The repository is `github.com/Ermianr/bot-inventor`; an identifier tied to it, such as `io.github.ermianr.bot-inventor`, is the likely choice but is not decided.
+- **Contact for conduct reports.** The code of conduct still says `TODO`; a dedicated address has to be chosen and published.
 
 ## Things to check while building
 
-Verification items that are not decisions are listed in each section above and marked `[verify]` in `DEVELOPMENT-GUIDE.md`. Also pending: file association of `.botproj` and Tauri file scopes on Linux; whether the squash commit keeps the pull request title for `release-plz`; the final names of environment variables.
+Verification items are listed in each decision above and marked `[verify]` in `DEVELOPMENT-GUIDE.md`. Also pending: file association of `.botproj` and Tauri file scopes on Linux.

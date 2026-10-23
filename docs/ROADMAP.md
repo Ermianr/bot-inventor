@@ -2,7 +2,7 @@
 
 What the project plans and in which order. There is no version target and no dates. How to work on it is in [`CONTRIBUTING.md`](CONTRIBUTING.md); the decisions behind it are in [`DECISIONS.md`](DECISIONS.md).
 
-**Stage: design.** The architecture, decisions, tooling and contribution rules are written. There is no code yet.
+**Stage: design.** The architecture, decisions, tooling and contribution rules are written, and the repository is public. There is no code yet.
 
 ## 1. Vision
 
@@ -16,13 +16,13 @@ The single unit of planned work: a capability stage with a definition of done (D
 
 | M | Name | Depends on | Status | Definition of done (sketch) |
 |---|---|---|---|---|
-| M0 | Workspace skeleton | — | draft | The criteria below |
+| M0 | Workspace skeleton | — | ready | The criteria below |
 | M1 | Project model | M0 | draft | `graph` crate: the sample project saves and reloads identically; a newer `format_version` is refused with a clear message; malformed input returns errors and never panics; a sample file of every format version loads |
 | M2 | Payload codec | M1 | draft | MessagePack + zstd round-trips; a truncated or damaged payload and an unknown version are refused with a clear error; `--dump` prints JSON; a sample payload of every version loads |
-| M3 | Expression engine | M0 | draft | CEL and `{{ }}` templates evaluate; text from Discord users is inserted but never evaluated; the references of an expression are listed; registered functions are pure; bad input returns errors |
+| M3 | Expression engine | M0 | draft | CEL and `{{ }}` templates evaluate; text from Discord users is inserted but never evaluated; the references of an expression are listed; registered functions are pure; bad input returns errors; the real conditions of Welcome and Moderation (role and permission checks, text and number comparisons) evaluate correctly with `cel`, before anything is built around it |
 | M4 | Compile and validate | M2, M3 | draft | Every rule of `ARCHITECTURE.md` §3.3 has a test; each error carries flow, node id and field path; a project with errors cannot be exported; snapshot tests for the messages; property tests for the validator |
 | M5 | Runtime core | M4 | draft | The Ping graph loads from a `.botproj` folder, compiles and runs against `MockPlatform`, which records the reply; limits stop a runaway run; a run that fails with no error path logs the detail and replies generically; every node has a bad-input test; the first "Adding a node" recipe is written |
-| M6 | Variables and storage | M5 | draft | Variables survive a restart on a real SQLite file; the atomic counter loses no counts under concurrent runs; migration and type-mismatch tests pass |
+| M6 | Variables and storage | M5 | draft | Variables survive a restart on a real SQLite file; the atomic counter loses no counts under concurrent runs; migration and type-mismatch tests pass, including integer to decimal conversion and `--reset-variable` |
 | M7 | Discord adapter | M5 | draft | Ping runs on a real test server; only the intents the nodes need are enabled; a second start sends no command changes; the response is deferred after 2 seconds; tests for event normalization and the command diff |
 | M8 | Runner | M2, M7 | draft | `runner --payload` runs Ping from the command line; SIGTERM closes it cleanly; exit codes match `ARCHITECTURE.md` §9.3; a test shows the token never reaches the output |
 | M9 | Export | M8 | draft | The exported folder runs on its own, without the app, on a machine with only the folder; a missing `.env` or asset fails with a clear message; `--dump` equals the compile output |
@@ -44,7 +44,7 @@ The single unit of planned work: a capability stage with a definition of done (D
   - [ ] `cargo xtask dev` opens a Tauri window with the empty Svelte app, with a restrictive CSP and least-privilege capabilities.
   - [ ] The baseline configuration files of `DEVELOPMENT-GUIDE.md` §11 are in place, including `unsafe_code = "forbid"` and the Clippy lints that forbid `unwrap`, `panic`, `unimplemented`, `todo` and `dbg!` in non-test code.
   - [ ] `cargo xtask layers` runs in CI and fails when a crate depends on one it must not (`ARCHITECTURE.md` §2).
-  - [ ] Repository settings are done: labels `accepted`, `in progress` and `needs info`, squash merges default to the pull request title, private vulnerability reporting on, and the contact for Code of Conduct reports filled in.
+  - [ ] The contact for Code of Conduct reports is filled in. (Done already: the repository is public with `LICENSE-MIT`, `LICENSE-APACHE` and `README.md`; labels `accepted`, `in progress` and `needs info`; squash-only merges titled by the pull request; private vulnerability reporting on.)
 - **Security:** no token handling yet; the new dependencies pass `cargo-deny`; the Tauri configuration starts with the least privilege.
 
 ### Done
@@ -55,7 +55,7 @@ The single unit of planned work: a capability stage with a definition of done (D
 
 Ranked; pick from the top unless a draft pull request already claims it.
 
-1. **Create the repository and finish M0.** It needs the application identifier first (see *Open* in `DECISIONS.md`). Everything else waits for it.
+1. **Finish M0.** The repository exists and its settings are done; what remains is the workspace, CI and shell. Everything else waits for it.
 2. **Write the full criteria of M1 (project model) and M3 (expression engine).** Both depend only on M0, so they can start in parallel.
 3. **The chain M2, M4, M5**, until the Ping graph loads, compiles and runs against the mock platform. M5 also writes the first "Adding a node" recipe, which opens the node tasks to contributors.
 

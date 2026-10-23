@@ -167,7 +167,7 @@ Declared in `bot.botproj`: `name`, `type` (integer, decimal, text, boolean), `sc
 3. A run holds its event, the outputs of the steps so far, the per-run variable cache and counters. It walks the flow from the trigger, node by node, following the output port the node returned.
 4. A run ends when a node has no line out of the chosen port, or when a limit is hit.
 
-Limits **[proposed, numbers to be measured]**: a global cap on simultaneous runs, a maximum number of steps per run, a maximum duration per run. When a run is dropped for a limit, it is logged at warning level with the flow and node.
+Limits (provisional values, adjusted by measurement): a global cap of 64 simultaneous runs, a maximum of 500 steps per run and a maximum duration of 60 seconds per run. When a run is dropped for a limit, it is logged at warning level with the flow and node.
 
 ### 5.2 Node contract **[proposed]**
 
@@ -215,8 +215,9 @@ Applied only where a measurement justifies them (no fixed budgets).
 ## 6. Expression engine
 
 - `ExpressionEngine` is a trait in `runtime`; the implementation uses the `cel` crate.
-- Compile parses each expression to check it and to extract the names it references; the payload stores the source text and the runner parses it once when it starts.
-- CEL gives no static type check in this crate **[verify]**, so type mistakes appear at run time and take the `error` path; compile catches syntax and unknown names.
+- Compile parses each expression to check it and to list the names it references with `Program::references()`; the payload stores the source text and the runner parses it once when it starts. Compiled programs are `Send + Sync` and shared across runs.
+- One base `Context` (with the standard library) is built once; each event gets a child from `new_inner_scope()`, which borrows the parent, so the context is not rebuilt per event.
+- CEL gives no static type check in this crate, so type mistakes appear at run time and take the `error` path; compile catches syntax and unknown names.
 - Registered functions are pure: no I/O, no clock, no randomness. Time-dependent values are fields of the event (`event.timestamp`) or the run, not functions.
 - An expression has a maximum source length, and values placed in the context are limited in size.
 
@@ -249,7 +250,7 @@ Applied only where a measurement justifies them (no fixed budgets).
   ```
 
   A missing row means the declared initial value. Tables for the bot's own data (*Next* in the roadmap) will use a separate namespace and are designed in their own milestone.
-- **Migrations:** the runner owns its schema version (`PRAGMA user_version`). On start it refuses a database newer than it understands; for an older one it copies the file to a backup and migrates inside a transaction. The runner also records the declared type of each variable; if the payload declares a different type for a stored variable, it refuses to start with a message that names the variable.
+- **Migrations:** the runner owns its schema version (`PRAGMA user_version`). On start it refuses a database newer than it understands; for an older one it copies the file to a backup and migrates inside a transaction. The runner also records the declared type of each variable; if the payload declares a different type for a stored variable, it refuses to start with a message that names the variable. Integer to decimal converts by itself; any other change needs `runner --reset-variable <scope>.<name>`, which deletes the stored values of that variable.
 - The exporter never copies a database, and the editor's test data stays in `.botinventor/`.
 
 ## 9. Local run and export
@@ -257,7 +258,7 @@ Applied only where a measurement justifies them (no fixed budgets).
 ### 9.1 Local run
 
 1. The app compiles the project to `.botinventor/run/payload.bin`.
-2. It starts the runner (a sidecar bundled with the app **[verify]**) with a cleared environment and only these variables **[proposed]**: the path to the payload, the project's `.env`, `assets/`, and `.botinventor/data/` as the data directory.
+2. It starts the runner (a sidecar bundled with `externalBin` and started with `tauri-plugin-shell` from Rust; the webview has no shell permission) with a cleared environment and only these variables: `BOT_INVENTOR_PAYLOAD` (the payload file), `BOT_INVENTOR_ENV_FILE` (the project's `.env`), `BOT_INVENTOR_ASSETS_DIR` (`assets/`) and `BOT_INVENTOR_DATA_DIR` (`.botinventor/data/`). In an exported bot the same directory variables are optional overrides; the token and `DISCORD_DEV_GUILD_ID` are read from `.env`.
 3. The runner reads the token from `.env` itself. The token never goes through the webview; the frontend only learns whether one is set. Writing the token creates `.env` with mode 0600.
 4. The runner prints **JSON lines** on standard output. The app parses them and forwards them through a Tauri `Channel`, which is meant for ordered, high-volume data (events are not).
 5. Stop: terminate signal, then kill after a timeout. An unexpected exit is shown with its exit status. A change to the payload means stop and start again.
@@ -272,7 +273,7 @@ Applied only where a measurement justifies them (no fixed budgets).
 
 ### 9.3 Runner command line and exit codes **[proposed]**
 
-`runner` (embedded payload) · `--payload <file>` · `--dump` · `--check` (verify payload, `.env` and assets without connecting) · `--version`. Exit code `0` for a clean shutdown, `2` for a configuration problem (missing token or asset), `3` for an unknown payload version, `1` otherwise.
+`runner` (embedded payload) · `--payload <file>` · `--dump` · `--check` (verify payload, `.env` and assets without connecting) · `--reset-variable <scope>.<name>` · `--version`. Exit code `0` for a clean shutdown, `2` for a configuration problem (missing token or asset), `3` for an unknown payload version, `1` otherwise.
 
 ### 9.4 Export
 
@@ -311,9 +312,6 @@ Plugins and third-party nodes (nodes are a closed catalog compiled into `runtime
 
 To settle in the milestone that first touches each one:
 
-1. Numeric defaults for run limits, the cap on simultaneous runs and the shutdown wait. **[measure]**
-2. How Tauri bundles and locates the runner as a sidecar, and that the cleared environment still lets it start. **[verify]**
-3. Whether the `cel` crate exposes the references (variables and functions) of a parsed expression, which compile relies on; otherwise a small walker over the parse tree is needed. **[verify]**
-4. Whether to cache the CEL evaluation context per event or build it each time. **[measure]**
-5. Behavior when a variable's type is changed in a project that already has data: today the runner refuses to start; a guided migration may be wanted.
-6. Naming of environment variables (`DISCORD_TOKEN`, `DISCORD_DEV_GUILD_ID` and the directory overrides).
+1. The numeric limits above are provisional and need measuring. **[measure]**
+2. That the bundled runner starts in the AppImage and `.deb` packages with a cleared environment. **[verify]**
+3. Which `cel` features are really needed, and that the real conditions of the reference bots evaluate. **[verify]**
