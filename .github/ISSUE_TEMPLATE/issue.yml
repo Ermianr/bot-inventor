@@ -13,7 +13,7 @@ body:
       options:
         - Bug (wrong behavior)
         - Error (a crash or a panic)
-        - Limitation (works, but not for this case)
+        - Limitation (works, only not for this case)
         - Missing test
         - Technical debt
         - Documentation
@@ -45,7 +45,7 @@ body:
     attributes:
       label: Impact
       options:
-        - Can lose data or exposes something it should not (if it is a security problem, do not use this form)
+        - Can lose data or exposes something it should not (a security problem does not belong in this form)
         - Wrong result in a supported case
         - Minor or cosmetic
     validations:
