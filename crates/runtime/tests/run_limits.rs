@@ -24,6 +24,7 @@ async fn a_run_may_take_the_steps_of_the_limit_and_no_more() {
     assert_eq!(records[0].level, Level::Warn);
     assert_eq!(records[0].flow.as_deref(), Some("main"));
     assert_eq!(records[0].node.as_deref(), Some("n500"));
+    assert_eq!(records[0].run, Some(1), "the first run of this runtime");
     assert!(records[0].message.contains("500 steps"));
 }
 
@@ -70,6 +71,7 @@ async fn a_run_is_stopped_when_it_takes_too_long() {
     assert_eq!(records.len(), 1);
     assert_eq!(records[0].level, Level::Warn);
     assert_eq!(records[0].node.as_deref(), Some("n2"));
+    assert_eq!(records[0].run, Some(1));
     assert!(records[0].message.contains("1 seconds"));
 }
 
@@ -92,6 +94,7 @@ async fn events_past_the_cap_of_simultaneous_runs_are_dropped() {
     assert_eq!(records.len(), 1);
     assert_eq!(records[0].level, Level::Warn);
     assert_eq!(records[0].flow.as_deref(), Some("main"));
+    assert_eq!(records[0].run, None, "a run that was refused has no number");
 
     runtime.drain().await;
     assert_eq!(runtime.platform().actions().len(), 2);

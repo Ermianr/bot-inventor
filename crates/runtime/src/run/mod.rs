@@ -12,6 +12,7 @@ mod walk;
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use graph::Payload;
@@ -111,6 +112,8 @@ struct Inner<P, S> {
     /// The `vars` namespace a run starts with: every variable at its initial value.
     vars: Value,
     permits: Arc<Semaphore>,
+    /// The number of runs started, which numbers the next one.
+    runs_started: AtomicU64,
 }
 
 impl<P: Platform> Runtime<P> {
@@ -194,6 +197,7 @@ impl<P: Platform, S: Storage> Runtime<P, S> {
                 vars: decls.namespace(),
                 decls,
                 permits,
+                runs_started: AtomicU64::new(0),
             }),
         })
     }
@@ -225,6 +229,7 @@ impl<P: Platform, S: Storage> Runtime<P, S> {
             inner.warn(
                 None,
                 None,
+                None,
                 "an event arrived outside an async runtime and was dropped",
             );
             return result;
@@ -235,6 +240,7 @@ impl<P: Platform, S: Storage> Runtime<P, S> {
             };
             let Ok(permit) = Arc::clone(&inner.permits).try_acquire_owned() else {
                 inner.warn(
+                    None,
                     Some(name),
                     None,
                     &format!(
@@ -265,9 +271,10 @@ impl<P: Platform, S: Storage> Runtime<P, S> {
 }
 
 impl<P: Platform, S: Storage> Inner<P, S> {
-    fn warn(&self, flow: Option<String>, node: Option<String>, message: &str) {
+    fn warn(&self, run: Option<u64>, flow: Option<String>, node: Option<String>, message: &str) {
         self.log.record(LogRecord {
             level: Level::Warn,
+            run,
             flow,
             node,
             message: message.to_owned(),
@@ -278,10 +285,15 @@ impl<P: Platform, S: Storage> Inner<P, S> {
         let Some(flow) = self.flows.get(flow_index) else {
             return;
         };
+        let run = self
+            .runs_started
+            .fetch_add(1, Ordering::Relaxed)
+            .saturating_add(1);
         let mut state = RunState::new(event, self.vars.clone());
         let _timer = state.interaction.clone().map(|interaction| {
             DeferTimer(tokio::spawn(defer_later(
                 Arc::clone(self),
+                run,
                 flow.name.clone(),
                 interaction,
                 Arc::clone(&state.response),
@@ -299,6 +311,7 @@ impl<P: Platform, S: Storage> Inner<P, S> {
             Ok(Ending::Failed { node, error }) => {
                 self.log.record(LogRecord {
                     level: Level::Error,
+                    run: Some(run),
                     flow: Some(flow.name.clone()),
                     node: node_id(Some(node)),
                     message: format!(
@@ -312,6 +325,7 @@ impl<P: Platform, S: Storage> Inner<P, S> {
             Ok(Ending::TooManySteps { node }) => {
                 self.log.record(LogRecord {
                     level: Level::Warn,
+                    run: Some(run),
                     flow: Some(flow.name.clone()),
                     node: node_id(Some(node)),
                     message: format!(
@@ -324,6 +338,7 @@ impl<P: Platform, S: Storage> Inner<P, S> {
             Err(_elapsed) => {
                 self.log.record(LogRecord {
                     level: Level::Warn,
+                    run: Some(run),
                     flow: Some(flow.name.clone()),
                     node: node_id(state.at),
                     message: format!(
@@ -335,12 +350,12 @@ impl<P: Platform, S: Storage> Inner<P, S> {
             }
         };
         if failed {
-            self.tell_user(flow, &state).await;
+            self.tell_user(run, flow, &state).await;
         }
     }
 
     /// The user is still waiting for a response: send the generic message, with no detail.
-    async fn tell_user(&self, flow: &Flow, state: &RunState) {
+    async fn tell_user(&self, run: u64, flow: &Flow, state: &RunState) {
         let Some(interaction) = state.interaction.clone() else {
             return;
         };
@@ -363,6 +378,7 @@ impl<P: Platform, S: Storage> Inner<P, S> {
             *stage = Stage::Responded;
         } else {
             self.warn(
+                Some(run),
                 Some(flow.name.clone()),
                 None,
                 "the generic failure message could not be sent",
@@ -384,6 +400,7 @@ impl Drop for DeferTimer {
 /// is logged and the run goes on: its reply still tries to be the response.
 async fn defer_later<P: Platform, S: Storage>(
     inner: Arc<Inner<P, S>>,
+    run: u64,
     flow: String,
     interaction: Interaction,
     response: Arc<Response>,
@@ -401,6 +418,11 @@ async fn defer_later<P: Platform, S: Storage>(
     if matches!(deferred, Ok(Ok(()))) {
         *stage = Stage::Deferred;
     } else {
-        inner.warn(Some(flow), None, "the interaction could not be deferred");
+        inner.warn(
+            Some(run),
+            Some(flow),
+            None,
+            "the interaction could not be deferred",
+        );
     }
 }
