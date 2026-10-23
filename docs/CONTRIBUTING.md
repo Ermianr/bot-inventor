@@ -109,7 +109,6 @@ feat(graph)!: rename the variable scope field
 You may use AI tools. You are responsible for what you submit.
 
 - Read, understand and test the code before you open the pull request, and say so in the description. A pull request that clearly was not reviewed by its author may be closed.
-- If a tool wrote a significant part, mention it; a `Co-Authored-By` trailer is welcome.
 - Write your own replies to review comments (using a tool only to translate is fine).
 - Coding agents working in this repository also follow [`../AGENTS.md`](../AGENTS.md).
 
