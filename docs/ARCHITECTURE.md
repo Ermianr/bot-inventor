@@ -95,17 +95,24 @@ my-bot/
 
 ### 3.2 Payload (what the runner executes)
 
-MessagePack compressed with zstd. It carries only logic: no positions, comments or groups. Contents **[proposed]**:
+MessagePack (with field names) compressed with zstd and its content checksum. It carries only logic: no positions, comments or groups. The types are `graph::Payload` and the codec is `Payload::encode` and `Payload::decode`. Contents:
 
 - the payload version (integer) and the app version that produced it;
-- for each flow: nodes in an array, lines as index adjacency (no name lookups at run time), and the pre-parsed settings of every node;
-- the **expression sources** as text, parsed once when the runner starts (the AST is not stored);
-- a table from event kind to the flows that start with it;
-- the **command definitions** to register, with a hash of each;
+- for each flow: its name, the index of its trigger and its nodes in an array; each node has its id, alias, type, type version, settings, expression sources and its lines as index adjacency (output port to node indexes), so there are no name lookups at run time;
+- the **expression sources** as text, with the path of the setting that holds each one, parsed once when the runner starts (the AST is not stored);
+- a table from event kind to the flows that start with it (indexes);
+- the **command definitions** to register, with the flow that handles each and a hash of the definition;
 - the variable declarations;
 - the computed requirements: Discord intents, which cache resources are needed, the assets that are referenced.
 
-Container when exported **[proposed]**: `[runner executable][payload bytes][footer]`, where the footer is a magic value, the container version, and the payload length. The runner reads the end of its own executable to find it (and uses `--payload <file>` for local runs). zstd's content checksum catches a damaged payload. The runner has `--dump`, which prints the payload as JSON.
+What the codec guarantees (the limits are provisional **[measure]**):
+
+- The same payload always gives the same bytes. Settings are written with sorted keys.
+- Decoding reads the version first. Only the current version is read: a newer one is refused with a message that says to update, an older one with a message that says to export the bot again (a payload is built from the project each time a bot is run or exported, so it has no migration). The runner exits with code 3 for either (§9.3).
+- Decoding checks that every index (a line target, a trigger, an event or command flow) points inside its list, and refuses more than 16 MiB compressed, more than 64 MiB decompressed, a zstd window above 64 MiB and MessagePack nested deeper than 128 levels. Encoding refuses what decoding would refuse.
+- A damaged payload is caught by the zstd checksum; a truncated one by the zstd frame.
+
+Container when exported: `[runner executable][payload bytes][footer]`. The footer has a fixed size of 20 bytes: the magic `BOTINVPL`, the container version (`u32`) and the payload length (`u64`), the numbers in little-endian. The runner reads the end of its own executable to find the payload (`graph::read_container`; a file with no footer returns nothing, and the runner uses `--payload <file>` for local runs). A footer with a newer container version, or a length larger than the file or the limit, is an error. The runner has `--dump`, which prints the payload as JSON (`graph::dump_json`); `cargo xtask dump <file>` does the same during development.
 
 ### 3.3 Compile (project → payload)
 

@@ -21,6 +21,7 @@ Tasks:
   build                   Build the app
   layers                  Check the crate dependency rules (docs/ARCHITECTURE.md §2)
   bindings [--check]      Regenerate the TypeScript types; --check fails if they changed
+  dump <file>             Print a payload, or the payload at the end of an exported bot, as JSON
 ";
 
 fn main() -> ExitCode {
@@ -45,6 +46,7 @@ fn dispatch(args: Vec<String>) -> Result<()> {
         "build" => tasks::build(),
         "layers" => layers::run(),
         "bindings" => tasks::bindings(rest),
+        "dump" => tasks::dump(rest),
         "help" | "--help" | "-h" => {
             print!("{HELP}");
             Ok(())
