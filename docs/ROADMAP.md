@@ -22,7 +22,7 @@ The single unit of planned work: a capability stage with a definition of done (D
 | M3 | Expression engine | M0 | done | The entry below |
 | M4 | Compile and validate | M2, M3 | done | The entry below |
 | M5 | Runtime core | M4 | done | The entry below |
-| M6 | Variables and storage | M5 | draft | Variables survive a restart on a real SQLite file; the atomic counter loses no counts under concurrent runs; migration and type-mismatch tests pass, including integer to decimal conversion and `--reset-variable` |
+| M6 | Variables and storage | M5 | in progress | The criteria below |
 | M7 | Discord adapter | M5 | draft | Ping runs on a real test server; only the intents the nodes need are enabled; a second start sends no command changes; the response is deferred after 2 seconds; tests for event normalization and the command diff |
 | M8 | Runner | M2, M7 | draft | `runner --payload` runs Ping from the command line; SIGTERM closes it cleanly; exit codes match `ARCHITECTURE.md` §9.3; a test shows the token never reaches the output |
 | M9 | Export | M8 | draft | The exported folder runs on its own, without the app, on a machine with only the folder; a missing `.env` or asset fails with a clear message; `--dump` equals the compile output |
@@ -32,6 +32,16 @@ The single unit of planned work: a capability stage with a definition of done (D
 | M13 | Reference bots | M6, M7, M12 | draft | Welcome and Moderation are built in the editor, run locally and exported; the nodes they need are done as node tasks |
 | M14 | More nodes | M13 | draft | The *Next* rows of section 4, one small task each; each ships with schema, executor and bad-input test |
 | M15 | Beyond Linux and distribution | M14 | draft | Linux packages (AppImage, `.deb`), release pipeline with `release-plz`, docs site (`mdBook`) and other systems; to be written when M13 is done |
+
+### In progress
+
+- **M6. Variables and storage.** Persistent variables, from the `Storage` trait to a real SQLite file.
+  - **`Storage` (`runtime::storage`).** A trait with `check_variables` (records the declared type of every persistent variable and applies the type rules below), `get_many` (one batch), `set`, `add` (the atomic counter) and `reset_variable`. A `StoredValue` is an integer, a decimal, text (at most 4000 characters) or a boolean, so a value of another shape cannot be stored. `MemoryStorage` is the implementation for tests. `Runtime` takes a storage as its second type parameter, with `MemoryStorage` by default, so the M5 constructors keep working.
+  - **`storage-sqlite`.** A new crate on `rusqlite` (`bundled`): one connection on a dedicated thread, WAL, `synchronous = FULL`, foreign keys, a small cache. The file is created with mode 0600 and a symbolic link is refused. The tables are the ones in `ARCHITECTURE.md` §8. The schema version is `PRAGMA user_version`: a newer database is refused; an older one is copied first (`VACUUM INTO`, never over an existing backup) and migrated in one transaction.
+  - **Types.** A change of type is checked when the bot starts. Integer to decimal converts the stored values. Any other change is refused with a message that names the variable and the `--reset-variable` command, unless nothing is stored for it. `reset_variable` deletes the values and the recorded type of that one variable; the `--reset-variable` flag is wired to it in M8.
+  - **In a run.** Before a node runs, the variables its expressions read are fetched in one batch, once per run; the writes of the run update that copy. A missing row reads as `initial`; `run` variables never touch the storage. The key comes from the event: `event.guild.id` for `server`, `event.guild.id` and `event.user.id` for `member`, `event.user.id` for `user`. An event without the ids it needs fails the node with `invalid_value`; a storage failure fails it with the new `error.kind` `storage`, with a message that names no value.
+  - **`data.set_variable`.** Settings `variable` (`scope.name`), `operation` (`set` or `add`) and `value` (an expression). `add` is the atomic counter: one statement, with no lost update, and it fails instead of wrapping on an overflow. It publishes `value`, the new value. Compile reports a variable that is not declared and an `add` on text or boolean.
+  - **Tests.** A real SQLite file: a value written survives closing and reopening; 64 tasks adding at once lose no count; a sample database of every schema version opens (a test requires one per version), and a stand-in migration shows the backup, the single transaction and the refusal of a newer database; a type mismatch names the variable; integer to decimal keeps the values; `reset_variable` touches only its variable; `member` and `user` values do not mix. The runtime has the same behaviours on `MemoryStorage`, a bad-input test for the node over payloads that skip compile, and no panic with arbitrary values.
 
 ### Done
 
