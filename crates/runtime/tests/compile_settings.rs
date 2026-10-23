@@ -209,5 +209,5 @@ fn the_built_in_catalog_has_distinct_keys() {
     let mut sorted = keys.clone();
     sorted.dedup();
     assert_eq!(keys, sorted);
-    assert_eq!(keys.len(), 3);
+    assert_eq!(keys.len(), 4);
 }

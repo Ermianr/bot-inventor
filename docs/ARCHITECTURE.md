@@ -41,7 +41,7 @@ The names of fields, commands and environment variables below are working names.
 | `graph` | Data only: the types of the project and of the payload, their versions, migrations, load/save of the `.botproj` folder, payload encoding | nothing |
 | `runtime` | The node catalog (schema + execution of every node), validation, compile (project → payload), the expression engine behind `ExpressionEngine`, the dispatcher and run executor, the `Platform` and `Storage` traits, a `MockPlatform` and in-memory storage for tests | `graph` |
 | `platform-discord` | The `Platform` implementation on twilight: gateway, HTTP, cache, command registration | `runtime` (traits) |
-| `storage-sqlite` | The `Storage` implementation on `rusqlite`: schema, migrations, a dedicated thread | `runtime` (traits) |
+| `storage-sqlite` | The `Storage` implementation on `rusqlite`: schema, migrations, a dedicated thread | `runtime` (traits, and the `graph` types it re-exports) |
 | `exporter` | Packaging: copy the runner, append the payload, copy assets, write `.env.example` | `graph` |
 | `runner` | The binary: reads its payload, reads `.env`, wires the runtime to Discord and SQLite, handles signals | `graph`, `runtime`, `platform-discord`, `storage-sqlite` |
 | `apps/desktop` | The Tauri app: commands, run supervisor, the Svelte frontend | `graph`, `runtime`, `exporter` |
@@ -165,9 +165,11 @@ Declared in `bot.botproj`: `name`, `type` (integer, decimal, text, boolean), `sc
 | `member` | guild id + user id | yes |
 | `user` | user id | yes |
 
-- Variables are **read** through `vars.<scope>.<name>` in expressions and **written** by the *Set variable* node. There is no *Get variable* node.
-- Expression functions must be pure, so reading is done before evaluation: the compile step lists the variables each node's expressions mention, and the runtime fetches them in one batch just before the node runs. Within a run, reads are kept in a per-run cache that the run's own writes update.
-- Across runs there is no locking. For counters, use the atomic *counter* operation (`value = value + n` in one statement).
+- Variables are **read** through `vars.<scope>.<name>` in expressions and **written** by the *Set variable* node (`data.set_variable`: `variable` as `scope.name`, `operation` `set` or `add`, and `value` as an expression of the type of the variable; it publishes the new value as `value`). There is no *Get variable* node.
+- Expression functions must be pure, so reading is done before evaluation: the runtime takes the variables each node's expressions mention (the same list the compile step reports) and fetches the persistent ones in one batch just before the node runs, once per run. Within a run, reads are kept in a per-run cache that the run's own writes update. A missing row reads as `initial`; a decimal declared with a whole number reads as a decimal. `run` variables live in the run and never reach the storage.
+- The key of a stored value comes from the event: `event.guild.id` (`server`), `event.guild.id` and `event.user.id` (`member`) or `event.user.id` (`user`), each a Discord id of at most 20 digits. An event without them (a command used in a direct message, for example) fails the node that needs them with `error.kind` `invalid_value`.
+- Across runs there is no locking. For counters, use the atomic `add` operation of *Set variable* (`value = value + n` in one statement). It fails with `invalid_value` instead of wrapping when the result does not fit.
+- A text variable holds at most 4000 characters; a decimal is finite.
 
 ## 5. Execution model
 
@@ -175,7 +177,7 @@ Declared in `bot.botproj`: `name`, `type` (integer, decimal, text, boolean), `sc
 
 1. The platform delivers a normalized **event** (`runtime::platform::Event`: its kind, for a slash command the command name, the fields a flow reads as `event.*` and the interaction a reply goes to).
 2. `Runtime::dispatch` looks up the flows whose trigger matches (for a slash command, the command name; command names are unique across flows) and starts one **run** per flow as an independent tokio task.
-3. A run holds its event, the outputs of the steps so far and the declared variables (until storage arrives, each reads its `initial` value). It walks the flow from the trigger. Nodes are in topological order, so the next node to run is the queued one with the lowest index: a node runs **once**, after every node before it that is going to run, which is what the compile checks on `steps.*` assume. Each node follows the output port it returned, and a port can lead to several nodes.
+3. A run holds its event, the outputs of the steps so far and the declared variables (each reads its `initial` value until the storage gives it another, §4.3). It walks the flow from the trigger. Nodes are in topological order, so the next node to run is the queued one with the lowest index: a node runs **once**, after every node before it that is going to run, which is what the compile checks on `steps.*` assume. Each node follows the output port it returned, and a port can lead to several nodes.
 4. A run ends when no node is queued, or when a limit is hit.
 
 Limits (provisional values, adjusted by measurement; `runtime::run::Limits`): a global cap of 64 simultaneous runs, a maximum of 500 steps per run (each executed node is a step) and a maximum duration of 60 seconds per run. When a run is dropped or stopped for a limit, it is logged at warning level with the flow and node. What happens to runs goes to a `RunLog` (a trait; the runner turns the records into the lines of §9.2), and every message names the problem and never a value.
@@ -185,11 +187,11 @@ Limits (provisional values, adjusted by measurement; `runtime::run::Limits`): a 
 A node type is declared in one place in `runtime` and has two parts: a **schema** (data) and an **executor**. The schema is real: `runtime::catalog` has `NodeSpec` (type id, version, fields, output ports, named outputs, requirements and, for a trigger, the event it starts and the fields of that event), `FieldSpec` and `FieldKind` (text, expression, integer, boolean, closed list of words, asset path, list of objects), and a `Registry` keyed by type and version. The schema and the executor of a node are in one file of `runtime::nodes`, and the executor is a function over a `NodeCx` (the platform, the node's settings and compiled expressions, the state of the run and `error.*` on an error path):
 
 ```rust
-async fn execute<P: Platform>(cx: &mut NodeCx<'_, P>) -> Result<Outcome, NodeError>
+async fn execute<P: Platform, S: Storage>(cx: &mut NodeCx<'_, P, S>) -> Result<Outcome, NodeError>
 // Outcome { port, outputs }; a NodeError sends the run to the "error" port.
 ```
 
-`NodeError` has a closed kind, which is `error.kind`: `expression`, `invalid_value`, `missing_permissions` or `platform`. The runtime dispatches on an enum of node types rather than on a trait object, so `Platform` stays a plain generic trait. The steps to add one are in `CONTRIBUTING.md` §8.
+`NodeError` has a closed kind, which is `error.kind`: `expression`, `invalid_value`, `missing_permissions`, `platform` or `storage` (a variable could not be read or written; its message names a variable at most, never a value or the detail of the database, because a flow can send `error.message` to a user). The runtime dispatches on an enum of node types rather than on a trait object, so `Platform` stays a plain generic trait. The steps to add one are in `CONTRIBUTING.md` §8.
 
 - The schema will be serialized to the frontend (through `tauri-specta`, with the editor in M10) and drives the property panel. Compile uses the same schema.
 - A test checks that every schema has an executor and every executor has a schema.
@@ -239,22 +241,34 @@ Applied only where a measurement justifies them (no fixed budgets).
 
 ## 8. Storage
 
-- One SQLite database file `bot.sqlite` in the data directory, created by the runner on first run. WAL mode, `synchronous = FULL`, a small `cache_size`, foreign keys on.
-- `rusqlite` is synchronous: one connection lives on a **dedicated thread** that receives requests over a channel. This serializes writes, keeps a single connection's memory, and keeps blocking calls off the async runtime **[proposed]**.
-- Schema **[proposed]**:
+- One SQLite database file `bot.sqlite` in the data directory, created by the runner on first run with mode 0600 (a link or a folder at that path is refused). WAL mode, `synchronous = FULL`, foreign keys on, a 1 MiB `cache_size`, a 5 second `busy_timeout` and `trusted_schema` off.
+- `rusqlite` is synchronous: one connection lives on a **dedicated thread** that receives jobs over a channel (`storage-sqlite`). This serializes writes, keeps a single connection's memory, and keeps blocking calls off the async runtime. Dropping the last handle ends the thread and closes the database, folding the log in.
+- The `Storage` trait (`runtime::storage`) has `check_variables`, `get_many` (one batch, one snapshot), `set`, `add` and `reset_variable`. A value is a `StoredValue`: an integer, a decimal, a text or a boolean.
+- Schema (version 1):
 
   ```sql
+  CREATE TABLE variable_types (
+    scope TEXT NOT NULL CHECK (scope IN ('bot', 'server', 'member', 'user')),
+    name  TEXT NOT NULL,
+    type  TEXT NOT NULL CHECK (type IN ('integer', 'decimal', 'text', 'boolean')),
+    PRIMARY KEY (scope, name)
+  ) STRICT, WITHOUT ROWID;
+
   CREATE TABLE variables (
-    scope  TEXT NOT NULL,       -- 'bot' | 'server' | 'member' | 'user'
-    key    TEXT NOT NULL,       -- '' | guild id | 'guild:user' | user id
-    name   TEXT NOT NULL,
-    value  ANY,
-    PRIMARY KEY (scope, key, name)
+    scope TEXT NOT NULL,
+    key   TEXT NOT NULL,        -- '' | guild id | 'guild:user' | user id
+    name  TEXT NOT NULL,
+    value ANY NOT NULL,         -- integer, real, text; a boolean is 0 or 1
+    PRIMARY KEY (scope, key, name),
+    FOREIGN KEY (scope, name) REFERENCES variable_types (scope, name)
+      ON DELETE CASCADE ON UPDATE CASCADE
   ) STRICT, WITHOUT ROWID;
   ```
 
-  A missing row means the declared initial value. Tables for the bot's own data (*Next* in the roadmap) will use a separate namespace and are designed in their own milestone.
-- **Migrations:** the runner owns its schema version (`PRAGMA user_version`). On start it refuses a database newer than it understands; for an older one it copies the file to a backup and migrates inside a transaction. The runner also records the declared type of each variable; if the payload declares a different type for a stored variable, it refuses to start with a message that names the variable. Integer to decimal converts by itself; any other change needs `runner --reset-variable <scope>.<name>`, which deletes the stored values of that variable.
+  A missing row means the declared initial value. A write names the type it expects and is refused by the database if the variable is not recorded with that type. Tables for the bot's own data (*Next* in the roadmap) will use a separate namespace and are designed in their own milestone.
+- **Counter:** `add` is one `INSERT ... ON CONFLICT DO UPDATE SET value = value + n ... RETURNING value`, guarded so that a sum that stops being an integer, or a decimal that stops being finite, changes nothing and is reported as an overflow. Runs on one connection and connections on one file both lose no count.
+- **Migrations:** the schema version is `PRAGMA user_version`, and `MIGRATIONS[n]` (`storage-sqlite`) takes version `n` to `n + 1`. On start the runner refuses a database newer than it understands (the message says to update the app) and a database of another program (version 0 with tables); for an older one it first writes a consistent copy next to it (`VACUUM INTO`, named `bot.sqlite.v<version>.bak`, then `.bak.1` and so on; an existing file is never overwritten, and the copy has mode 0600) and migrates inside one transaction, which a failing step rolls back. Every version has a sample database in `crates/storage-sqlite/tests/samples/`.
+- **Types:** `check_variables` runs when the bot starts, before the first run, and records the declared type of each persistent variable (a `run` variable is not stored). If the payload declares a different type for a stored variable, it refuses to start with a message that names the variable and `--reset-variable <scope>.<name>`. Integer to decimal converts the values (exact up to 2^53). A type with no value stored for it changes without a reset. Any other change needs `runner --reset-variable <scope>.<name>`, which deletes the stored values and the recorded type of that variable (`Storage::reset_variable`). The check is all or nothing, and a variable that is stored but no longer declared keeps its values.
 - The exporter never copies a database, and the editor's test data stays in `.botinventor/`.
 
 ## 9. Local run and export

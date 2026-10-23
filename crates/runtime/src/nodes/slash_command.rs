@@ -2,6 +2,7 @@
 
 use crate::catalog::{FieldKind, FieldSpec, NodeRequires, NodeSpec, PortSpec, TriggerSpec};
 use crate::platform::Platform;
+use crate::storage::Storage;
 
 use super::{NodeCx, NodeError, Outcome};
 
@@ -101,7 +102,9 @@ pub(super) static SPEC: NodeSpec = NodeSpec {
 };
 
 /// Remembers whether the replies of this run are visible only to the user.
-pub(super) fn execute<P: Platform>(cx: &mut NodeCx<'_, P>) -> Result<Outcome, NodeError> {
+pub(super) fn execute<P: Platform, S: Storage>(
+    cx: &mut NodeCx<'_, P, S>,
+) -> Result<Outcome, NodeError> {
     cx.run.ephemeral = cx.flag("ephemeral", false)?;
     Ok(Outcome::next())
 }

@@ -3,10 +3,11 @@
 //! A [`Runtime`] holds a payload with its expressions compiled. [`Runtime::dispatch`] looks up
 //! the flows an event starts and runs each one as its own task, within the limits of
 //! [`Limits`]. What happens to a run is written to a [`RunLog`]; what it does to the world goes
-//! through the [`Platform`].
+//! through the [`Platform`] and what it keeps between runs through the [`Storage`].
 
 mod log;
 mod prepare;
+pub(crate) mod vars;
 mod walk;
 
 use std::collections::HashMap;
@@ -19,11 +20,13 @@ use tokio::sync::Semaphore;
 
 pub use log::{Level, LogRecord, MemoryLog, NoLog, RunLog};
 pub(crate) use prepare::{Compiled, Flow, PreparedNode};
+pub(crate) use vars::{Declarations, Declared};
 pub(crate) use walk::RunState;
 
 use crate::catalog::Registry;
 use crate::expr::{CelEngine, ExpressionEngine};
 use crate::platform::{AllowedMentions, Delivery, Event, Platform, Reply};
+use crate::storage::{MemoryStorage, Storage};
 use walk::Ending;
 
 /// What a user sees when a run fails and nothing handles the error. It says nothing about why.
@@ -82,12 +85,13 @@ pub struct Dispatch {
 }
 
 /// A compiled bot ready to run.
-pub struct Runtime<P: Platform> {
-    inner: Arc<Inner<P>>,
+pub struct Runtime<P: Platform, S: Storage = MemoryStorage> {
+    inner: Arc<Inner<P, S>>,
 }
 
-struct Inner<P> {
+struct Inner<P, S> {
     platform: P,
+    storage: S,
     log: Arc<dyn RunLog>,
     limits: Limits,
     flows: Vec<Flow>,
@@ -95,12 +99,15 @@ struct Inner<P> {
     commands: HashMap<String, usize>,
     /// Event kind to flows.
     routes: HashMap<String, Vec<usize>>,
+    decls: Declarations,
+    /// The `vars` namespace a run starts with: every variable at its initial value.
     vars: Value,
     permits: Arc<Semaphore>,
 }
 
 impl<P: Platform> Runtime<P> {
-    /// Prepares `payload` with the nodes the app ships and the default limits.
+    /// Prepares `payload` with the nodes the app ships, the default limits and the variables kept
+    /// in memory.
     ///
     /// # Errors
     ///
@@ -122,10 +129,31 @@ impl<P: Platform> Runtime<P> {
         engine: &dyn ExpressionEngine,
         limits: Limits,
     ) -> Result<Self, RuntimeError> {
+        Runtime::with_storage(payload, platform, MemoryStorage::new(), log, engine, limits)
+    }
+}
+
+impl<P: Platform, S: Storage> Runtime<P, S> {
+    /// Like [`with`](Runtime::with), with the storage the variables are kept in. The caller has
+    /// run [`Storage::check_variables`] on it for the variables of `payload`.
+    ///
+    /// # Errors
+    ///
+    /// [`RuntimeError`] when a node or an expression of the payload cannot be run, or the limits
+    /// allow no run.
+    pub fn with_storage(
+        payload: &Payload,
+        platform: P,
+        storage: S,
+        log: Arc<dyn RunLog>,
+        engine: &dyn ExpressionEngine,
+        limits: Limits,
+    ) -> Result<Self, RuntimeError> {
         if limits.max_runs == 0 {
             return Err(RuntimeError::NoRuns);
         }
-        let flows = prepare::flows(payload, &Registry::builtin(), engine)?;
+        let decls = Declarations::new(&payload.variables);
+        let flows = prepare::flows(payload, &Registry::builtin(), engine, &decls)?;
         let mut commands = HashMap::new();
         for command in &payload.commands {
             if let Ok(flow) = usize::try_from(command.flow) {
@@ -149,12 +177,14 @@ impl<P: Platform> Runtime<P> {
         Ok(Self {
             inner: Arc::new(Inner {
                 platform,
+                storage,
                 log,
                 limits,
                 flows,
                 commands,
                 routes,
-                vars: prepare::variables(payload),
+                vars: decls.namespace(),
+                decls,
                 permits,
             }),
         })
@@ -163,6 +193,11 @@ impl<P: Platform> Runtime<P> {
     #[must_use]
     pub fn platform(&self) -> &P {
         &self.inner.platform
+    }
+
+    #[must_use]
+    pub fn storage(&self) -> &S {
+        &self.inner.storage
     }
 
     /// Starts a run for each flow the event starts, as tasks of the current tokio runtime.
@@ -221,7 +256,7 @@ impl<P: Platform> Runtime<P> {
     }
 }
 
-impl<P: Platform> Inner<P> {
+impl<P: Platform, S: Storage> Inner<P, S> {
     fn warn(&self, flow: Option<String>, node: Option<String>, message: &str) {
         self.log.record(LogRecord {
             level: Level::Warn,
