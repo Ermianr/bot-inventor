@@ -1,0 +1,51 @@
+name: Proposal
+description: Suggest a new feature or a larger change. Please open this before writing code.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pull requests that add features nobody has agreed to may be closed, so please describe the idea here first.
+        A maintainer will answer, and will mark the proposal `accepted` if it fits the roadmap (`docs/ROADMAP.md`).
+        For a bug, use the **Issue** form. **Do not report security vulnerabilities here.**
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can you not do today, or what is hard? Describe it from the point of view of someone building a bot, or of someone working on the code.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you suggest
+      description: What should be possible or different afterwards. A sketch is enough.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: impact
+    attributes:
+      label: Who or what it affects
+      description: Other features, the project format or payload (a change there is breaking), security (tokens, input from Discord users, files, limits), new dependencies.
+  - type: dropdown
+    id: build
+    attributes:
+      label: Do you want to build it?
+      options:
+        - Yes, I would send the pull request
+        - I could help with part of it
+        - No, I am only suggesting it
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I looked in `docs/ROADMAP.md` and the open issues, and this is not already there.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

@@ -1,0 +1,73 @@
+name: Issue
+description: Report a bug, an error, a limitation, a missing test, technical debt or a documentation problem.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for a problem you found, whether you hit it using the app or while working on the code.
+        **Do not report security vulnerabilities here.** Use "Report a vulnerability" under the Security tab (see `docs/SECURITY.md`).
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Bug (wrong behavior)
+        - Error (crash, panic, failure)
+        - Limitation (works, but not for this case)
+        - Missing test
+        - Technical debt
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: What you observed, with the exact error text if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should happen
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: The smallest steps, command or test that shows it. Never paste a bot token.
+      render: shell
+    validations:
+      required: false
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      options:
+        - Can lose data or exposes something it should not (if it is a security problem, do not use this form)
+        - Wrong result in a supported case
+        - Minor or cosmetic
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit, and operating system
+      placeholder: "0.1.0 / abc1234 / Arch Linux"
+  - type: input
+    id: related
+    attributes:
+      label: Related pull request or issue (optional)
+      description: Only if you know where it came from, for example `#12`.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: This is not a security vulnerability.
+          required: true
+        - label: I looked for an existing issue about this.
+          required: true
+        - label: This report contains no bot token or other secret.
+          required: true
