@@ -25,13 +25,37 @@ The single unit of planned work: a capability stage with a definition of done (D
 | M6 | Variables and storage | M5 | done | The entry below |
 | M7 | Discord adapter | M5 | done | The entry below |
 | M8 | Runner | M2, M7 | done | The entry below |
-| M9 | Export | M8 | draft | The exported folder runs on its own, without the app, on a machine with only the folder; a missing `.env` or asset fails with a clear message; `--dump` equals the compile output |
+| M9 | Export | M8 | ready | The criteria below |
 | M10 | Editor canvas | M5 | draft | A project can be built, saved and reopened in the app; panels are generated from the node schema; undo and redo; validation errors mark the exact field |
 | M11 | Condition builder | M3, M10 | draft | A condition is built from lists and the generated expression shows in the advanced mode (CodeMirror); renaming a node rewrites the expressions that use it; a broken reference is reported |
 | M12 | Local run and export in the app | M8, M9, M10 | draft | Ping is built from scratch in the app, run locally with live logs, stopped and exported; the token field writes `.env` with mode 0600 and the frontend can never read it back |
 | M13 | Reference bots | M6, M7, M12 | draft | Welcome and Moderation are built in the editor, run locally and exported; the nodes they need are done as node tasks |
 | M14 | More nodes | M13 | draft | The *Next* rows of section 4, one small task each; each ships with schema, executor and bad-input test |
 | M15 | Beyond Linux and distribution | M14 | draft | Linux packages (AppImage, `.deb`), release pipeline with `release-plz`, docs site (`mdBook`) and other systems; to be written when M13 is done |
+
+### M9. Export (ready)
+
+- **Goal:** a folder written by the exporter runs the bot on its own, on a machine that has only that folder. The compile step and the buttons of the app are M12; this milestone is the packaging, tested with the real runner.
+- **The folder.** `<out>/` holds `<name>` (the runner, then the payload, then the footer of `ARCHITECTURE.md` §3.2), `assets/` (a copy of the project's) and `.env.example`. It never holds a `.env`, a `data/` folder, a database or a token: those are the user's and are created on the machine where the bot runs.
+- **Acceptance criteria**
+  - [ ] `exporter::export` takes the runner file, a `Payload`, the project folder (only its `assets/` is read), the output folder and the bot name, and writes the folder above. `exporter` depends on `graph` and nothing else of the repository, and `cargo xtask layers` still passes.
+  - [ ] The executable is the bytes of the runner, followed by `Payload::encode` and the footer: a test reads it back with `read_container` and gets the same payload, finds the runner bytes unchanged at the start, and finds mode `0755`.
+  - [ ] `<name> --dump` of the exported Ping prints the committed `crates/graph/tests/payload_samples/v1/ping.json`, so what is exported is what `compile` produced.
+  - [ ] `assets/` is copied whole. Regular files and folders only: a symbolic link or any other kind of file is refused and named, nothing is followed, and a tree over 4096 files, 16 levels deep or 256 MiB is refused **[measure]**. Files are written with mode `0644` and folders `0755`.
+  - [ ] An asset that the payload's `requirements.assets` names and the project does not have refuses the export, names the file, and writes nothing.
+  - [ ] `.env.example` has `DISCORD_TOKEN=` and a commented `DISCORD_DEV_GUILD_ID=`, each with a line that says what it is for, and no value. Copied to `.env` as it is, the runner reads it, exits `2` and says that `DISCORD_TOKEN` is empty.
+  - [ ] The name is a plain file name: empty, `.`, `..`, a separator, a NUL, a leading dash, more than 64 bytes, and `.env`, `.env.example`, `assets` and `data` are refused, and a `proptest` run over arbitrary names never writes outside `<out>`. A runner that already has a footer (an exported bot given as the runner), or that is not a regular file, is refused.
+  - [ ] An export does not destroy and does not half-write. Everything is written to a staging folder inside `<out>` and moved with renames, so on any error `<out>` is as it was before. A second export into the same folder replaces the executable (a rename, so it also works while the old one runs), `.env.example`, and the files of `assets/` that the project has, and never touches `.env`, `data/`, an asset the project does not have, or any other file; the test runs it with a `.env` and a `data/bot.sqlite` in place and compares them byte for byte.
+  - [ ] `<out>` that is a file or a link is refused; `<out>` inside the project's `assets/` is refused (the copy would copy itself); a missing `<out>` is created with mode `0755`.
+  - [ ] The project's `.env`, `.botinventor/` and any database in the project folder are in no exported file: a test puts a marker token in the project's `.env` and searches the whole output for it.
+  - [ ] On its own: a test in `crates/runner/tests` exports Ping, moves the folder to a new location, and starts it from another working directory with a cleared environment (only the stand-in for Discord) and a `.env` next to it. It answers `Pong!`, stops on `SIGTERM` with exit `0`, and creates `data/` with mode `0700`. The same folder with no `.env` exits `2` with a message that names the `.env` it looked for; with no token, `2` and `DISCORD_TOKEN`; and an exported bot whose payload references `assets/logo.png` without that file exits `2` and names it.
+  - [ ] Every error of the exporter is a typed `ExportError` that names the path or the setting and never a token, with a table of bad inputs (names, runner, assets, output) and no panic.
+  - [ ] `crates/exporter/examples/export.rs` (`--runner`, `--payload`, `--project`, `--out`, `--name`) makes a folder from a payload that `crates/runtime/examples/compile.rs` made, and `docs/CONTRIBUTING.md` says how.
+  - [ ] `cargo xtask layers` accepts `runner` using `exporter` as a dev-dependency only (the end-to-end test above needs both), and a test of the check shows that a normal dependency of `runner` on `exporter` still fails.
+  - [ ] Checked by hand with `DISCORD-TEST.md`: a release runner exports Ping, the folder is copied to a machine or container with no Rust toolchain and no project (`ldd` of the runner lists only system libraries), and `/ping` answers `Pong!` on a real test server. The result goes in the pull request.
+  - [ ] Documents updated in the same pull request: `ARCHITECTURE.md` §9.4 (staging, re-export, limits, `.env.example`), `DECISIONS.md` (*Exported bot layout*: a re-export keeps `.env` and `data/`), `DISCORD-TEST.md` (the new row), and this entry moved to *Done*.
+- **Security:** the exporter reads no `.env` and copies no database; it follows no link; the token is nowhere in the output; the names it writes come from validated input and stay inside `<out>`; no new dependency (`std` only; `tempfile` is already a dev dependency).
+- **Not in this milestone:** compiling inside the exporter, the Tauri command and the screen (M12), cross-export, embedding assets in the executable, signing, archives, and a file-picker for the output folder.
 
 ### Done
 
@@ -52,8 +76,7 @@ The single unit of planned work: a capability stage with a definition of done (D
 
 Ranked; pick from the top unless a draft pull request already claims it.
 
-1. **Write the full criteria of M9 (Export)**, which M8 unblocks.
-2. **M9**, until the exported folder runs on its own.
+1. **M9**, until the exported folder runs on its own.
 
 ## 4. Node catalog
 
