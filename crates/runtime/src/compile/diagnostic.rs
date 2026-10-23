@@ -79,6 +79,7 @@ codes! {
     // Variables.
     DuplicateVariable => "duplicate-variable", Error;
     InitialTypeMismatch => "initial-type-mismatch", Error;
+    AddToNonNumber => "add-to-non-number", Error;
     // Discord limits.
     InvalidCommandName => "invalid-command-name", Error;
     InvalidDescription => "invalid-description", Error;

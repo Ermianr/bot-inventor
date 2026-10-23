@@ -227,6 +227,21 @@ fn cases() -> Vec<(Code, Project)> {
     );
     add(Code::InitialTypeMismatch, mismatch);
 
+    let mut adding = ping();
+    declare(
+        &mut adding,
+        VariableScope::Bot,
+        "motto",
+        VariableType::Text,
+        json!("hi"),
+    );
+    edit(&mut adding, |f| {
+        f.nodes
+            .push(set_variable("n3", "count", "bot.motto", "add", "1"));
+        f.lines.push(line("n2", "next", "n3"));
+    });
+    add(Code::AddToNonNumber, adding);
+
     add(
         Code::InvalidCommandName,
         command(json!({ "name": "Ping", "description": "d" })),

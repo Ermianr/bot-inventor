@@ -41,6 +41,15 @@ pub fn branch(id: &str, alias: &str, condition: &str) -> Node {
     node(id, alias, "logic.branch", json!({ "condition": condition }))
 }
 
+pub fn set_variable(id: &str, alias: &str, variable: &str, operation: &str, value: &str) -> Node {
+    node(
+        id,
+        alias,
+        "data.set_variable",
+        json!({ "variable": variable, "operation": operation, "value": value }),
+    )
+}
+
 pub fn line(from: &str, port: &str, to: &str) -> Line {
     Line {
         from: graph::Port {
@@ -131,6 +140,7 @@ use std::sync::Arc;
 use graph::Payload;
 use runtime::platform::{Action, Event, Interaction, MockPlatform, Reply};
 use runtime::run::{Limits, MemoryLog, Runtime};
+use runtime::storage::Storage;
 
 /// The payload of a project that compiles without errors.
 pub fn payload(project: &Project) -> Payload {
@@ -157,6 +167,24 @@ pub fn start_with(payload: &Payload, limits: Limits) -> (Runtime<MockPlatform>, 
     (runtime, log)
 }
 
+/// A runtime on a mock platform and the given storage, with the default limits.
+pub fn start_stored<S: Storage>(
+    payload: &Payload,
+    storage: S,
+) -> (Runtime<MockPlatform, S>, Arc<MemoryLog>) {
+    let log = Arc::new(MemoryLog::new());
+    let runtime = Runtime::with_storage(
+        payload,
+        MockPlatform::new(),
+        storage,
+        log.clone(),
+        &runtime::expr::CelEngine::new(),
+        Limits::default(),
+    )
+    .unwrap();
+    (runtime, log)
+}
+
 /// A `/name` slash command from a user named `ana`.
 pub fn command(name: &str) -> Event {
     Event {
@@ -173,8 +201,16 @@ pub fn command(name: &str) -> Event {
     }
 }
 
+/// Like [`command`], used in a server: `guild` and `user` are Discord ids.
+pub fn command_in(name: &str, guild: &str, user: &str) -> Event {
+    let mut event = command(name);
+    event.data["guild"] = json!({ "id": guild });
+    event.data["user"]["id"] = json!(user);
+    event
+}
+
 /// The replies the mock platform carried out.
-pub fn replies(runtime: &Runtime<MockPlatform>) -> Vec<Reply> {
+pub fn replies<S: Storage>(runtime: &Runtime<MockPlatform, S>) -> Vec<Reply> {
     runtime
         .platform()
         .actions()
@@ -186,7 +222,10 @@ pub fn replies(runtime: &Runtime<MockPlatform>) -> Vec<Reply> {
 }
 
 /// Dispatches `event`, waits for the runs to end and returns the replies.
-pub async fn dispatch_and_wait(runtime: &Runtime<MockPlatform>, event: Event) -> Vec<Reply> {
+pub async fn dispatch_and_wait<S: Storage>(
+    runtime: &Runtime<MockPlatform, S>,
+    event: Event,
+) -> Vec<Reply> {
     runtime.dispatch(event);
     runtime.drain().await;
     replies(runtime)

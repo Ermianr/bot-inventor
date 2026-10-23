@@ -7,6 +7,7 @@
 
 mod branch;
 mod reply;
+mod set_variable;
 mod slash_command;
 
 use serde_json::{Map, Value, json};
@@ -14,12 +15,20 @@ use serde_json::{Map, Value, json};
 use crate::catalog::NodeSpec;
 use crate::expr::{ExprError, Scope};
 use crate::platform::{Platform, PlatformError};
-use crate::run::{Compiled, PreparedNode, RunState};
+use crate::run::{Compiled, Declarations, PreparedNode, RunState};
+use crate::storage::{Storage, StorageError};
+
+pub(crate) use set_variable::TYPE_ID as SET_VARIABLE;
 
 /// The schemas the app ships, for [`Registry::builtin`](crate::catalog::Registry::builtin).
 #[must_use]
 pub fn builtin_specs() -> &'static [&'static NodeSpec] {
-    static SPECS: [&NodeSpec; 3] = [&slash_command::SPEC, &reply::SPEC, &branch::SPEC];
+    static SPECS: [&NodeSpec; 4] = [
+        &slash_command::SPEC,
+        &reply::SPEC,
+        &branch::SPEC,
+        &set_variable::SPEC,
+    ];
     &SPECS
 }
 
@@ -29,10 +38,16 @@ pub(crate) enum Kind {
     SlashCommand,
     Reply,
     Branch,
+    SetVariable,
 }
 
 impl Kind {
-    pub(crate) const ALL: [Kind; 3] = [Kind::SlashCommand, Kind::Reply, Kind::Branch];
+    pub(crate) const ALL: [Kind; 4] = [
+        Kind::SlashCommand,
+        Kind::Reply,
+        Kind::Branch,
+        Kind::SetVariable,
+    ];
 
     pub(crate) fn of(type_id: &str) -> Option<Self> {
         Self::ALL
@@ -45,19 +60,21 @@ impl Kind {
             Kind::SlashCommand => &slash_command::SPEC,
             Kind::Reply => &reply::SPEC,
             Kind::Branch => &branch::SPEC,
+            Kind::SetVariable => &set_variable::SPEC,
         }
     }
 }
 
 /// Runs the executor of `kind`.
-pub(crate) async fn execute<P: Platform>(
+pub(crate) async fn execute<P: Platform, S: Storage>(
     kind: Kind,
-    cx: &mut NodeCx<'_, P>,
+    cx: &mut NodeCx<'_, P, S>,
 ) -> Result<Outcome, NodeError> {
     match kind {
         Kind::SlashCommand => slash_command::execute(cx),
         Kind::Reply => reply::execute(cx).await,
         Kind::Branch => branch::execute(cx),
+        Kind::SetVariable => set_variable::execute(cx).await,
     }
 }
 
@@ -111,6 +128,30 @@ impl From<ExprError> for NodeError {
     }
 }
 
+impl From<StorageError> for NodeError {
+    fn from(error: StorageError) -> Self {
+        match error {
+            StorageError::Invalid(_) | StorageError::Overflow => Self::invalid(error.to_string()),
+            // These name a variable and never a value.
+            StorageError::TypeMismatch { .. }
+            | StorageError::UnknownVariable { .. }
+            | StorageError::Corrupt { .. } => Self {
+                kind: ErrorKind::Storage,
+                message: error.to_string(),
+            },
+            // The detail of a failing database stays out of `error.message`, which a flow can
+            // send to a user.
+            StorageError::NewerDatabase { .. }
+            | StorageError::File(_)
+            | StorageError::Database(_)
+            | StorageError::Closed => Self {
+                kind: ErrorKind::Storage,
+                message: "the storage could not carry out the operation".to_owned(),
+            },
+        }
+    }
+}
+
 impl From<PlatformError> for NodeError {
     fn from(error: PlatformError) -> Self {
         let kind = match error {
@@ -134,6 +175,8 @@ pub(crate) enum ErrorKind {
     MissingPermissions,
     /// The platform could not carry out the action.
     Platform,
+    /// The storage could not read or write a variable.
+    Storage,
 }
 
 impl ErrorKind {
@@ -143,20 +186,24 @@ impl ErrorKind {
             ErrorKind::InvalidValue => "invalid_value",
             ErrorKind::MissingPermissions => "missing_permissions",
             ErrorKind::Platform => "platform",
+            ErrorKind::Storage => "storage",
         }
     }
 }
 
-/// What an executor can reach: the platform, its node, and the state of the run.
-pub(crate) struct NodeCx<'a, P: Platform> {
+/// What an executor can reach: the platform, the storage, its node, and the state of the run.
+pub(crate) struct NodeCx<'a, P: Platform, S: Storage> {
     pub(crate) platform: &'a P,
+    pub(crate) storage: &'a S,
+    /// The variables the bot declares.
+    pub(crate) decls: &'a Declarations,
     pub(crate) node: &'a PreparedNode,
     pub(crate) run: &'a mut RunState,
     /// `error.kind` and `error.message`, on a path that left an `error` port.
     pub(crate) error: Option<&'a Value>,
 }
 
-impl<P: Platform> NodeCx<'_, P> {
+impl<P: Platform, S: Storage> NodeCx<'_, P, S> {
     /// A text setting. A template is rendered; plain text is returned as it is.
     pub(crate) fn text(&self, field: &str) -> Result<String, NodeError> {
         match self.node.compiled(field) {

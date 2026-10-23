@@ -4,6 +4,7 @@ use serde_json::Value;
 
 use crate::catalog::{FieldKind, FieldSpec, NodeRequires, NodeSpec, OutputSpec, PortSpec};
 use crate::platform::{AllowedMentions, Delivery, Platform, Reply};
+use crate::storage::Storage;
 
 use super::{NodeCx, NodeError, Outcome};
 
@@ -30,7 +31,9 @@ pub(super) static SPEC: NodeSpec = NodeSpec {
 
 /// The first reply is the response to the interaction; the ones after it are follow-ups. The
 /// message notifies nobody, and it is visible only to the user when the command says so.
-pub(super) async fn execute<P: Platform>(cx: &mut NodeCx<'_, P>) -> Result<Outcome, NodeError> {
+pub(super) async fn execute<P: Platform, S: Storage>(
+    cx: &mut NodeCx<'_, P, S>,
+) -> Result<Outcome, NodeError> {
     let content = cx.text("content")?;
     let length = content.chars().count();
     if length == 0 || length > MAX_CONTENT_CHARS {
