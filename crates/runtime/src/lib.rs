@@ -2,3 +2,5 @@
 //!
 //! This crate knows no Tauri, Discord or SQLite: it only sees the `Platform` and `Storage`
 //! traits (`docs/ARCHITECTURE.md` §2).
+
+pub mod expr;

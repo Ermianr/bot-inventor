@@ -1,0 +1,110 @@
+use super::lex::skip_string;
+use super::{
+    ExprError, Expression, ExpressionEngine, MAX_RESULT_BYTES, MAX_TEMPLATE_BYTES, References,
+    Scope, Value,
+};
+
+/// Plain text with `{{ expression }}` segments, compiled once.
+///
+/// The source is written by the bot's author. What the segments produce is inserted as text and
+/// is not read again, so a Discord user cannot make it evaluate anything. A literal `{{` is
+/// written `{{ '{{' }}`; a `}}` outside a segment is plain text.
+pub struct Template {
+    parts: Vec<Part>,
+    references: References,
+}
+
+enum Part {
+    Text(String),
+    Segment(Box<dyn Expression>),
+}
+
+impl Template {
+    pub fn compile(engine: &dyn ExpressionEngine, source: &str) -> Result<Self, ExprError> {
+        if source.len() > MAX_TEMPLATE_BYTES {
+            return Err(ExprError::SourceTooLong {
+                len: source.len(),
+                max: MAX_TEMPLATE_BYTES,
+            });
+        }
+        let mut parts = Vec::new();
+        let mut references = References::default();
+        let mut rest = source;
+        let mut offset = 0;
+        while let Some(start) = rest.find("{{") {
+            if start > 0 {
+                parts.push(Part::Text(rest[..start].to_owned()));
+            }
+            let body = &rest[start + 2..];
+            let end = segment_end(body).ok_or(ExprError::UnclosedSegment {
+                offset: offset + start,
+            })?;
+            let expression = engine.compile(&body[..end])?;
+            references.extend(expression.references());
+            parts.push(Part::Segment(expression));
+            let consumed = start + 2 + end + 2;
+            offset += consumed;
+            rest = &rest[consumed..];
+        }
+        if !rest.is_empty() {
+            parts.push(Part::Text(rest.to_owned()));
+        }
+        Ok(Self { parts, references })
+    }
+
+    pub fn references(&self) -> &References {
+        &self.references
+    }
+
+    /// Renders the template. Numbers, booleans and text are inserted; null, lists and maps are
+    /// an error, because there is no single right text for them.
+    pub fn render(&self, scope: &Scope) -> Result<String, ExprError> {
+        let mut out = String::new();
+        for part in &self.parts {
+            match part {
+                Part::Text(text) => out.push_str(text),
+                Part::Segment(expression) => match expression.evaluate(scope)? {
+                    Value::String(text) => out.push_str(&text),
+                    Value::Bool(flag) => out.push_str(if flag { "true" } else { "false" }),
+                    Value::Number(number) => out.push_str(&number.to_string()),
+                    Value::Null => {
+                        return Err(ExprError::UnsupportedResult("null cannot be inserted"));
+                    }
+                    Value::Array(_) | Value::Object(_) => {
+                        return Err(ExprError::UnsupportedResult(
+                            "a list or a map cannot be inserted",
+                        ));
+                    }
+                },
+            }
+            if out.len() > MAX_RESULT_BYTES {
+                return Err(ExprError::ResultTooLarge);
+            }
+        }
+        Ok(out)
+    }
+}
+
+/// Where the segment that starts at the beginning of `body` ends: the byte of its closing `}}`.
+///
+/// Quoted text and nested braces are skipped, so `{{ {'a': {'b': 1}} }}` and `{{ '}}' }}` close
+/// where the author meant.
+fn segment_end(body: &str) -> Option<usize> {
+    let bytes = body.as_bytes();
+    let mut depth = 0usize;
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\'' | b'"' => {
+                i = skip_string(bytes, i)?;
+                continue;
+            }
+            b'{' => depth += 1,
+            b'}' if depth > 0 => depth -= 1,
+            b'}' if bytes.get(i + 1) == Some(&b'}') => return Some(i),
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}

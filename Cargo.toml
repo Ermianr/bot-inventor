@@ -12,6 +12,8 @@ publish = false
 
 [workspace.dependencies]
 anyhow = "1"
+# Pinned to the exact version; the features are chosen in `crates/runtime` (docs/DECISIONS.md).
+cel = { version = "=0.15.0", default-features = false }
 proptest = "1"
 rmp-serde = "1"
 serde = { version = "1", features = ["derive"] }
