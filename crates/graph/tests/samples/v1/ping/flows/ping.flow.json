@@ -1,0 +1,41 @@
+{
+  "nodes": [
+    {
+      "id": "n1",
+      "alias": "ping_command",
+      "type": "discord.slash_command",
+      "type_version": 1,
+      "settings": {
+        "description": "Replies with pong",
+        "ephemeral": false,
+        "name": "ping"
+      },
+      "editor": {
+        "x": 0.0,
+        "y": 0.0
+      }
+    },
+    {
+      "id": "n2",
+      "alias": "reply",
+      "type": "discord.reply",
+      "type_version": 1,
+      "settings": {
+        "content": "Pong!"
+      },
+      "editor": {
+        "x": 280.0,
+        "y": 0.0
+      }
+    }
+  ],
+  "lines": [
+    {
+      "from": {
+        "node": "n1",
+        "port": "next"
+      },
+      "to": "n2"
+    }
+  ]
+}
