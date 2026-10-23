@@ -67,6 +67,15 @@ pub enum PlatformError {
 
 /// The actions a flow can ask of the platform.
 pub trait Platform: Send + Sync + 'static {
+    /// Tells the user the bot is working on the response, so the platform's deadline for a first
+    /// response stops running. The next [`Reply`] to the interaction completes it, and it is
+    /// visible only to the user when `ephemeral` is set.
+    fn defer(
+        &self,
+        interaction: Interaction,
+        ephemeral: bool,
+    ) -> impl Future<Output = Result<(), PlatformError>> + Send;
+
     /// Sends `reply` and returns the id of the message.
     fn reply(&self, reply: Reply) -> impl Future<Output = Result<String, PlatformError>> + Send;
 }

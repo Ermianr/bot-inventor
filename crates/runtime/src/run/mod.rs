@@ -17,20 +17,28 @@ use std::time::Duration;
 use graph::Payload;
 use serde_json::Value;
 use tokio::sync::Semaphore;
+use tokio::task::JoinHandle;
 
 pub use log::{Level, LogRecord, MemoryLog, NoLog, RunLog};
 pub(crate) use prepare::{Compiled, Flow, PreparedNode};
 pub(crate) use vars::{Declarations, Declared};
-pub(crate) use walk::RunState;
+pub(crate) use walk::{Response, RunState, Stage};
 
 use crate::catalog::Registry;
 use crate::expr::{CelEngine, ExpressionEngine};
-use crate::platform::{AllowedMentions, Delivery, Event, Platform, Reply};
+use crate::platform::{AllowedMentions, Event, Interaction, Platform, Reply};
 use crate::storage::{MemoryStorage, Storage};
 use walk::Ending;
 
 /// What a user sees when a run fails and nothing handles the error. It says nothing about why.
 pub const GENERIC_FAILURE_MESSAGE: &str = "Something went wrong. Please try again later.";
+
+/// How long a run may go without a response before the interaction is deferred. Discord wants
+/// the first response within 3 seconds (`docs/ARCHITECTURE.md` §5.3).
+const DEFER_AFTER: Duration = Duration::from_secs(2);
+
+/// How long the deferral may take before it is given up; the deadline is 1 second away.
+const DEFER_TIMEOUT: Duration = Duration::from_secs(1);
 
 /// How long the generic message may take to send before it is given up.
 const GENERIC_REPLY_TIMEOUT: Duration = Duration::from_secs(5);
@@ -266,11 +274,19 @@ impl<P: Platform, S: Storage> Inner<P, S> {
         });
     }
 
-    async fn run(&self, flow_index: usize, event: Event) {
+    async fn run(self: &Arc<Self>, flow_index: usize, event: Event) {
         let Some(flow) = self.flows.get(flow_index) else {
             return;
         };
         let mut state = RunState::new(event, self.vars.clone());
+        let _timer = state.interaction.clone().map(|interaction| {
+            DeferTimer(tokio::spawn(defer_later(
+                Arc::clone(self),
+                flow.name.clone(),
+                interaction,
+                Arc::clone(&state.response),
+            )))
+        });
         let ending =
             tokio::time::timeout(self.limits.max_duration, walk::walk(self, flow, &mut state))
                 .await;
@@ -325,9 +341,13 @@ impl<P: Platform, S: Storage> Inner<P, S> {
 
     /// The user is still waiting for a response: send the generic message, with no detail.
     async fn tell_user(&self, flow: &Flow, state: &RunState) {
-        let (false, Some(interaction)) = (state.responded, state.interaction.clone()) else {
+        let Some(interaction) = state.interaction.clone() else {
             return;
         };
+        let mut stage = state.response.lock().await;
+        if *stage == Stage::Responded {
+            return;
+        }
         let sent = tokio::time::timeout(
             GENERIC_REPLY_TIMEOUT,
             self.platform.reply(Reply {
@@ -335,16 +355,52 @@ impl<P: Platform, S: Storage> Inner<P, S> {
                 content: GENERIC_FAILURE_MESSAGE.to_owned(),
                 ephemeral: true,
                 mentions: AllowedMentions::default(),
-                delivery: Delivery::Response,
+                delivery: stage.delivery(),
             }),
         )
         .await;
-        if !matches!(sent, Ok(Ok(_))) {
+        if matches!(sent, Ok(Ok(_))) {
+            *stage = Stage::Responded;
+        } else {
             self.warn(
                 Some(flow.name.clone()),
                 None,
                 "the generic failure message could not be sent",
             );
         }
+    }
+}
+
+/// Stops the deferral timer when the run ends.
+struct DeferTimer(JoinHandle<()>);
+
+impl Drop for DeferTimer {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
+/// Defers the interaction if the run has not responded by [`DEFER_AFTER`]. A deferral that fails
+/// is logged and the run goes on: its reply still tries to be the response.
+async fn defer_later<P: Platform, S: Storage>(
+    inner: Arc<Inner<P, S>>,
+    flow: String,
+    interaction: Interaction,
+    response: Arc<Response>,
+) {
+    tokio::time::sleep(DEFER_AFTER).await;
+    let mut stage = response.lock().await;
+    if *stage != Stage::Pending {
+        return;
+    }
+    let deferred = tokio::time::timeout(
+        DEFER_TIMEOUT,
+        inner.platform.defer(interaction, response.ephemeral()),
+    )
+    .await;
+    if matches!(deferred, Ok(Ok(()))) {
+        *stage = Stage::Deferred;
+    } else {
+        inner.warn(Some(flow), None, "the interaction could not be deferred");
     }
 }

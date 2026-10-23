@@ -105,6 +105,7 @@ pub(super) static SPEC: NodeSpec = NodeSpec {
 pub(super) fn execute<P: Platform, S: Storage>(
     cx: &mut NodeCx<'_, P, S>,
 ) -> Result<Outcome, NodeError> {
-    cx.run.ephemeral = cx.flag("ephemeral", false)?;
+    let ephemeral = cx.flag("ephemeral", false)?;
+    cx.run.response.set_ephemeral(ephemeral);
     Ok(Outcome::next())
 }
