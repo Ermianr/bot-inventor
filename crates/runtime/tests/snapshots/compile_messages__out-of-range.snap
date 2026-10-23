@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[out-of-range] flow `main` node `n2` field `content`: the text must have 1 to 2000 characters, it has 0

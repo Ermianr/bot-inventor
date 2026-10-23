@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[unreachable-node] flow `main` node `n2`: no line leads from the trigger to this node

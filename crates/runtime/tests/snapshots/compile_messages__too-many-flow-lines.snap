@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[too-many-flow-lines] flow `main`: the flow has 8193 lines; the limit is 8192

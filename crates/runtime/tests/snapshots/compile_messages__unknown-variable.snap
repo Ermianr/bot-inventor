@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[unknown-variable] flow `main` node `n2` field `content`: `bot.visits` is not a declared variable

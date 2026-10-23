@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[line-from-unknown-node] flow `main` node `zz` field `lines[1]`: no node of this flow has the id `zz`

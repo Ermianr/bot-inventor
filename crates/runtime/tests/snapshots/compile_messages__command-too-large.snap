@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[command-too-large] flow `main` node `n1` field `options`: the names and descriptions add up to 10562 characters; Discord allows 8000

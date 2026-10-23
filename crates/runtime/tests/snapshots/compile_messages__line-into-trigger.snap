@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[line-into-trigger] flow `main` node `n2` field `lines[1]`: `n1` is a trigger, which starts a flow and takes no line

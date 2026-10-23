@@ -116,17 +116,17 @@ Container when exported: `[runner executable][payload bytes][footer]`. The foote
 
 ### 3.3 Compile (project → payload)
 
-The same function is used when the editor validates and when the app exports **[proposed]**. In order:
+`runtime::compile::compile(&Project, app_version)` returns a `Report`; `compile_with` takes the node catalog and the expression engine too, for tests. The same function serves the editor, which shows the diagnostics, and the export, which needs the payload. A `Report` has the **diagnostics** in a fixed order (flow, node, field, code), the **payload** (only when there is no error) and the **variables each node reads**. A diagnostic has a severity, a stable code (`Code`, written in kebab case: `unknown-port`), the flow, the node id, the **field path** (`content`, `options[0].name`, or `lines[2]` for a line) and a message. A message names the field and the limit and never carries the value of a setting. Only an error stops the payload; a warning does not. A bot with errors cannot be exported.
 
-1. Load the project and migrate it if needed.
-2. **Structure:** ids are unique, aliases are unique inside a flow, lines point to existing ports, every flow has exactly one trigger, every node is reachable, and the flow has **no cycles**.
-3. **Settings:** each node's settings are checked against its schema (types, limits).
-4. **Expressions:** every expression and template is parsed; each reference is resolved: `event.*` against the trigger's fields, `steps.<alias>.<output>` against nodes that run before this one, `vars.<scope>.<name>` against the declarations. A reference to a node that runs only on some paths is a warning; to one that never runs before it, an error.
-5. **Discord limits:** command and option names and lengths, option counts, the 8000-character command size, the number of commands (the limits are in section 7).
-6. **Requirements:** compute intents, cache needs, referenced assets and the variables each node reads.
-7. Emit the payload.
+The project arrives loaded and migrated (`Project::load`). In order:
 
-Every error carries the **flow, the node id and the field path**, so the editor can mark the exact field. A bot with errors cannot be exported.
+1. **Variables:** `scope.name` is unique, and `initial` matches the type (an integer is accepted for a decimal).
+2. **Structure,** per flow: node ids are unique, aliases are unique inside a flow, the type and `type_version` have a schema, lines join existing nodes and a port the type declares, no line enters the trigger, no line is repeated, there is exactly one trigger, every node is reachable from it and there is **no cycle**. A flow over 2048 nodes or 8192 lines is refused **[measure]**. All the passes are iterative, so the depth of a flow does not use the stack.
+3. **Settings:** each node's settings are checked against its schema (`catalog::NodeSpec`): required and unknown fields, types, text length, number range, closed lists of words, asset paths that stay inside `assets/`.
+4. **Expressions:** every expression field is compiled with the expression engine and a template field with `Template`; then each reference is resolved: `event.*` against the fields of the trigger (for a slash command, also `event.options.<name>` for each declared option), `steps.<alias>.<output>` against the alias and the outputs the node type declares, `vars.<scope>.<name>` against the declarations, `error.kind` and `error.message` against the `error` ports. A step that runs before the node on every path is valid; on only some paths it is a **warning**; on none (a node after it, a sibling branch, the node itself) it is an error. The same three cases apply to `error.*`: a node reached from an `error` port on every path, some, or none. The order is decided with dominators on the acyclic graph. When a flow has a structure error the order is not known and these checks are skipped; the others still run.
+5. **Discord limits** (section 7), for each node that defines a slash command: name and description lengths, characters allowed in a name, up to 25 options, option names unique, required options first, 8000 characters in all, a command name unique across flows, at most 100 commands.
+6. **Requirements:** the union of the intents and cache resources the nodes in use declare, and the assets they reference, each sorted and without duplicates; the variables each node reads, from its references.
+7. **Emit the payload:** nodes in a canonical topological order (the trigger first, ties broken by node id), lines as sorted indexes by port, the event table, the command definitions and the variables. A template with no `{{ }}` segment is plain text and is not stored as an expression. The command `hash` is the SHA-256, in hexadecimal, of the definition as JSON with the keys in order. The order of the nodes and lines in the files does not change the payload bytes. `Payload::check` runs last.
 
 ## 4. Graph model
 
@@ -180,27 +180,18 @@ Declared in `bot.botproj`: `name`, `type` (integer, decimal, text, boolean), `sc
 
 Limits (provisional values, adjusted by measurement): a global cap of 64 simultaneous runs, a maximum of 500 steps per run and a maximum duration of 60 seconds per run. When a run is dropped for a limit, it is logged at warning level with the flow and node.
 
-### 5.2 Node contract **[proposed]**
+### 5.2 Node contract
 
-A node type is declared in one place in `runtime` and has two parts: a **schema** (data) and an **executor**. A sketch, not final code:
+A node type is declared in one place in `runtime` and has two parts: a **schema** (data) and an **executor**. The schema is real: `runtime::catalog` has `NodeSpec` (type id, version, fields, output ports, named outputs, requirements and, for a trigger, the event it starts and the fields of that event), `FieldSpec` and `FieldKind` (text, expression, integer, boolean, closed list of words, asset path, list of objects), and a `Registry` keyed by type and version. The executor arrives with the run loop (M5), and this sketch is **[proposed]**:
 
 ```rust
-struct NodeSpec {
-    type_id: &'static str,           // "discord.send_message"
-    version: u32,
-    fields: Vec<FieldSpec>,          // name, kind, limits, widget hint, expression allowed?
-    ports: Vec<PortSpec>,            // "next", "error", …
-    outputs: Vec<OutputSpec>,        // named values later nodes can read
-    requires: Requirements,          // intents, bot permissions, assets
-}
-
 trait NodeExec {
     async fn run(&self, cx: &mut RunCx<'_>) -> Result<Outcome, NodeError>;
 }
 // Outcome { port, outputs }; a NodeError sends the run to the "error" port.
 ```
 
-- The schema is serialized to the frontend (through `tauri-specta`) and drives the property panel. Compile uses the same schema.
+- The schema will be serialized to the frontend (through `tauri-specta`, with the editor in M10) and drives the property panel. Compile uses the same schema.
 - A test checks that every schema has an executor and every executor has a schema.
 
 ### 5.3 Errors, deadlines and mentions

@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[incomplete-reference] flow `main` node `n2` field `content`: a step is read as `steps.<alias>.<output>`

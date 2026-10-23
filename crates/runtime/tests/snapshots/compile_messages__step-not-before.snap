@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[step-not-before] flow `main` node `n2` field `content`: `reply` never runs before this node

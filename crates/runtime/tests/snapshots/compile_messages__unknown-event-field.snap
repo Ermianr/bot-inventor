@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[unknown-event-field] flow `main` node `n2` field `content`: `event.nothing` is not a field of the `slash_command` event

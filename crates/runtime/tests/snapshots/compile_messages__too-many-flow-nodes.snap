@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[too-many-flow-nodes] flow `main`: the flow has 2049 nodes; the limit is 2048

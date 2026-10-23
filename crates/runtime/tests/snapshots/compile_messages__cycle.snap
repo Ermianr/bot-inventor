@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[cycle] flow `main` node `n2`: the lines form a cycle through this node; a flow cannot loop

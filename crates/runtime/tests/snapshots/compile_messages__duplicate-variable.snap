@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[duplicate-variable] field `variables[1]`: `bot.x` is declared more than once

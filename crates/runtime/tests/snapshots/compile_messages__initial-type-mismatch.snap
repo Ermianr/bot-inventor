@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[initial-type-mismatch] field `variables[0].initial`: the initial value of `bot.x` must be a whole number

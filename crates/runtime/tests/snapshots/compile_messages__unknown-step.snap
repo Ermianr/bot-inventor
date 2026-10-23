@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[unknown-step] flow `main` node `n2` field `content`: no node of this flow has the alias `nobody`

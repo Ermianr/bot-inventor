@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[invalid-command-name] flow `main` node `n1` field `name`: a name has 1 to 32 lowercase letters, digits, `-` or `_`; this one has 4 characters

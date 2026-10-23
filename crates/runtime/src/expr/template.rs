@@ -56,6 +56,13 @@ impl Template {
         &self.references
     }
 
+    /// Whether the template has any `{{ }}` segment. Without one it is plain text.
+    pub fn has_segments(&self) -> bool {
+        self.parts
+            .iter()
+            .any(|part| matches!(part, Part::Segment(_)))
+    }
+
     /// Renders the template. Numbers, booleans and text are inserted; null, lists and maps are
     /// an error, because there is no single right text for them.
     pub fn render(&self, scope: &Scope) -> Result<String, ExprError> {

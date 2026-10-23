@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[multiple-triggers] flow `main` node `n1`: the flow has 2 triggers; it needs exactly one
