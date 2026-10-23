@@ -48,7 +48,7 @@ cargo xtask test        # nextest and vitest
 cargo xtask bindings    # regenerate the TypeScript types; commit any difference
 ```
 
-Until the first milestone creates these commands, check the documents you touched for consistency. Then update what your change affects, in the same pull request: the milestone and the node rows in `docs/ROADMAP.md`, `docs/DECISIONS.md` for a decision, `docs/ARCHITECTURE.md` for a design change.
+Then update what your change affects, in the same pull request: the milestone and the node rows in `docs/ROADMAP.md`, `docs/DECISIONS.md` for a decision, `docs/ARCHITECTURE.md` for a design change.
 
 ## 5. Commits and pull requests
 
