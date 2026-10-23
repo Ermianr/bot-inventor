@@ -17,7 +17,10 @@ allow = [
     "BSD-2-Clause",
     "BSD-3-Clause",
     "CC0-1.0",
+    # The CA certificates of Mozilla (`webpki-root-certs`, through the TLS verifier of twilight).
+    "CDLA-Permissive-2.0",
     "MIT",
+    "ISC",
     "MIT-0",
     "MPL-2.0",
     "Unicode-3.0",

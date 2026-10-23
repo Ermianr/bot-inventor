@@ -215,8 +215,9 @@ pub fn replies<S: Storage>(runtime: &Runtime<MockPlatform, S>) -> Vec<Reply> {
         .platform()
         .actions()
         .into_iter()
-        .map(|action| match action {
-            Action::Reply(reply) => reply,
+        .filter_map(|action| match action {
+            Action::Reply(reply) => Some(reply),
+            Action::Defer { .. } => None,
         })
         .collect()
 }
