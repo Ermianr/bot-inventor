@@ -2,6 +2,8 @@ name: CI
 
 on:
   pull_request:
+    # `edited` re-checks the title, which can change after the pull request is opened.
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
 
@@ -18,6 +20,7 @@ env:
 jobs:
   checks:
     name: Lint, test and bindings
+    if: github.event_name == 'push' || github.event.action != 'edited'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
