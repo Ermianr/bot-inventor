@@ -225,12 +225,13 @@ Applied only where a measurement justifies them (no fixed budgets).
 
 ## 6. Expression engine
 
-- `ExpressionEngine` is a trait in `runtime`; the implementation uses the `cel` crate.
-- Compile parses each expression to check it and to list the names it references with `Program::references()`; the payload stores the source text and the runner parses it once when it starts. Compiled programs are `Send + Sync` and shared across runs.
-- One base `Context` (with the standard library) is built once; each event gets a child from `new_inner_scope()`, which borrows the parent, so the context is not rebuilt per event.
-- CEL gives no static type check in this crate, so type mistakes appear at run time and take the `error` path; compile catches syntax and unknown names.
-- Registered functions are pure: no I/O, no clock, no randomness. Time-dependent values are fields of the event (`event.timestamp`) or the run, not functions.
-- An expression has a maximum source length, and values placed in the context are limited in size.
+- `ExpressionEngine` is a trait in `runtime` (`crates/runtime/src/expr`); the implementation, `CelEngine`, uses the `cel` crate (`=0.15.0`, no default features) from one module, and no other crate imports it. The scope an expression reads is plain data (`serde_json::Value`) in four namespaces, and a result comes back as the same kind of data.
+- Compile (`ExpressionEngine::compile`) checks the source length, the nesting and the number of operators, parses it, refuses functions outside a closed list and names outside `event`, `steps`, `vars` and `error` (macro variables are tracked), and lists the paths it reads (`References`) and the named functions it calls. The payload stores the source text; the runner compiles it once when it starts. Compiled programs are `Send + Sync` and shared across runs.
+- A template (`Template`) is split into text and `{{ expression }}` segments by a small scanner that knows quoted text and nested braces, then each segment is compiled the same way. A literal `{{` is written `{{ '{{' }}`. A segment renders text, numbers and booleans; null, lists and maps are errors.
+- One base `Context` (with the standard library) is built once; each evaluation gets a child from `new_inner_scope()`, which borrows the parent, so the context is not rebuilt per event. Only the namespaces the expression reads are converted into the child.
+- CEL gives no static type check in this crate, so type mistakes appear at run time and take the `error` path; compile catches syntax, unknown names and unknown functions. Evaluation errors name the problem and never carry values, which may be text from Discord users.
+- Registered functions are pure: no I/O, no clock, no randomness. Time-dependent values are fields of the event (`event.timestamp`) or the run, not functions. The closed list is `ALLOWED_FUNCTIONS` in `cel_engine.rs` and a test fails if it changes without the test.
+- Limits, all provisional **[measure]** (`crates/runtime/src/expr/limits.rs`): an expression is at most 2 KiB, a template 16 KiB, 512 syntax nodes, 64 levels deep, 256 operators or chain characters (the parser and the tree's destructor recurse on those, and a test runs the largest allowed chains on a 512 KiB stack), and two macros nested. A scope holds at most 4096 values, 128 KiB of text, 1024 elements per list or map and 16 levels, checked when it is built; a result is at most 64 KiB.
 
 ## 7. Platform and Discord
 
@@ -325,4 +326,3 @@ To settle in the milestone that first touches each one:
 
 1. The numeric limits above are provisional and need measuring. **[measure]**
 2. That the bundled runner starts in the AppImage and `.deb` packages with a cleared environment. **[verify]**
-3. Which `cel` features are really needed, and that the real conditions of the reference bots evaluate. **[verify]**
