@@ -1,7 +1,7 @@
 //! Prints a payload as JSON: `cargo xtask dump <file>`.
 //!
 //! The file is a payload, or an exported bot with a payload at its end. This is what
-//! `runner --dump` will show, through the same function.
+//! `runner --dump` shows, through the same function.
 
 use std::error::Error;
 use std::fs::File;
