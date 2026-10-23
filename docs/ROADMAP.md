@@ -44,7 +44,7 @@ The single unit of planned work: a capability stage with a definition of done (D
   - [ ] `cargo xtask dev` opens a Tauri window with the empty Svelte app, with a restrictive CSP and least-privilege capabilities.
   - [ ] The baseline configuration files of `DEVELOPMENT-GUIDE.md` §11 are in place, including `unsafe_code = "forbid"` and the Clippy lints that forbid `unwrap`, `panic`, `unimplemented`, `todo` and `dbg!` in non-test code.
   - [ ] `cargo xtask layers` runs in CI and fails when a crate depends on one it must not (`ARCHITECTURE.md` §2).
-  - [ ] The contact for Code of Conduct reports is filled in. (Done already: the repository is public with `LICENSE-MIT`, `LICENSE-APACHE` and `README.md`; labels `accepted`, `in progress` and `needs info`; squash-only merges titled by the pull request; private vulnerability reporting on.)
+  - [x] Repository settings already done: public repository with `LICENSE-MIT`, `LICENSE-APACHE` and `README.md`; labels `accepted`, `in progress` and `needs info`; squash-only merges titled by the pull request; private vulnerability reporting on.
 - **Security:** no token handling yet; the new dependencies pass `cargo-deny`; the Tauri configuration starts with the least privilege.
 
 ### Done

@@ -120,7 +120,7 @@ The decisions that shape the project: the ones that change how it behaves or tha
 
 ## Open
 
-- **Contact for conduct reports.** The code of conduct still says `TODO`; a dedicated address has to be chosen and published.
+- **Contact for conduct reports.** The code of conduct still says `TODO`. The decision is to leave it until there is a community; then choose a dedicated address (not the maintainer's personal one) and add a fallback for reports about a maintainer (GitHub's abuse report form).
 
 ## Things to check while building
 
