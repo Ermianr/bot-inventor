@@ -82,7 +82,7 @@ pub fn ping_payload() -> Payload {
     payload.commands.push(CommandDef {
         name: "ping".to_owned(),
         flow: 0,
-        hash: "ping-v1".to_owned(),
+        hash: "ee6d98097e8ef5408bcfcb79abe426d9fc421a130532ca1f6926b80a1ee444e4".to_owned(),
         definition: object(json!({
             "description": "Replies with pong",
             "name": "ping",

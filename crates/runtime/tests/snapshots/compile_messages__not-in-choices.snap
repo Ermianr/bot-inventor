@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[not-in-choices] flow `main` node `n1` field `options[0].type`: the value must be one of: string, integer, number, boolean, user, channel, role

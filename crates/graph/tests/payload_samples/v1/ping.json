@@ -52,7 +52,7 @@
     {
       "name": "ping",
       "flow": 0,
-      "hash": "ping-v1",
+      "hash": "ee6d98097e8ef5408bcfcb79abe426d9fc421a130532ca1f6926b80a1ee444e4",
       "definition": {
         "description": "Replies with pong",
         "name": "ping",

@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[too-many-commands]: the project defines 101 commands; Discord allows 100

@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[invalid-expression] flow `main` node `n2` field `content`: the function `now` is not available

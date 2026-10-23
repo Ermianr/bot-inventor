@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[duplicate-option] flow `main` node `n1` field `options[1].name`: another option of this command has the same name

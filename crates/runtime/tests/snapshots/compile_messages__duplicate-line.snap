@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[duplicate-line] flow `main` node `n1` field `lines[1]`: port `next` already leads to `n2`

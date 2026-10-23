@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[unknown-port] flow `main` node `n1` field `lines[0]`: the node type `discord.slash_command` has no output port `true`

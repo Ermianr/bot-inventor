@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[too-many-options] flow `main` node `n1` field `options`: a command has at most 25 options, this one has 26

@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[option-order] flow `main` node `n1` field `options[1].required`: Discord needs the required options before the optional ones

@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[unknown-type-version] flow `main` node `n2`: the node type `discord.reply` has no version 7
