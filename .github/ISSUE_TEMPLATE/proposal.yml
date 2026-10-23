@@ -35,9 +35,9 @@ body:
     attributes:
       label: Do you want to build it?
       options:
-        - Yes, I would send the pull request
+        - Yes - I would send the pull request
         - I could help with part of it
-        - No, I am only suggesting it
+        - No - I am only suggesting it
     validations:
       required: true
   - type: checkboxes

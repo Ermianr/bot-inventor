@@ -12,7 +12,7 @@ body:
       label: Kind
       options:
         - Bug (wrong behavior)
-        - Error (crash, panic, failure)
+        - Error (a crash or a panic)
         - Limitation (works, but not for this case)
         - Missing test
         - Technical debt
