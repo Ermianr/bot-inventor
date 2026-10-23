@@ -3,13 +3,11 @@
 //! A schema is data: the fields a node has, with their kinds and limits, its output ports, the
 //! values it publishes to later nodes and what it needs from the platform. Compile checks a
 //! project against these schemas; the property panel of the editor is drawn from them. The
-//! executor of a node lives beside its schema and arrives with the run loop.
-
-mod builtin;
+//! executor of a node lives beside its schema, in `crate::nodes`.
 
 use std::collections::BTreeMap;
 
-pub use builtin::builtin_specs;
+pub use crate::nodes::builtin_specs;
 
 /// The port a node that can fail leaves through when it does.
 pub const ERROR_PORT: &str = "error";

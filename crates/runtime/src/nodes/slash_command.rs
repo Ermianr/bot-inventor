@@ -1,6 +1,9 @@
-//! The schemas of the nodes the app ships. Their executors arrive with the run loop.
+//! `discord.slash_command`: the trigger of a flow started by a slash command.
 
-use super::{FieldKind, FieldSpec, NodeRequires, NodeSpec, OutputSpec, PortSpec, TriggerSpec};
+use crate::catalog::{FieldKind, FieldSpec, NodeRequires, NodeSpec, PortSpec, TriggerSpec};
+use crate::platform::Platform;
+
+use super::{NodeCx, NodeError, Outcome};
 
 /// The kinds of option a slash command can take.
 pub const OPTION_KINDS: &[&str] = &[
@@ -38,7 +41,7 @@ static OPTION_FIELDS: &[FieldSpec] = &[
     },
 ];
 
-static SLASH_COMMAND: NodeSpec = NodeSpec {
+pub(super) static SPEC: NodeSpec = NodeSpec {
     type_id: "discord.slash_command",
     version: 1,
     fields: &[
@@ -97,45 +100,8 @@ static SLASH_COMMAND: NodeSpec = NodeSpec {
     }),
 };
 
-static REPLY: NodeSpec = NodeSpec {
-    type_id: "discord.reply",
-    version: 1,
-    fields: &[FieldSpec {
-        name: "content",
-        kind: FieldKind::Text {
-            min: 1,
-            max: 2000,
-            template: true,
-        },
-        required: true,
-    }],
-    ports: &[PortSpec { name: "next" }, PortSpec { name: "error" }],
-    outputs: &[OutputSpec { name: "message_id" }],
-    requires: NodeRequires::NOTHING,
-    trigger: None,
-};
-
-static BRANCH: NodeSpec = NodeSpec {
-    type_id: "logic.branch",
-    version: 1,
-    fields: &[FieldSpec {
-        name: "condition",
-        kind: FieldKind::Expression,
-        required: true,
-    }],
-    ports: &[
-        PortSpec { name: "true" },
-        PortSpec { name: "false" },
-        PortSpec { name: "error" },
-    ],
-    outputs: &[],
-    requires: NodeRequires::NOTHING,
-    trigger: None,
-};
-
-/// The schemas the app ships, for [`Registry::builtin`](super::Registry::builtin).
-#[must_use]
-pub fn builtin_specs() -> &'static [&'static NodeSpec] {
-    static SPECS: [&NodeSpec; 3] = [&SLASH_COMMAND, &REPLY, &BRANCH];
-    &SPECS
+/// Remembers whether the replies of this run are visible only to the user.
+pub(super) fn execute<P: Platform>(cx: &mut NodeCx<'_, P>) -> Result<Outcome, NodeError> {
+    cx.run.ephemeral = cx.flag("ephemeral", false)?;
+    Ok(Outcome::next())
 }

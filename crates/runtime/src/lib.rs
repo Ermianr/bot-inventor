@@ -6,3 +6,6 @@
 pub mod catalog;
 pub mod compile;
 pub mod expr;
+mod nodes;
+pub mod platform;
+pub mod run;

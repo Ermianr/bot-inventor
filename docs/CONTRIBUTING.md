@@ -128,9 +128,21 @@ While there is one maintainer, the maintainer's own pull requests are merged whe
 
 By contributing you agree that your contribution is licensed under `MIT OR Apache-2.0`, as the rest of the project.
 
-## 8. Recipes (planned)
+## 8. Recipes
 
-Short step-by-step guides for the most common contributions are written when the code they describe exists, not before:
+Short step-by-step guides for the most common contributions, written from what was really done.
 
-- **Adding a node.** Declare the node's schema (fields, limits, ports, outputs, required intents and permissions), write its executor, register it in the catalog, test it against `MockPlatform` (including a test with bad input: it must return an error, never panic), and update `ROADMAP.md`. The first version of this recipe is written in the milestone that creates the first nodes (M5), from what was really done there; the schema and executor live together.
-- **Adding a Discord event or action**, and **changing the project format** (with its migration and sample), follow when those exist.
+### Adding a node
+
+A node is one file in `crates/runtime/src/nodes/` with its schema and its executor together. `branch.rs` is the smallest one; `reply.rs` is one that calls the platform.
+
+1. **Declare the schema** as a `static SPEC: NodeSpec` (`catalog/mod.rs`): the type id (`discord.reply`) and `version` (1), the `fields` with their kind and limits (the limits that come from Discord are written here, once), the output `ports` (add `error` if the node can fail), the named `outputs` that later nodes read as `steps.<alias>.<output>`, what it `requires` (intents, cache) and, for a trigger, its `TriggerSpec`. Compile and the editor read this and nothing else.
+2. **Write the executor** in the same file: `fn execute<P: Platform>(cx: &mut NodeCx<'_, P>) -> Result<Outcome, NodeError>`, `async` if it calls the platform. Read settings with `cx.text`, `cx.expression` and `cx.flag` (they return an error for a missing or wrong value); return `Outcome::next()` or `Outcome::port("true")`, with `outputs` when the node publishes values. A `NodeError` sends the run to the `error` port: use `NodeError::invalid` for a bad value, and let `?` convert `ExprError` and `PlatformError`. A message names the setting and never carries its value or text from a user.
+3. **Register it** in `nodes/mod.rs`: `mod`, the schema in `builtin_specs`, and the variant of `Kind` with its lines in `ALL`, `spec` and `execute`. A test fails if a schema has no executor or the other way round.
+4. **If it needs a new action**, add the method to the `Platform` trait (`platform/mod.rs`), a variant to `Action` and the recording to `MockPlatform`; the Discord side is `platform-discord`.
+5. **Test it** in `crates/runtime/tests/`: a flow that uses it, run with `start` and `dispatch_and_wait` against `MockPlatform` (`tests/common/mod.rs` has the builders), and a test with bad input over a payload that skips compile (`run_bad_input.rs`): wrong types, missing settings and out-of-range values must fail the run cleanly, never panic. Compile tests for its schema go in the `compile_*` files.
+6. **Update the docs**: the node row in `docs/ROADMAP.md`, and `docs/ARCHITECTURE.md` if the design changed.
+
+### Other recipes (planned)
+
+**Adding a Discord event or action**, and **changing the project format** (with its migration and sample), follow when those exist.
