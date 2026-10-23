@@ -3013,6 +3013,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "runner"
+version = "0.1.0"
+dependencies = [
+ "platform-discord",
+ "proptest",
+ "rmp-serde",
+ "runtime",
+ "serde_json",
+ "storage-sqlite",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "zstd",
+]
+
+[[package]]
 name = "runtime"
 version = "0.1.0"
 dependencies = [

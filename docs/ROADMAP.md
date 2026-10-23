@@ -24,7 +24,7 @@ The single unit of planned work: a capability stage with a definition of done (D
 | M5 | Runtime core | M4 | done | The entry below |
 | M6 | Variables and storage | M5 | done | The entry below |
 | M7 | Discord adapter | M5 | done | The entry below |
-| M8 | Runner | M2, M7 | draft | `runner --payload` runs Ping from the command line; SIGTERM closes it cleanly; exit codes match `ARCHITECTURE.md` §9.3; a test shows the token never reaches the output |
+| M8 | Runner | M2, M7 | in progress | The criteria below |
 | M9 | Export | M8 | draft | The exported folder runs on its own, without the app, on a machine with only the folder; a missing `.env` or asset fails with a clear message; `--dump` equals the compile output |
 | M10 | Editor canvas | M5 | draft | A project can be built, saved and reopened in the app; panels are generated from the node schema; undo and redo; validation errors mark the exact field |
 | M11 | Condition builder | M3, M10 | draft | A condition is built from lists and the generated expression shows in the advanced mode (CodeMirror); renaming a node rewrites the expressions that use it; a broken reference is reported |
@@ -46,12 +46,37 @@ The single unit of planned work: a capability stage with a definition of done (D
 
 - **M7. Discord adapter**. The new crate `platform-discord` implements `Platform` on twilight (`0.17.1`) and feeds a `Runtime`. `Platform::defer` is new: the run defers an interaction 2 seconds after it starts if there is no response, with the visibility of the command node; the timer and the replies share the state of the response behind a lock held while a message is sent, the first message after a deferral completes it and the rest are follow-ups, a deferral that fails is logged and the run goes on, and a run that fails after a deferral sends the generic message in place of "thinking" (`crates/runtime/tests/run_defer.rs`, with a paused clock). `event::normalize` turns a slash command into an `Event` (Discord ids as text, `event.member.permissions` as permission names, `event.timestamp` from the interaction id, options as `{ name: value }`) and refuses what is not a command, options of a kind the editor does not define, text past 6000 characters and names out of range, with a table of hostile inputs. `commands::plan` compares the registered commands with the payload field by field (not by the hash), so a second start sends no call, a change sends only that command, a removed command is deleted and a command edited by hand is put back; with `DISCORD_DEV_GUILD_ID` the commands go only to that server. `intents` maps the names in `Requirements` to gateway intents, event types and cache resources (an unknown name is an error, and there is no cache when none is asked for). `Discord::connect` checks the token with one request, `Discord::run` reads the gateway and calls `dispatch` (a flow never runs in the loop), waits longer after each error up to a minute, and closes on a signal in about 75 ms. The interaction token stays in the adapter (`Token` has no `Display`, and no `Debug` shows a token). A 403 is `MissingPermissions` and anything else `Failed`; the requests are tested against a fake HTTP server (routes, bodies, the 403, the deferral). `crates/platform-discord/examples/serve.rs` runs a bot from `--payload` or `--project`, with the token read from an env file. Checked by hand on a real test server with `DISCORD-TEST.md`: rows 1, 2 and 3 (created, `Pong!`, a second start with no change), a clean stop, and the deferral (a 4 second delay before the reply showed "thinking" from second 2 and `Pong!` replaced it with no second message). Not run by hand: rows 4, 5, 7 and 9, which the unit and request tests cover. New dependencies: the `twilight-*` crates (`gateway`, `http`, `model`, `cache-inmemory`), `rustls` with `ring` (twilight leaves the crypto provider to the application and panics without one), and `tokio` `macros`; `deny.toml` allows `ISC` and `CDLA-Permissive-2.0`. The runner binary is M8.
 
+### In progress
+
+- **M8. Runner**. The new crate `crates/runner` (binary `runner`) wires `runtime`, `platform-discord` and `storage-sqlite`, and replaces the `serve` example. `LogRecord` gets a `run` number, `Discord::connect_via` sends the HTTP requests to a stand-in server (`BOT_INVENTOR_DISCORD_PROXY`, for the tests), and `runtime::compile::unsafe_asset_path` is public so the runner checks every asset again. The only new dependencies are dev-only (`rmp-serde` and `zstd`, to build a payload of another version in a test). Criteria:
+  - **Command line** (`ARCHITECTURE.md` §9.3)
+    - [ ] `runner --payload <file>` connects the bot and runs Ping from end to end; checked by hand with `DISCORD-TEST.md`, which uses the runner instead of the example. **Waiting for the manual run (rows 1 to 12).**
+    - [x] `--version`, `--dump` (`graph::dump_json`) and `--check` (verifies the payload, `.env` and assets without connecting) work.
+    - [x] `--reset-variable <scope>.<name>` calls `reset_variable` and exits; a malformed name or an undeclared variable is a configuration error. A test on a real SQLite file.
+    - [x] An unknown or repeated argument is a usage error. No argument holds the token.
+    - [x] Without `--payload` the runner reads the `BOTINVPL` footer of its own executable; a test appends a payload to a copy of the runner and runs it.
+  - **Configuration**
+    - [x] `BOT_INVENTOR_PAYLOAD`, `BOT_INVENTOR_ENV_FILE`, `BOT_INVENTOR_ASSETS_DIR` and `BOT_INVENTOR_DATA_DIR` are read as in §9.1; without them the directories resolve relative to the executable.
+    - [x] The `.env` reader moves from `examples/serve.rs` into the runner with tests; it warns when the mode is not 0600.
+    - [x] Every asset in `requirements.assets` is checked at start; `..` and absolute paths are rejected.
+    - [x] `data/` is created with mode 0700 and the database is opened with `SqliteStorage::open`.
+  - **Log lines** (§9.2)
+    - [x] JSON lines on standard output with `ts`, `level`, `source`, `run`, `flow`, `node`, `msg` and `fields`; the start and stop messages are also JSON lines.
+    - [x] The token is redacted from every line, error messages from Discord included.
+    - [x] The log rate is limited; past the limit lines are dropped and one line says how many.
+    - [x] A test starts the runner against a fake HTTP server with a marker token and shows the marker in neither standard output nor standard error when Discord rejects the token or fails, or nothing listens; the redaction of every field of a line is a unit test, and the whole session is checked by hand (row 11 of `DISCORD-TEST.md`).
+  - **Signals and exit codes**
+    - [x] SIGTERM and SIGINT stop accepting events, wait at most 5 seconds for runs in progress, close the gateway and the database, and exit `0`; a test with a real process shows it while the bot is connecting; the close of the gateway and the wait for runs are checked by hand (row 10 of `DISCORD-TEST.md`). 
+    - [x] Exit `0` for a clean shutdown; `2` for a configuration problem (no token, a token Discord rejects, an invalid `DISCORD_DEV_GUILD_ID`, a missing asset, a variable type change); `3` for an unknown payload version; `1` for anything else, such as a network failure. Each code has a test.
+    - [x] Each start failure prints one line that says what to fix. No bad payload, `.env`, asset path or argument makes the runner panic (a `proptest` run over the arguments, `.env` text, asset paths and secrets).
+  - **Closing**
+    - [x] `ARCHITECTURE.md` §9.2 and §9.3 lose `[proposed]`, `DISCORD-TEST.md` uses the runner (with a new `compile` example in `runtime` to make its payloads), and `cargo xtask lint` and `cargo xtask test` pass.
+
 ## 3. Current focus
 
 Ranked; pick from the top unless a draft pull request already claims it.
 
-1. **Write the full criteria of M8 (Runner)**, which M7 unblocks.
-2. **M8**, until `runner --payload` runs Ping from the command line.
+1. **M8**, until `runner --payload` runs Ping from the command line.
 
 ## 4. Node catalog
 

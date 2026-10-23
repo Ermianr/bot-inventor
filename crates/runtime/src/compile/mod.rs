@@ -22,6 +22,7 @@ use graph::{
     CommandDef, EventRoute, FlowName, NodeId, Output, Payload, PayloadFlow, PayloadNode, Project,
     Requirements, Variable, VariableType,
 };
+pub use settings::unsafe_asset_path;
 pub use structure::{MAX_FLOW_LINES, MAX_FLOW_NODES};
 
 use crate::catalog::Registry;

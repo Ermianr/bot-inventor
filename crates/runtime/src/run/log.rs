@@ -12,6 +12,9 @@ pub enum Level {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LogRecord {
     pub level: Level,
+    /// The run the record belongs to, counted from 1 since the runtime started; `None` for what
+    /// is not about one run.
+    pub run: Option<u64>,
     pub flow: Option<String>,
     pub node: Option<String>,
     pub message: String,

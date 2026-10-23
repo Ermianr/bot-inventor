@@ -19,6 +19,6 @@ mod tls;
 mod token;
 
 pub use error::AdapterError;
-pub use gateway::Discord;
+pub use gateway::{Discord, check_guild_id};
 pub use platform::DiscordPlatform;
 pub use token::Token;

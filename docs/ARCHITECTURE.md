@@ -206,7 +206,7 @@ async fn execute<P: Platform, S: Storage>(cx: &mut NodeCx<'_, P, S>) -> Result<O
 
 ### 5.4 Shutdown
 
-On a termination signal the runner stops accepting events, waits up to a few seconds for runs in progress, closes the gateway and the database, and exits **[proposed]**.
+On `SIGTERM` or `SIGINT` the runner stops accepting events, closes the gateway, waits up to 5 seconds for the runs in progress (`runner::GRACE`), closes the database and exits with code `0`. A signal that arrives while the bot is still connecting stops it there. The handlers stay installed until the process ends, so a second signal during the close does nothing. A run that is still going after the 5 seconds is logged as left behind, and the process exits without closing the database; SQLite recovers its log on the next start.
 
 ### 5.5 Performance practices
 
@@ -277,22 +277,31 @@ Applied only where a measurement justifies them (no fixed budgets).
 ### 9.1 Local run
 
 1. The app compiles the project to `.botinventor/run/payload.bin`.
-2. It starts the runner (a sidecar bundled with `externalBin` and started with `tauri-plugin-shell` from Rust; the webview has no shell permission) with a cleared environment and only these variables: `BOT_INVENTOR_PAYLOAD` (the payload file), `BOT_INVENTOR_ENV_FILE` (the project's `.env`), `BOT_INVENTOR_ASSETS_DIR` (`assets/`) and `BOT_INVENTOR_DATA_DIR` (`.botinventor/data/`). In an exported bot the same directory variables are optional overrides; the token and `DISCORD_DEV_GUILD_ID` are read from `.env`.
+2. It starts the runner (a sidecar bundled with `externalBin` and started with `tauri-plugin-shell` from Rust; the webview has no shell permission) with a cleared environment and only these variables: `BOT_INVENTOR_PAYLOAD` (the payload file), `BOT_INVENTOR_ENV_FILE` (the project's `.env`), `BOT_INVENTOR_ASSETS_DIR` (`assets/`) and `BOT_INVENTOR_DATA_DIR` (`.botinventor/data/`). In an exported bot the same directory variables are optional overrides; the token and `DISCORD_DEV_GUILD_ID` are read from `.env`. Without them the `.env`, `assets/` and `data/` are looked for next to the executable, never in the working directory. `BOT_INVENTOR_DISCORD_PROXY` (a `host:port`, plain HTTP) sends the HTTP requests to a stand-in for Discord; it exists for the tests of the runner, is read only from the process environment and never from `.env`, and the app does not set it.
 3. The runner reads the token from `.env` itself. The token never goes through the webview; the frontend only learns whether one is set. Writing the token creates `.env` with mode 0600.
 4. The runner prints **JSON lines** on standard output. The app parses them and forwards them through a Tauri `Channel`, which is meant for ordered, high-volume data (events are not).
 5. Stop: terminate signal, then kill after a timeout. An unexpected exit is shown with its exit status. A change to the payload means stop and start again.
 
-### 9.2 Log lines **[proposed]**
+### 9.2 Log lines
 
 ```json
-{"ts":"…","level":"info","source":"engine","run":"r1","flow":"ping","node":"reply","msg":"…","fields":{}}
+{"ts":"2026-10-23T14:05:09.042Z","level":"warn","source":"engine","run":"r1","flow":"ping","node":"reply","msg":"…","fields":{}}
 ```
 
-`source` is `engine` (the runtime's own messages) or `bot` (the *Log* node). The runner redacts the token from every line and limits the log rate.
+`ts` is RFC 3339 in UTC with milliseconds. `level` is `info`, `warn` or `error`. `source` is `engine` (the runtime's and the runner's own messages) or `bot` (the *Log* node, with the nodes of M14). `run` is `r<n>`, counting the runs since the runner started, and is `null` for a line that is not about one run, as `flow` and `node` are. `fields` is an object for data that belongs to a line; engine lines leave it empty. A message is cut at 2000 characters.
 
-### 9.3 Runner command line and exit codes **[proposed]**
+The runner writes one line per write, redacts the token (and its JSON-escaped form) from every value and from the finished line, and limits the rate: at most 100 lines in each second. What is over the limit is dropped, and the first line of the next window (or the last line of the process) says how many were dropped. A failure to start is not a log line: it is one `error: …` line on standard error, with the exit code of §9.3.
 
-`runner` (embedded payload) · `--payload <file>` · `--dump` · `--check` (verify payload, `.env` and assets without connecting) · `--reset-variable <scope>.<name>` · `--version`. Exit code `0` for a clean shutdown, `2` for a configuration problem (missing token or asset), `3` for an unknown payload version, `1` otherwise.
+### 9.3 Runner command line and exit codes
+
+`runner` (the payload at the end of its own executable) · `--payload <file>` (a payload file; wins over `BOT_INVENTOR_PAYLOAD`) · `--dump` (the payload as JSON) · `--check` (verify the payload, `.env` and assets without connecting) · `--reset-variable <scope>.<name>` (delete the stored values of a variable the bot declares) · `--version` · `--help`. At most one of `--dump`, `--check`, `--reset-variable`, `--version` and `--help` is given, and no argument takes the token.
+
+| Code | Meaning |
+|---|---|
+| `0` | A clean shutdown, or a command that finished |
+| `1` | Any other failure: a payload that cannot be read or is damaged, Discord unreachable or answering with an error, the gateway closed for good, a database failure |
+| `2` | A configuration problem the user fixes: a bad argument, no `.env` or token, a token Discord rejects, an invalid `DISCORD_DEV_GUILD_ID`, a missing or unsafe asset, a payload file that cannot be opened, an unknown intent or command, a variable whose type changed, a database that is newer or not the app's |
+| `3` | A payload version this runner does not read (newer: update the app; older: export the bot again) |
 
 ### 9.4 Export
 
