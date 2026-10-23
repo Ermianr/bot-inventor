@@ -2,8 +2,6 @@
 
 Thank you for helping. This guide explains how work is organized and what a pull request needs. Decisions behind these rules are in [`DECISIONS.md`](DECISIONS.md). The code rules are in [`../AGENTS.md`](../AGENTS.md) §2, which also gives orientation and the steps for picking work.
 
-> **Status:** the repository holds documents only, so the commands below are the planned ones. The first milestone (M0: workspace, `cargo xtask`, CI) creates them and updates this file.
-
 ## 1. Before you start
 
 - Read [`ROADMAP.md`](ROADMAP.md) (what the project does and does not plan), [`ARCHITECTURE.md`](ARCHITECTURE.md) and, for the language or tool you will touch, [`DEVELOPMENT-GUIDE.md`](DEVELOPMENT-GUIDE.md).
@@ -26,15 +24,18 @@ pnpm install
 cargo xtask lint && cargo xtask test
 ```
 
-### Daily commands (planned)
+### Daily commands
 
 | Command | What it does |
 |---|---|
 | `cargo xtask dev` | Run the app in development mode |
 | `cargo xtask lint` | Format check, `clippy -D warnings`, `layers`, ESLint, Prettier, `svelte-check`, Effect diagnostics, `cargo-deny` |
-| `cargo xtask test` | Rust tests (`nextest`) and `vitest` |
-| `cargo xtask build` | Build the app and the runner |
-| `cargo xtask bindings` | Regenerate the TypeScript types from Rust (CI fails if they differ from the committed ones) |
+| `cargo xtask test` | Rust tests (`nextest`), doc tests and `vitest` |
+| `cargo xtask build` | Build the app (the runner joins it in a later milestone) |
+| `cargo xtask layers` | Check the crate dependency rules of `ARCHITECTURE.md` §2 |
+| `cargo xtask bindings` | Regenerate the TypeScript types from Rust; `--check` fails if they differ from the committed ones (what CI runs) |
+
+The first run installs the frontend dependencies and, if missing, `cargo-nextest` and `cargo-deny`, so Rust and `pnpm` are all you need besides Tauri's system libraries.
 
 There are no git hooks: run the checks yourself; CI runs them on every pull request.
 

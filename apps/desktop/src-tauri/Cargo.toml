@@ -1,0 +1,26 @@
+[package]
+name = "desktop"
+description = "The Tauri app: commands, run supervisor and the Svelte frontend."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+name = "desktop_lib"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+specta = "=2.0.0-rc.26"
+specta-typescript = "=0.0.13"
+tauri = { version = "2.12.5", features = [] }
+tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
+
+[lints]
+workspace = true

@@ -2,7 +2,7 @@
 
 An open source desktop application to build Discord bots **without code**, from a node editor. Run the bot from the app with live logs, or export it as a standalone executable.
 
-> **Status: design stage.** The repository holds the architecture, decisions and plan; there is no application yet. Linux comes first.
+> **Status: early development.** The architecture, decisions and plan are written and the workspace skeleton is in place; there is no usable application yet. Linux comes first.
 
 Built with Rust, Tauri and Svelte. Security comes first, then functionality, then performance and low memory use.
 
