@@ -2,7 +2,7 @@
 
 What the project plans and in which order. There is no version target and no dates. How to work on it is in [`CONTRIBUTING.md`](CONTRIBUTING.md); the decisions behind it are in [`DECISIONS.md`](DECISIONS.md).
 
-**Stage: building the base.** The architecture, decisions, tooling and contribution rules are written, the repository is public, and the workspace skeleton (M0) is done. There is no bot functionality yet.
+**Stage: building the base.** The architecture, decisions, tooling and contribution rules are written, the repository is public, and the workspace skeleton (M0) and the project model (M1) are done. There is no bot functionality yet.
 
 ## 1. Vision
 
@@ -17,7 +17,7 @@ The single unit of planned work: a capability stage with a definition of done (D
 | M | Name | Depends on | Status | Definition of done (sketch) |
 |---|---|---|---|---|
 | M0 | Workspace skeleton | — | done | The criteria below |
-| M1 | Project model | M0 | draft | `graph` crate: the sample project saves and reloads identically; a newer `format_version` is refused with a clear message; malformed input returns errors and never panics; a sample file of every format version loads |
+| M1 | Project model | M0 | done | The entry below |
 | M2 | Payload codec | M1 | draft | MessagePack + zstd round-trips; a truncated or damaged payload and an unknown version are refused with a clear error; `--dump` prints JSON; a sample payload of every version loads |
 | M3 | Expression engine | M0 | draft | CEL and `{{ }}` templates evaluate; text from Discord users is inserted but never evaluated; the references of an expression are listed; registered functions are pure; bad input returns errors; the real conditions of Welcome and Moderation (role and permission checks, text and number comparisons) evaluate correctly with `cel`, before anything is built around it |
 | M4 | Compile and validate | M2, M3 | draft | Every rule of `ARCHITECTURE.md` §3.3 has a test; each error carries flow, node id and field path; a project with errors cannot be exported; snapshot tests for the messages; property tests for the validator |
@@ -36,12 +36,13 @@ The single unit of planned work: a capability stage with a definition of done (D
 ### Done
 
 - **M0. Workspace skeleton** (#1). The Rust and pnpm workspace, `cargo xtask` (`dev`, `lint`, `test`, `build`, `layers`, `bindings`), CI on Linux (lint, tests, bindings check, Conventional Commits on the title and the commits), the empty Svelte app in a Tauri window with a restrictive CSP and one allowed command, and the baseline configuration files.
+- **M1. Project model** (#2). The project side of the `graph` crate. `Project::load` and `Project::save` read and write the `.botproj` folder (`bot.botproj`, `flows/*.flow.json`, a generated `.gitignore`) with a stable key order, through a temporary file and a rename; the `ping` sample (`crates/graph/tests/samples/v1/ping/`) saves back to identical bytes. Node ids, flow names, aliases, port names and variable names are validated types. A newer `format_version` is refused with a message that says to update the app; older ones go through a table of migration steps (empty for now), and a test requires a sample for every version. Symbolic links, non-regular files, files over 4 MiB and more than 256 flows are refused, and a table of bad inputs (invalid JSON, wrong types, missing and unknown fields, invalid UTF-8, deep nesting, bad names) returns typed errors that name the file and never panic. The payload types and codec are M2; the checks on the graph are M4; the TypeScript bindings of these types come with the editor (M10). The backup copy before a migration comes with the first real migration.
 
 ## 3. Current focus
 
 Ranked; pick from the top unless a draft pull request already claims it.
 
-1. **Write the full criteria of M1 (project model) and M3 (expression engine).** Both depend only on M0, which is done, so they can start in parallel.
+1. **Write the full criteria of M2 (payload codec) and M3 (expression engine).** M2 depends on M1, which is done, and M3 only on M0, so they can start in parallel.
 2. **The chain M2, M4, M5**, until the Ping graph loads, compiles and runs against the mock platform. M5 also writes the first "Adding a node" recipe, which opens the node tasks to contributors.
 
 ## 4. Node catalog
