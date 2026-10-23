@@ -1,9 +1,12 @@
 //! `discord.reply`: answers the interaction that started the run.
 
+use std::sync::Arc;
+
 use serde_json::Value;
 
 use crate::catalog::{FieldKind, FieldSpec, NodeRequires, NodeSpec, OutputSpec, PortSpec};
-use crate::platform::{AllowedMentions, Delivery, Platform, Reply};
+use crate::platform::{AllowedMentions, Platform, Reply};
+use crate::run::Stage;
 use crate::storage::Storage;
 
 use super::{NodeCx, NodeError, Outcome};
@@ -46,22 +49,21 @@ pub(super) async fn execute<P: Platform, S: Storage>(
             "the event has no interaction to reply to",
         ));
     };
-    let delivery = if cx.run.responded {
-        Delivery::FollowUp
-    } else {
-        Delivery::Response
-    };
+    // The lock is held while the message is sent, so the deferral timer cannot slip in between.
+    let response = Arc::clone(&cx.run.response);
+    let mut stage = response.lock().await;
     let message_id = cx
         .platform
         .reply(Reply {
             interaction,
             content,
-            ephemeral: cx.run.ephemeral,
+            ephemeral: response.ephemeral(),
             mentions: AllowedMentions::default(),
-            delivery,
+            delivery: stage.delivery(),
         })
         .await?;
-    cx.run.responded = true;
+    *stage = Stage::Responded;
+    drop(stage);
     let mut outcome = Outcome::next();
     outcome
         .outputs

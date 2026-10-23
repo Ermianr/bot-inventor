@@ -3,15 +3,69 @@
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde_json::{Map, Value};
+use tokio::sync::{Mutex, MutexGuard};
 
 use crate::nodes::{self, NodeCx, NodeError};
-use crate::platform::{Event, Interaction, Platform};
+use crate::platform::{Delivery, Event, Interaction, Platform};
 use crate::storage::Storage;
 
 use super::vars::{self, Loaded};
 use super::{Flow, Inner};
+
+/// Where the response to an interaction stands.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Stage {
+    /// Nothing was sent: the next message is the response.
+    Pending,
+    /// The user sees "thinking": the next message completes it.
+    Deferred,
+    /// The response was sent.
+    Responded,
+}
+
+impl Stage {
+    /// How the next message reaches the user.
+    pub(crate) fn delivery(self) -> Delivery {
+        match self {
+            Self::Pending => Delivery::Response,
+            Self::Deferred | Self::Responded => Delivery::FollowUp,
+        }
+    }
+}
+
+/// The response to the interaction of a run. The walk and the deferral timer share it: the stage
+/// is behind an async lock that is held while a message is sent, so the timer never defers an
+/// interaction whose response is on its way.
+#[derive(Debug)]
+pub(crate) struct Response {
+    stage: Mutex<Stage>,
+    /// Whether the messages are visible only to the user, as the command node says.
+    ephemeral: AtomicBool,
+}
+
+impl Response {
+    fn new() -> Self {
+        Self {
+            stage: Mutex::new(Stage::Pending),
+            ephemeral: AtomicBool::new(false),
+        }
+    }
+
+    pub(crate) async fn lock(&self) -> MutexGuard<'_, Stage> {
+        self.stage.lock().await
+    }
+
+    pub(crate) fn ephemeral(&self) -> bool {
+        self.ephemeral.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn set_ephemeral(&self, ephemeral: bool) {
+        self.ephemeral.store(ephemeral, Ordering::Relaxed);
+    }
+}
 
 /// What a run holds while it walks (`docs/ARCHITECTURE.md` §5.1).
 pub(crate) struct RunState {
@@ -22,10 +76,7 @@ pub(crate) struct RunState {
     /// Which persistent variables already have their stored value in `vars`.
     pub(super) loaded: Loaded,
     pub(crate) interaction: Option<Interaction>,
-    /// Whether the interaction has its first response.
-    pub(crate) responded: bool,
-    /// Whether the replies are visible only to the user, as the command node says.
-    pub(crate) ephemeral: bool,
+    pub(crate) response: Arc<Response>,
     /// The node the run was at last, for the log.
     pub(super) at: Option<usize>,
 }
@@ -38,8 +89,7 @@ impl RunState {
             vars,
             loaded: Loaded::default(),
             interaction: event.interaction,
-            responded: false,
-            ephemeral: false,
+            response: Arc::new(Response::new()),
             at: None,
         }
     }

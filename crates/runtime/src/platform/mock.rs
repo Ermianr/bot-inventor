@@ -2,12 +2,16 @@ use std::collections::VecDeque;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
-use super::{Platform, PlatformError, Reply};
+use super::{Interaction, Platform, PlatformError, Reply};
 
 /// An action the mock carried out.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     Reply(Reply),
+    Defer {
+        interaction: Interaction,
+        ephemeral: bool,
+    },
 }
 
 /// A platform for tests: it records the actions it is given and fails or waits when told to.
@@ -46,17 +50,34 @@ impl MockPlatform {
         self.state().delay = delay;
     }
 
+    async fn wait(&self) {
+        let delay = self.state().delay;
+        if !delay.is_zero() {
+            tokio::time::sleep(delay).await;
+        }
+    }
+
     fn state(&self) -> MutexGuard<'_, State> {
         self.state.lock().unwrap_or_else(PoisonError::into_inner)
     }
 }
 
 impl Platform for MockPlatform {
-    async fn reply(&self, reply: Reply) -> Result<String, PlatformError> {
-        let delay = self.state().delay;
-        if !delay.is_zero() {
-            tokio::time::sleep(delay).await;
+    async fn defer(&self, interaction: Interaction, ephemeral: bool) -> Result<(), PlatformError> {
+        self.wait().await;
+        let mut state = self.state();
+        if let Some(error) = state.failures.pop_front() {
+            return Err(error);
         }
+        state.actions.push(Action::Defer {
+            interaction,
+            ephemeral,
+        });
+        Ok(())
+    }
+
+    async fn reply(&self, reply: Reply) -> Result<String, PlatformError> {
+        self.wait().await;
         let mut state = self.state();
         if let Some(error) = state.failures.pop_front() {
             return Err(error);

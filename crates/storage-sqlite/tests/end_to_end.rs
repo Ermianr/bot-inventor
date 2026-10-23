@@ -132,8 +132,9 @@ async fn say(runtime: &Runtime<MockPlatform, SqliteStorage>, guild: &str) -> Str
         .platform()
         .actions()
         .into_iter()
-        .map(|action| match action {
-            runtime::platform::Action::Reply(reply) => reply,
+        .filter_map(|action| match action {
+            runtime::platform::Action::Reply(reply) => Some(reply),
+            runtime::platform::Action::Defer { .. } => None,
         })
         .collect();
     replies.last().unwrap().content.clone()
@@ -171,8 +172,9 @@ async fn runs_at_the_same_time_lose_no_count() {
             .platform()
             .actions()
             .into_iter()
-            .map(|action| match action {
-                runtime::platform::Action::Reply(reply) => reply.content,
+            .filter_map(|action| match action {
+                runtime::platform::Action::Reply(reply) => Some(reply.content),
+                runtime::platform::Action::Defer { .. } => None,
             })
             .collect();
         totals.sort();
