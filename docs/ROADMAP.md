@@ -2,7 +2,7 @@
 
 What the project plans and in which order. There is no version target and no dates. How to work on it is in [`CONTRIBUTING.md`](CONTRIBUTING.md); the decisions behind it are in [`DECISIONS.md`](DECISIONS.md).
 
-**Stage: building the base.** The architecture, decisions, tooling and contribution rules are written, and the repository is public. The workspace skeleton (M0) is the only code so far.
+**Stage: building the base.** The architecture, decisions, tooling and contribution rules are written, the repository is public, and the workspace skeleton (M0) is done. There is no bot functionality yet.
 
 ## 1. Vision
 
@@ -16,7 +16,7 @@ The single unit of planned work: a capability stage with a definition of done (D
 
 | M | Name | Depends on | Status | Definition of done (sketch) |
 |---|---|---|---|---|
-| M0 | Workspace skeleton | — | in progress | The criteria below |
+| M0 | Workspace skeleton | — | done | The criteria below |
 | M1 | Project model | M0 | draft | `graph` crate: the sample project saves and reloads identically; a newer `format_version` is refused with a clear message; malformed input returns errors and never panics; a sample file of every format version loads |
 | M2 | Payload codec | M1 | draft | MessagePack + zstd round-trips; a truncated or damaged payload and an unknown version are refused with a clear error; `--dump` prints JSON; a sample payload of every version loads |
 | M3 | Expression engine | M0 | draft | CEL and `{{ }}` templates evaluate; text from Discord users is inserted but never evaluated; the references of an expression are listed; registered functions are pure; bad input returns errors; the real conditions of Welcome and Moderation (role and permission checks, text and number comparisons) evaluate correctly with `cel`, before anything is built around it |
@@ -33,31 +33,16 @@ The single unit of planned work: a capability stage with a definition of done (D
 | M14 | More nodes | M13 | draft | The *Next* rows of section 4, one small task each; each ships with schema, executor and bad-input test |
 | M15 | Beyond Linux and distribution | M14 | draft | Linux packages (AppImage, `.deb`), release pipeline with `release-plz`, docs site (`mdBook`) and other systems; to be written when M13 is done |
 
-### M0. Workspace skeleton (in progress)
-
-- **Goal:** a repository where every later milestone can land with the same checks.
-- **Acceptance criteria**
-  - [x] From a clean clone with only Rust and pnpm installed, `cargo xtask lint` and `cargo xtask test` run and pass.
-  - [ ] CI on Linux runs rustfmt, clippy with `-D warnings`, ESLint, Prettier, `svelte-check`, the Effect diagnostics, `cargo-deny`, `nextest` and `vitest`.
-  - [ ] CI fails when the generated TypeScript bindings differ from the committed ones.
-  - [ ] CI fails on a pull request title that is not a Conventional Commit.
-  - [x] `cargo xtask dev` opens a Tauri window with the empty Svelte app, with a restrictive CSP and least-privilege capabilities.
-  - [x] The baseline configuration files of `DEVELOPMENT-GUIDE.md` §11 are in place, including `unsafe_code = "forbid"` and the Clippy lints that forbid `unwrap`, `panic`, `unimplemented`, `todo` and `dbg!` in non-test code.
-  - [ ] `cargo xtask layers` runs in CI and fails when a crate depends on one it must not (`ARCHITECTURE.md` §2).
-  - [x] Repository settings already done: public repository with `LICENSE-MIT`, `LICENSE-APACHE` and `README.md`; labels `accepted`, `in progress` and `needs info`; squash-only merges titled by the pull request; private vulnerability reporting on.
-- **Security:** no token handling yet; the new dependencies pass `cargo-deny`; the Tauri configuration starts with the least privilege.
-
 ### Done
 
-*(none yet)*
+- **M0. Workspace skeleton** (#1). The Rust and pnpm workspace, `cargo xtask` (`dev`, `lint`, `test`, `build`, `layers`, `bindings`), CI on Linux (lint, tests, bindings check, Conventional Commits on the title and the commits), the empty Svelte app in a Tauri window with a restrictive CSP and one allowed command, and the baseline configuration files.
 
 ## 3. Current focus
 
 Ranked; pick from the top unless a draft pull request already claims it.
 
-1. **Finish M0.** The repository exists and its settings are done; what remains is the workspace, CI and shell. Everything else waits for it.
-2. **Write the full criteria of M1 (project model) and M3 (expression engine).** Both depend only on M0, so they can start in parallel.
-3. **The chain M2, M4, M5**, until the Ping graph loads, compiles and runs against the mock platform. M5 also writes the first "Adding a node" recipe, which opens the node tasks to contributors.
+1. **Write the full criteria of M1 (project model) and M3 (expression engine).** Both depend only on M0, which is done, so they can start in parallel.
+2. **The chain M2, M4, M5**, until the Ping graph loads, compiles and runs against the mock platform. M5 also writes the first "Adding a node" recipe, which opens the node tasks to contributors.
 
 ## 4. Node catalog
 
