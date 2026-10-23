@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[duplicate-command] flow `b` node `n1` field `name`: another flow defines a command with this name

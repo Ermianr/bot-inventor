@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+warning[step-sometimes] flow `main` node `n4` field `content`: `yes` runs before this node on only some of the paths that reach it

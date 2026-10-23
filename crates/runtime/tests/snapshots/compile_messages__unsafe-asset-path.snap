@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: "message(&report, Code::UnsafeAssetPath)"
+---
+error[unsafe-asset-path] flow `main` node `n1` field `file`: the path has an empty part, `.` or `..`

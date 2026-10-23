@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[unknown-field] flow `main` node `n2` field `colour`: the node type has no such field

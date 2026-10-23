@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[invalid-description] flow `main` node `n1` field `description`: a description has 1 to 100 characters; this one has 101

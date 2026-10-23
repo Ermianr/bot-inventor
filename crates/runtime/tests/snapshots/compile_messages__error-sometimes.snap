@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+warning[error-sometimes] flow `main` node `n4` field `content`: this node is reached from an `error` port on only some of its paths

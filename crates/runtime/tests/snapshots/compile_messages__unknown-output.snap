@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[unknown-output] flow `main` node `n2` field `content`: the node `cmd` of type `discord.slash_command` has no output `nothing`

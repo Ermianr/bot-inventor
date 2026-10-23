@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[duplicate-alias] flow `main` node `n2` field `alias`: another node of this flow has the alias `same`

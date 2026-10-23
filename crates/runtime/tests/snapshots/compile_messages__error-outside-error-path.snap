@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[error-outside-error-path] flow `main` node `n2` field `content`: `error` exists only in a node reached from an `error` port

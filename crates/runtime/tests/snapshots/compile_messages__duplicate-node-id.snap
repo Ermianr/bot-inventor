@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[duplicate-node-id] flow `main` node `n1`: another node of this flow has the id `n1`

@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[unknown-error-field] flow `main` node `n2` field `content`: `error.code` does not exist; use `error.kind` or `error.message`
