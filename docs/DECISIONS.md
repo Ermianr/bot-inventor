@@ -61,6 +61,7 @@ The decisions that shape the project: the ones that change how it behaves or tha
   - Messages sent by the bot ping nobody by default; a node option enables user or role mentions.
   - Slash commands are registered globally; if the project's `.env` defines a development server, local runs register there. At startup the runner compares its commands with the registered ones and sends only differences (Discord allows 200 command creations a day per server).
   - Intents and cache resources are derived from the nodes in use.
+  - Inside a run, a node runs once, after every node before it that runs (lowest index first, in the topological order of the payload), so a node where two paths join sees the steps of both.
 - **Why.** Parallel runs keep one slow node from blocking a server; the generic error keeps internals private; the mention default stops user text from triggering `@everyone`.
 - **To verify.** The numeric defaults; that deferral keeps the chosen visibility.
 - **Details.** `ARCHITECTURE.md` §5, §7.

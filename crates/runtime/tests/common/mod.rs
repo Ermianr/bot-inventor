@@ -123,3 +123,82 @@ pub fn ping() -> Project {
         vec![line("n1", "next", "n2")],
     )
 }
+
+// ---- Running a payload ------------------------------------------------------------------------
+
+use std::sync::Arc;
+
+use graph::Payload;
+use runtime::platform::{Action, Event, Interaction, MockPlatform, Reply};
+use runtime::run::{Limits, MemoryLog, Runtime};
+
+/// The payload of a project that compiles without errors.
+pub fn payload(project: &Project) -> Payload {
+    let report = run(project);
+    assert!(!report.has_errors(), "{:#?}", report.diagnostics);
+    report.payload.unwrap()
+}
+
+/// A runtime on a mock platform and a memory log, with the default limits.
+pub fn start(payload: &Payload) -> (Runtime<MockPlatform>, Arc<MemoryLog>) {
+    start_with(payload, Limits::default())
+}
+
+pub fn start_with(payload: &Payload, limits: Limits) -> (Runtime<MockPlatform>, Arc<MemoryLog>) {
+    let log = Arc::new(MemoryLog::new());
+    let runtime = Runtime::with(
+        payload,
+        MockPlatform::new(),
+        log.clone(),
+        &runtime::expr::CelEngine::new(),
+        limits,
+    )
+    .unwrap();
+    (runtime, log)
+}
+
+/// A `/name` slash command from a user named `ana`.
+pub fn command(name: &str) -> Event {
+    Event {
+        kind: "slash_command".to_owned(),
+        command: Some(name.to_owned()),
+        data: json!({
+            "command": { "name": name },
+            "user": { "id": "42", "name": "ana" },
+            "options": {},
+        }),
+        interaction: Some(Interaction {
+            id: "i-1".to_owned(),
+        }),
+    }
+}
+
+/// The replies the mock platform carried out.
+pub fn replies(runtime: &Runtime<MockPlatform>) -> Vec<Reply> {
+    runtime
+        .platform()
+        .actions()
+        .into_iter()
+        .map(|action| match action {
+            Action::Reply(reply) => reply,
+        })
+        .collect()
+}
+
+/// Dispatches `event`, waits for the runs to end and returns the replies.
+pub async fn dispatch_and_wait(runtime: &Runtime<MockPlatform>, event: Event) -> Vec<Reply> {
+    runtime.dispatch(event);
+    runtime.drain().await;
+    replies(runtime)
+}
+
+/// A chain `slash -> reply -> reply -> ...` of `nodes` nodes in all.
+pub fn chain(nodes: usize) -> Project {
+    let mut list = vec![slash("n0", "start", "go")];
+    let mut lines = Vec::new();
+    for i in 1..nodes {
+        list.push(reply(&format!("n{i}"), &format!("r{i}"), "ok"));
+        lines.push(line(&format!("n{}", i - 1), "next", &format!("n{i}")));
+    }
+    single(list, lines)
+}

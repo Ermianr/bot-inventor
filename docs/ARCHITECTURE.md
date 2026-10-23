@@ -173,26 +173,27 @@ Declared in `bot.botproj`: `name`, `type` (integer, decimal, text, boolean), `sc
 
 ### 5.1 Dispatch and runs
 
-1. The platform delivers a normalized **event** (`Ready`, `SlashCommand`, `MemberJoined`, …).
-2. The dispatcher looks up the flows whose trigger matches (for a slash command, the command name; command names are unique across flows) and starts one **run** per flow as an independent tokio task.
-3. A run holds its event, the outputs of the steps so far, the per-run variable cache and counters. It walks the flow from the trigger, node by node, following the output port the node returned.
-4. A run ends when a node has no line out of the chosen port, or when a limit is hit.
+1. The platform delivers a normalized **event** (`runtime::platform::Event`: its kind, for a slash command the command name, the fields a flow reads as `event.*` and the interaction a reply goes to).
+2. `Runtime::dispatch` looks up the flows whose trigger matches (for a slash command, the command name; command names are unique across flows) and starts one **run** per flow as an independent tokio task.
+3. A run holds its event, the outputs of the steps so far and the declared variables (until storage arrives, each reads its `initial` value). It walks the flow from the trigger. Nodes are in topological order, so the next node to run is the queued one with the lowest index: a node runs **once**, after every node before it that is going to run, which is what the compile checks on `steps.*` assume. Each node follows the output port it returned, and a port can lead to several nodes.
+4. A run ends when no node is queued, or when a limit is hit.
 
-Limits (provisional values, adjusted by measurement): a global cap of 64 simultaneous runs, a maximum of 500 steps per run and a maximum duration of 60 seconds per run. When a run is dropped for a limit, it is logged at warning level with the flow and node.
+Limits (provisional values, adjusted by measurement; `runtime::run::Limits`): a global cap of 64 simultaneous runs, a maximum of 500 steps per run (each executed node is a step) and a maximum duration of 60 seconds per run. When a run is dropped or stopped for a limit, it is logged at warning level with the flow and node. What happens to runs goes to a `RunLog` (a trait; the runner turns the records into the lines of §9.2), and every message names the problem and never a value.
 
 ### 5.2 Node contract
 
-A node type is declared in one place in `runtime` and has two parts: a **schema** (data) and an **executor**. The schema is real: `runtime::catalog` has `NodeSpec` (type id, version, fields, output ports, named outputs, requirements and, for a trigger, the event it starts and the fields of that event), `FieldSpec` and `FieldKind` (text, expression, integer, boolean, closed list of words, asset path, list of objects), and a `Registry` keyed by type and version. The executor arrives with the run loop (M5), and this sketch is **[proposed]**:
+A node type is declared in one place in `runtime` and has two parts: a **schema** (data) and an **executor**. The schema is real: `runtime::catalog` has `NodeSpec` (type id, version, fields, output ports, named outputs, requirements and, for a trigger, the event it starts and the fields of that event), `FieldSpec` and `FieldKind` (text, expression, integer, boolean, closed list of words, asset path, list of objects), and a `Registry` keyed by type and version. The schema and the executor of a node are in one file of `runtime::nodes`, and the executor is a function over a `NodeCx` (the platform, the node's settings and compiled expressions, the state of the run and `error.*` on an error path):
 
 ```rust
-trait NodeExec {
-    async fn run(&self, cx: &mut RunCx<'_>) -> Result<Outcome, NodeError>;
-}
+async fn execute<P: Platform>(cx: &mut NodeCx<'_, P>) -> Result<Outcome, NodeError>
 // Outcome { port, outputs }; a NodeError sends the run to the "error" port.
 ```
 
+`NodeError` has a closed kind, which is `error.kind`: `expression`, `invalid_value`, `missing_permissions` or `platform`. The runtime dispatches on an enum of node types rather than on a trait object, so `Platform` stays a plain generic trait. The steps to add one are in `CONTRIBUTING.md` §8.
+
 - The schema will be serialized to the frontend (through `tauri-specta`, with the editor in M10) and drives the property panel. Compile uses the same schema.
 - A test checks that every schema has an executor and every executor has a schema.
+- A payload that skips compile still cannot make a node panic: executors read their settings through `NodeCx`, which returns an error for a missing or wrong value.
 
 ### 5.3 Errors, deadlines and mentions
 
@@ -226,7 +227,7 @@ Applied only where a measurement justifies them (no fixed budgets).
 
 ## 7. Platform and Discord
 
-`Platform` is the trait the runtime sees: it delivers normalized events and executes actions (reply, send message, add role, kick, …). `platform-discord` implements it on twilight. A `MockPlatform` implements it for tests and records every action.
+`Platform` is the trait the runtime sees: it delivers normalized events and executes actions (reply, send message, add role, kick, …). `platform-discord` implements it on twilight. A `MockPlatform` (in `runtime::platform`) implements it for tests: it records every action and can be told to fail the next ones or to wait. `PlatformError` is a closed list that carries no data from the platform.
 
 - **Intents and cache** are computed at compile from the nodes' `requires` and stored in the payload. The runner enables only those intents and keeps only the cache resources the nodes need. A node that needs a privileged intent (`GUILD_MEMBERS`, `MESSAGE_CONTENT`) shows a notice in the editor.
 - **Commands** are global by default. If `.env` defines `DISCORD_DEV_GUILD_ID`, they are registered only in that server. At start the runner fetches the registered commands, compares them with the payload's definitions (by the stored hash), and sends only differences, because Discord allows 200 command creations per day per server.
