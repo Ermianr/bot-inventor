@@ -85,9 +85,13 @@ my-bot/
 └─ .gitignore           # generated
 ```
 
-- `bot.botproj` holds: `format_version` (integer), `name`, `platform` (`discord`), settings, and the **variable declarations**. It does not list flows; the app scans `flows/`.
-- Each `*.flow.json` holds one flow: its nodes (with their editor position under a separate `editor` key) and its lines.
-- Files are written with a stable key order and stable node ids, through a temporary file and a rename. Versioning and migrations are in *Project and payload formats* in `DECISIONS.md`.
+- `bot.botproj` holds: `format_version` (integer, 1 or more), `name`, `platform` (`discord`), `settings` (an object whose keys are not fixed yet) and `variables`, the **variable declarations** (`name`, `type`, `scope`, `initial`). It does not list flows; the app scans `flows/`.
+- Each `flows/<name>.flow.json` holds one flow, and the flow name is the file name. Its fields are `nodes` and `lines`. A node has `id`, `alias`, `type`, `type_version`, `settings` (an object) and `editor` (`x` and `y`, the position, kept apart from the logic). A line has `from` (`node` and `port`) and `to` (a node id). The node `type` and `settings` are opaque to the `graph` crate; the node catalog in `runtime` gives them a meaning.
+- Names are checked when the file is read: node ids are 1-64 letters, digits, `_` or `-`; flow names are 1-64 lowercase letters, digits, `_` or `-`, starting with a letter or a digit; aliases, port names and variable names are 1-64 lowercase letters, digits or `_`, not starting with a digit. A field that is not in the format is an error within the same `format_version`.
+- Loading checks only the **shape** of the files (JSON, types, names, sizes); the graph itself (unique ids and aliases, ports, one trigger, cycles, references) is checked when it is compiled (§3.3). Loading never writes.
+- Loading refuses a file larger than 4 MiB, a project with more than 256 flows, and any symbolic link or non-regular file it would read (`bot.botproj`, `flows/` and each flow file). A file in `flows/` that does not end in `.flow.json` (a leftover `.tmp`, for example) is ignored. The limits are provisional **[measure]**.
+- Files are written with a stable key order (the declared order for fixed fields, sorted keys inside the free-form `settings`), pretty-printed with a final newline, through a temporary file and a rename. Saving creates `.gitignore` only if it is missing, removes the files of flows that no longer exist, and never touches `.env`, `assets/` or `.botinventor/`. Versioning and migrations are in *Project and payload formats* in `DECISIONS.md`.
+- A project in an older format version is migrated in memory, as JSON, by a table of steps (`graph::migrate::STEPS`, empty while version 1 is the only one); the loader reports the version it came from. The backup copy made before the project is saved in the new version is written with the first real migration.
 
 ### 3.2 Payload (what the runner executes)
 
