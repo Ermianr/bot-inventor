@@ -3,9 +3,13 @@
 //! This crate knows no Tauri, Discord or SQLite: it only sees the `Platform` and `Storage`
 //! traits (`docs/ARCHITECTURE.md` §2).
 
+/// The data types that appear in the API of this crate: a payload, a variable, a project.
+pub use graph;
+
 pub mod catalog;
 pub mod compile;
 pub mod expr;
 mod nodes;
 pub mod platform;
 pub mod run;
+pub mod storage;

@@ -1,0 +1,5 @@
+---
+source: crates/runtime/tests/compile_messages.rs
+expression: text
+---
+error[add-to-non-number] flow `main` node `n3` field `operation`: `add` needs a number, and `bot.motto` does not hold one

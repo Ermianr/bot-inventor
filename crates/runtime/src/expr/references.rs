@@ -48,7 +48,8 @@ impl References {
         self.functions.insert(name);
     }
 
-    pub(super) fn extend(&mut self, other: &References) {
+    /// Adds everything `other` reads and calls.
+    pub fn extend(&mut self, other: &References) {
         self.paths.extend(other.paths.iter().cloned());
         self.functions.extend(other.functions.iter().cloned());
     }

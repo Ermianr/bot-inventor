@@ -414,8 +414,9 @@ Sources: https://twilight.rs/chapter_1_crates/section_3_gateway.html, https://tw
 - **[official]** With `synchronous=NORMAL` in WAL mode, commits do not sync and a power loss or hard reset can roll back recent transactions; `FULL` syncs the WAL on every commit.
 - **[project]** WAL on for bot storage. Document that a project or bot data folder must not live on a network drive.
 - **[project]** `synchronous=FULL`: safer, and the extra write latency does not matter for small bot data. Revisit only if a measurement shows a problem.
-- **[verify]** Settings to confirm against the SQLite documentation before use: `foreign_keys=ON`, `busy_timeout`, and the `cache_size` and `mmap_size` values for low RAM.
-- **[verify]** `rusqlite`'s `bundled` feature (compiles SQLite with the crate); that `Connection` is `Send` but not `Sync`; and that blocking database calls from async code should go through `tokio::task::spawn_blocking` or one dedicated thread. Confirm each in the crate documentation.
+- **[project]** Settings used (M6): `foreign_keys=ON`, `busy_timeout` of 5 seconds, `cache_size` of 1 MiB, `trusted_schema=OFF`; `mmap_size` is left at its default, which is off. The `-wal` and `-shm` files take the mode of the database, which is created with 0600.
+- **[project]** `rusqlite` with `default-features = false` and `bundled` (SQLite compiled with the crate); `Connection` is `Send` and moves to one dedicated thread, which every job reaches over a channel. Drop the last handle to close the database: the thread is joined, so that is a short blocking call.
+- **[project]** Never put a message of SQLite in an error that can reach a flow: `storage-sqlite` keeps only the kind of the error code.
 - **[project]** The exported bot creates its database on first run in a `data/` folder next to the executable (resolved relative to the executable, overridable by an environment variable). It is never embedded in the executable. Local runs from the editor use `.botinventor/` inside the project, which is not committed.
 - **[project]** Group multi-step writes in a transaction. All access goes through the `Storage` trait, so the rest of the runtime never sees SQL.
 

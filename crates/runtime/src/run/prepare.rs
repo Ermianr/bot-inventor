@@ -1,15 +1,13 @@
 //! From a payload to the flows a run walks: schemas looked up, expressions compiled once.
 
-use std::collections::HashMap;
-
 use graph::{Payload, PayloadNode};
 use serde_json::{Map, Value};
 
 use crate::catalog::{FieldKind, Registry};
-use crate::expr::{ExprError, Expression, ExpressionEngine, Template};
+use crate::expr::{ExprError, Expression, ExpressionEngine, References, Template};
 use crate::nodes::Kind;
 
-use super::RuntimeError;
+use super::{Declarations, Declared, RuntimeError};
 
 /// An expression or a template, compiled.
 pub(crate) enum Compiled {
@@ -28,6 +26,8 @@ pub(crate) struct PreparedNode {
     pub(crate) alias: String,
     pub(crate) kind: Kind,
     pub(crate) settings: Map<String, Value>,
+    /// The persistent variables its expressions read, fetched in one batch before it runs.
+    pub(crate) reads: Vec<Declared>,
     compiled: Vec<(String, Compiled)>,
     next: Vec<(String, Vec<usize>)>,
 }
@@ -53,6 +53,7 @@ pub(super) fn flows(
     payload: &Payload,
     registry: &Registry,
     engine: &dyn ExpressionEngine,
+    decls: &Declarations,
 ) -> Result<Vec<Flow>, RuntimeError> {
     payload
         .flows
@@ -62,7 +63,7 @@ pub(super) fn flows(
             let nodes = flow
                 .nodes
                 .iter()
-                .map(|node| prepare(name, node, registry, engine))
+                .map(|node| prepare(name, node, registry, engine, decls))
                 .collect::<Result<Vec<_>, _>>()?;
             let trigger = usize::try_from(flow.trigger)
                 .ok()
@@ -88,6 +89,7 @@ fn prepare(
     node: &PayloadNode,
     registry: &Registry,
     engine: &dyn ExpressionEngine,
+    decls: &Declarations,
 ) -> Result<PreparedNode, RuntimeError> {
     let unknown = || RuntimeError::UnknownNode {
         flow: flow.to_owned(),
@@ -122,6 +124,15 @@ fn prepare(
         compiled.push((expression.path.clone(), value));
     }
 
+    let mut references = References::default();
+    for (_, compiled) in &compiled {
+        references.extend(match compiled {
+            Compiled::Template(template) => template.references(),
+            Compiled::Expression(expression) => expression.references(),
+        });
+    }
+    let reads = decls.reads(&references);
+
     let next = node
         .next
         .iter()
@@ -140,29 +151,8 @@ fn prepare(
         alias: node.alias.as_str().to_owned(),
         kind,
         settings: node.settings.clone(),
+        reads,
         compiled,
         next,
     })
-}
-
-/// The declared variables as the `vars` namespace: `{scope: {name: initial}}`. Persistent scopes
-/// read their declared value until the storage arrives.
-pub(super) fn variables(payload: &Payload) -> Value {
-    let mut scopes: HashMap<String, Map<String, Value>> = HashMap::new();
-    for variable in &payload.variables {
-        let scope = serde_json::to_value(variable.scope)
-            .ok()
-            .and_then(|value| value.as_str().map(str::to_owned))
-            .unwrap_or_default();
-        scopes
-            .entry(scope)
-            .or_default()
-            .insert(variable.name.as_str().to_owned(), variable.initial.clone());
-    }
-    Value::Object(
-        scopes
-            .into_iter()
-            .map(|(scope, vars)| (scope, Value::Object(vars)))
-            .collect(),
-    )
 }

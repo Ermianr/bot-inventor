@@ -10,8 +10,9 @@ mod expressions;
 mod paths;
 mod settings;
 mod structure;
+mod variables;
 
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 pub use diagnostic::{Code, Diagnostic, Severity};
 pub use discord::{
@@ -75,6 +76,7 @@ pub fn compile_with(
 ) -> Report {
     let mut diagnostics = Vec::new();
     let declared = check_variables(&project.manifest.variables, &mut diagnostics);
+    let kinds = declared_kinds(&project.manifest.variables);
 
     let mut analyzed = Vec::new();
     let mut commands: Vec<(usize, &FlowName, &graph::Node, discord::Command)> = Vec::new();
@@ -98,6 +100,9 @@ pub fn compile_with(
             cache.extend(spec.requires.cache.iter().copied());
             let checked = settings::check(name, node, spec, &mut diagnostics);
             assets.extend(checked.assets.iter().cloned());
+            if checked.ok && spec.type_id == crate::nodes::SET_VARIABLE {
+                variables::check_set(name, node, &kinds, &mut diagnostics);
+            }
             let mut reads = BTreeSet::new();
             expressions[position] = expressions::check_node(
                 &scope,
@@ -237,6 +242,21 @@ fn check_variables(variables: &[Variable], out: &mut Vec<Diagnostic>) -> HashSet
         }
     }
     declared
+}
+
+/// The type of each declared variable by `scope.name`; the first declaration wins.
+fn declared_kinds(variables: &[Variable]) -> HashMap<String, VariableType> {
+    let mut kinds = HashMap::new();
+    for variable in variables {
+        let scope = serde_json::to_value(variable.scope)
+            .ok()
+            .and_then(|v| v.as_str().map(str::to_owned))
+            .unwrap_or_default();
+        kinds
+            .entry(format!("{scope}.{}", variable.name.as_str()))
+            .or_insert(variable.kind);
+    }
+    kinds
 }
 
 /// Rules that look at all the commands of the project together.

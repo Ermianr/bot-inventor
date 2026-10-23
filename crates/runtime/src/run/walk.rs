@@ -8,7 +8,9 @@ use serde_json::{Map, Value};
 
 use crate::nodes::{self, NodeCx, NodeError};
 use crate::platform::{Event, Interaction, Platform};
+use crate::storage::Storage;
 
+use super::vars::{self, Loaded};
 use super::{Flow, Inner};
 
 /// What a run holds while it walks (`docs/ARCHITECTURE.md` §5.1).
@@ -17,6 +19,8 @@ pub(crate) struct RunState {
     /// `steps.<alias>.<output>` of the nodes that already ran.
     pub(crate) steps: Map<String, Value>,
     pub(crate) vars: Value,
+    /// Which persistent variables already have their stored value in `vars`.
+    pub(super) loaded: Loaded,
     pub(crate) interaction: Option<Interaction>,
     /// Whether the interaction has its first response.
     pub(crate) responded: bool,
@@ -32,6 +36,7 @@ impl RunState {
             event: event.data,
             steps: Map::new(),
             vars,
+            loaded: Loaded::default(),
             interaction: event.interaction,
             responded: false,
             ephemeral: false,
@@ -56,8 +61,8 @@ pub(super) enum Ending {
 /// Walks `flow` from its trigger. A node runs at most once, after every node before it that is
 /// going to run: nodes are in topological order, so the next one to run is always the one with
 /// the lowest index. Each node counts as a step.
-pub(super) async fn walk<P: Platform>(
-    inner: &Inner<P>,
+pub(super) async fn walk<P: Platform, S: Storage>(
+    inner: &Inner<P, S>,
     flow: &Flow,
     state: &mut RunState,
 ) -> Ending {
@@ -80,13 +85,22 @@ pub(super) async fn walk<P: Platform>(
             continue;
         };
         let inherited = errors.get(at).cloned().flatten();
-        let mut cx = NodeCx {
-            platform: &inner.platform,
-            node,
-            run: state,
-            error: inherited.as_deref(),
+        // The variables the node reads come from the storage in one batch, just before it runs.
+        let outcome = match vars::load(&inner.storage, node, state).await {
+            Ok(()) => {
+                let mut cx = NodeCx {
+                    platform: &inner.platform,
+                    storage: &inner.storage,
+                    decls: &inner.decls,
+                    node,
+                    run: state,
+                    error: inherited.as_deref(),
+                };
+                nodes::execute(node.kind, &mut cx).await
+            }
+            Err(error) => Err(error),
         };
-        let (port, error) = match nodes::execute(node.kind, &mut cx).await {
+        let (port, error) = match outcome {
             Ok(outcome) => {
                 if !outcome.outputs.is_empty() {
                     state
