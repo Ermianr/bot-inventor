@@ -54,6 +54,5 @@ Then update what your change affects, in the same pull request: the milestone an
 
 - Work in a branch named `m5-short-title`. Never push to `main`.
 - Conventional Commit messages, with `!` for a breaking change (`docs/CONTRIBUTING.md` §4).
-- If you wrote a significant part, a `Co-Authored-By` trailer is welcome.
 - Open the pull request from the template and say what you ran to test it.
 - Do not attach a harmful project or payload to a public issue (`docs/SECURITY.md`).
