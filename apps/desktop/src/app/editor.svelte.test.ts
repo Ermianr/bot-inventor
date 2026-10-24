@@ -1,7 +1,15 @@
 import { Effect, ManagedRuntime } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { catalog, ping, reply } from "../editor/fixtures";
-import type { DiagnosticView, OpenedProject, Project } from "../lib/bindings";
+import type {
+  Condition,
+  DiagnosticView,
+  Flow,
+  NameList,
+  OpenedProject,
+  Project,
+  Renamed,
+} from "../lib/bindings";
 import {
   BackendError,
   TauriBackend,
@@ -265,6 +273,21 @@ describe("EditorStore history", () => {
     expect(store.setting("n2", "content")).toBe("A");
   });
 
+  it("makes a choice from a list a step of its own and typing one step", async () => {
+    const { store } = await opened();
+    store.setSelection(["n2"]);
+    store.setSetting("n2", "content", "A", false);
+    store.setSetting("n2", "content", "AB", false);
+    store.setSetting("n2", "content", "ABC");
+    store.setSetting("n2", "content", "ABCD");
+    store.undo();
+    expect(store.setting("n2", "content")).toBe("AB");
+    store.undo();
+    expect(store.setting("n2", "content")).toBe("A");
+    store.undo();
+    expect(store.setting("n2", "content")).toBe("Pong!");
+  });
+
   it("makes one drag of several nodes one step", async () => {
     const { store } = await opened();
     store.moveNodes([
@@ -275,14 +298,20 @@ describe("EditorStore history", () => {
     expect(store.flow).toBe(ping);
   });
 
-  it("makes a rename a step, and refuses a bad alias without a step", async () => {
-    const { store } = await opened();
-    expect(store.renameAlias("n2", "answer")).toBeNull();
-    expect(store.renameAlias("n2", "Bad Name")).toBe("invalid");
-    expect(store.renameAlias("n2", "ping_command")).toBe("taken");
-    expect(store.flow?.nodes[1]?.alias).toBe("answer");
-    store.undo();
-    expect(store.flow?.nodes[1]?.alias).toBe("reply");
+  it("refuses a bad alias without asking Rust and without a step", async () => {
+    const calls: string[] = [];
+    const { store } = await opened({
+      renameAlias: (p, _flow, _node, alias) =>
+        Effect.sync(() => {
+          calls.push(alias);
+          return { project: p, rewritten: [], left_alone: [] };
+        }),
+    });
+    expect(await store.renameAlias("n2", "Bad Name")).toBe("invalid");
+    expect(await store.renameAlias("n2", "ping_command")).toBe("taken");
+    expect(await store.renameAlias("zz", "other")).toBe("unknown-node");
+    expect(await store.renameAlias("n2", "reply")).toBeNull();
+    expect(calls).toEqual([]);
     expect(store.canUndo).toBe(false);
   });
 
@@ -464,5 +493,264 @@ describe("Ping from scratch", () => {
     expect(built?.lines).toEqual([
       { from: { node: first.id, port: "next" }, to: second.id },
     ]);
+  });
+});
+
+describe("EditorStore renaming", () => {
+  const checking: Flow = {
+    nodes: [
+      ping.nodes[0]!,
+      ping.nodes[1]!,
+      {
+        id: "n3",
+        alias: "check",
+        type: "logic.branch",
+        type_version: 1,
+        settings: { condition: "steps.reply.message_id != ''" },
+        editor: { x: 560, y: 0 },
+      },
+    ],
+    lines: ping.lines,
+  };
+  const withBranch: Project = { ...project, flows: { ping: checking } };
+
+  /** What Rust gives back: the alias changed and the read rewritten. */
+  function renamed(p: Project, alias: string): Renamed {
+    const flow = p.flows.ping!;
+    return {
+      project: {
+        ...p,
+        flows: {
+          ping: {
+            ...flow,
+            nodes: flow.nodes.map((n) =>
+              n.id === "n2"
+                ? { ...n, alias }
+                : n.id === "n3"
+                  ? {
+                      ...n,
+                      settings: {
+                        condition: `steps.${alias}.message_id != ''`,
+                      },
+                    }
+                  : n,
+            ),
+          },
+        },
+      },
+      rewritten: [{ node: "n3", path: "condition" }],
+      left_alone: [],
+    };
+  }
+
+  const open = (overrides: Partial<Backend>) =>
+    opened({
+      openProject: () =>
+        Effect.succeed({
+          project: withBranch,
+          migrated_from: null,
+        } satisfies OpenedProject),
+      ...overrides,
+    });
+
+  it("renames the node and the reads of it as one step of the history", async () => {
+    const asked: string[] = [];
+    const { store } = await open({
+      renameAlias: (p, flow, node, alias) =>
+        Effect.sync(() => {
+          asked.push(`${flow}/${node}/${alias}`);
+          return renamed(p, alias);
+        }),
+    });
+    expect(await store.renameAlias("n2", "answer")).toBeNull();
+    expect(asked).toEqual(["ping/n2/answer"]);
+    expect(store.flow?.nodes[1]?.alias).toBe("answer");
+    expect(store.setting("n3", "condition")).toBe(
+      "steps.answer.message_id != ''",
+    );
+    expect(store.dirty).toBe(true);
+
+    store.undo();
+    expect(store.flow?.nodes[1]?.alias).toBe("reply");
+    expect(store.setting("n3", "condition")).toBe(
+      "steps.reply.message_id != ''",
+    );
+    expect(store.canUndo).toBe(false);
+    store.redo();
+    expect(store.setting("n3", "condition")).toBe(
+      "steps.answer.message_id != ''",
+    );
+  });
+
+  it("says which fields kept the old alias", async () => {
+    const { store } = await open({
+      renameAlias: (p, _flow, _node, alias) =>
+        Effect.succeed({
+          ...renamed(p, alias),
+          rewritten: [],
+          left_alone: [
+            {
+              field: { node: "n3", path: "condition" },
+              reason: "syntax error",
+            },
+          ],
+        }),
+    });
+    expect(await store.renameAlias("n2", "answer")).toBeNull();
+    expect(store.notice?.kind).toBe("info");
+    expect(store.notice?.text).toContain("check.condition (syntax error)");
+  });
+
+  it("changes nothing and says so when Rust fails", async () => {
+    const { store } = await open({
+      renameAlias: () =>
+        Effect.fail(
+          new BackendError({
+            command: "rename_alias",
+            cause: { kind: "invalid_input", message: "no such flow" },
+          }),
+        ),
+    });
+    expect(await store.renameAlias("n2", "answer")).toBe("failed");
+    expect(store.flow?.nodes[1]?.alias).toBe("reply");
+    expect(store.canUndo).toBe(false);
+    expect(store.notice).toEqual({ kind: "error", text: "no such flow" });
+  });
+
+  it("asks again when the project changed while Rust answered", async () => {
+    const seen: Project[] = [];
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { store } = await open({
+      renameAlias: (p, _flow, _node, alias) =>
+        Effect.promise(async () => {
+          seen.push(p);
+          if (seen.length === 1) await gate;
+          return renamed(p, alias);
+        }),
+    });
+    const done = store.renameAlias("n2", "answer");
+    await vi.waitFor(() => {
+      expect(seen).toHaveLength(1);
+    });
+    store.setSetting("n1", "name", "pong");
+    release();
+    expect(await done).toBeNull();
+    expect(seen).toHaveLength(2);
+    expect(store.setting("n1", "name")).toBe("pong");
+    expect(store.flow?.nodes[1]?.alias).toBe("answer");
+  });
+});
+
+describe("EditorStore conditions and names", () => {
+  const condition: Condition = {
+    join: "All",
+    rows: [
+      {
+        type: "Compare",
+        left: { type: "Name", value: ["event", "user", "id"] },
+        op: "Eq",
+        right: { type: "Text", value: "1" },
+      },
+    ],
+  };
+
+  it("reads and writes a condition through Rust", async () => {
+    const { store } = await opened({
+      conditionToSource: () => Effect.succeed('event.user.id == "1"'),
+      conditionFromSource: (source) =>
+        Effect.succeed(source === 'event.user.id == "1"' ? condition : null),
+    });
+    expect(await store.writeCondition(condition)).toEqual({
+      ok: true,
+      value: 'event.user.id == "1"',
+    });
+    expect(await store.readCondition('event.user.id == "1"')).toEqual({
+      ok: true,
+      value: condition,
+    });
+    expect(await store.readCondition("size(x)")).toEqual({
+      ok: true,
+      value: null,
+    });
+  });
+
+  it("gives the message of a condition that cannot be read or written", async () => {
+    const fail = (message: string) =>
+      Effect.fail(
+        new BackendError({
+          command: "x",
+          cause: { kind: "invalid_input", message },
+        }),
+      );
+    const { store } = await opened({
+      conditionToSource: () => fail("a condition needs at least one row"),
+      conditionFromSource: () => fail("the expression is empty"),
+    });
+    expect(await store.writeCondition(condition)).toEqual({
+      ok: false,
+      message: "a condition needs at least one row",
+    });
+    expect(await store.readCondition("")).toEqual({
+      ok: false,
+      message: "the expression is empty",
+    });
+  });
+
+  it("lists the names of the one node that is selected", async () => {
+    const asked: string[] = [];
+    const list: NameList = { order_known: true, names: [] };
+    const { store } = await opened({
+      expressionNames: (_p, flow, node) =>
+        Effect.sync(() => {
+          asked.push(`${flow}/${node}`);
+          return list;
+        }),
+    });
+    expect(store.namesOf("n2")).toBeNull();
+    store.setSelection(["n2"]);
+    await vi.waitFor(() => {
+      expect(store.namesOf("n2")).toBe(list);
+    });
+    expect(store.namesOf("n1")).toBeNull();
+    expect(asked).toContain("ping/n2");
+
+    store.setSelection(["n1", "n2"]);
+    expect(store.namesOf("n2")).toBeNull();
+    store.setSelection([]);
+    expect(store.namesOf("n2")).toBeNull();
+  });
+
+  it("asks again after an edit and drops an answer about an older selection", async () => {
+    let calls = 0;
+    const release: (() => void)[] = [];
+    const { store } = await opened({
+      expressionNames: (_p, _flow, node) =>
+        Effect.promise(async () => {
+          calls += 1;
+          if (node === "n1") {
+            await new Promise<void>((resolve) => release.push(resolve));
+          }
+          return { order_known: true, names: [] } satisfies NameList;
+        }),
+    });
+    store.setSelection(["n1"]);
+    store.setSelection(["n2"]);
+    await vi.waitFor(() => {
+      expect(store.namesOf("n2")).not.toBeNull();
+    });
+    release.forEach((resolve) => {
+      resolve();
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(store.namesOf("n1")).toBeNull();
+
+    const before = calls;
+    store.setSetting("n2", "content", "changed");
+    await vi.waitFor(() => {
+      expect(calls).toBeGreaterThan(before);
+    });
   });
 });

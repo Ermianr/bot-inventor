@@ -128,7 +128,9 @@ impl Walk<'_> {
                 format!("{prefix}.{}", field.name)
             };
             match &field.kind {
-                FieldKind::Expression => self.text(value, &path, None, false),
+                FieldKind::Expression | FieldKind::Condition => {
+                    self.text(value, &path, None, false)
+                }
                 FieldKind::Text {
                     max,
                     template: true,

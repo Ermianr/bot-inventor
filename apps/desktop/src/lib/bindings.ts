@@ -125,8 +125,14 @@ export type FieldKind =
         template: boolean;
       };
     }
-  /**  The source of one expression, such as the condition of a branch. */
+  /**  The source of one expression, such as the value of a variable. */
   | { type: "Expression" }
+  /**
+   *  The source of one expression that gives true or false, such as the condition of a
+   *  branch. It is compiled like an [`FieldKind::Expression`]; the editor also offers the
+   *  condition builder for it.
+   */
+  | { type: "Condition" }
   /**  A whole number from `min` to `max`. */
   | {
       type: "Integer";

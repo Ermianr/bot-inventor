@@ -16,8 +16,8 @@
 
   // The text is checked as it is typed, but only a valid one that is confirmed (Enter, or leaving
   // the field) renames the node, so a name that is refused never changes the alias on the way.
-  function commit(): void {
-    if (editor.renameAlias(id, draft) !== null) {
+  async function commit(): Promise<void> {
+    if ((await editor.renameAlias(id, draft)) !== null) {
       draft = alias;
       error = null;
     }
@@ -36,7 +36,9 @@
       draft = event.currentTarget.value;
       error = editor.checkAlias(id, draft);
     }}
-    onchange={commit}
+    onchange={() => {
+      void commit();
+    }}
   />
   {#if error === "invalid"}
     <p class="problem">{m.alias_invalid()}</p>
