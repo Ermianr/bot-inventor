@@ -18,6 +18,7 @@ import type {
   Project,
   Renamed,
   Row,
+  RunEvent,
 } from "../src/lib/bindings";
 import catalogJson from "./catalog.json";
 
@@ -34,6 +35,19 @@ export interface E2eState {
   saveError: string | null;
   /** The `securitypolicyviolation` events of the page. */
   violations: string[];
+  /** Whether the fake bot is up: between `start_bot` and its exit. */
+  running: boolean;
+  /** The bot token the fake `.env` holds. The page must never show it. */
+  token: string | null;
+  devGuild: string | null;
+  /** The names `export_bot` wrote, in order. */
+  exported: string[];
+  /** Makes the next `export_bot` behave as if the person cancelled the folder dialog. */
+  exportCancel: boolean;
+  /** Sends an event to the page through the channel `start_bot` received, as Rust would. */
+  send(event: RunEvent): void;
+  /** Sends this many `info` lines, one event each. */
+  flood(count: number): void;
 }
 
 declare global {
@@ -547,13 +561,76 @@ export function fakeRename(
   return { project: next, rewritten, left_alone: [] };
 }
 
+/** Tauri rejects with the serialized error as it is, not with an `Error`. */
+function reject(kind: string, message?: string): Promise<never> {
+  // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+  return Promise.reject(message === undefined ? { kind } : { kind, message });
+}
+
+/** The id of the channel a command received (`Channel` serializes as `__CHANNEL__:<id>`). */
+function channelId(value: unknown): number {
+  if (typeof value === "object" && value !== null && "id" in value) {
+    return Number(value.id);
+  }
+  return Number(String(value).replace("__CHANNEL__:", ""));
+}
+
+/** The reason `exporter::check_name` would give for a name, or `null` when it is fine. */
+function nameProblem(name: string): string | null {
+  if (name === "") return "the name is empty";
+  if (name.startsWith(".")) return "the name starts with a dot";
+  if (name.startsWith("-")) return "the name starts with a dash";
+  if (/[/\\]/.test(name)) return "the name has a path separator";
+  if (["assets", "data"].includes(name.toLowerCase())) {
+    return "the name is one the exported bot uses for its own files";
+  }
+  return null;
+}
+
 export function installFakeBackend(): void {
+  let channel: number | null = null;
+  let index = 0;
   const state: E2eState = {
     calls: [],
     saved: [],
     openResult: null,
     saveError: null,
     violations: [],
+    running: false,
+    token: null,
+    devGuild: null,
+    exported: [],
+    exportCancel: false,
+    send(event) {
+      if (channel === null) return;
+      if (event.kind === "status" && event.data.state === "exited") {
+        state.running = false;
+      }
+      const internals = (
+        window as unknown as {
+          __TAURI_INTERNALS__: {
+            runCallback(id: number, data: unknown): void;
+          };
+        }
+      ).__TAURI_INTERNALS__;
+      internals.runCallback(channel, { index: index++, message: event });
+    },
+    flood(count) {
+      for (let i = 0; i < count; i++) {
+        state.send({
+          kind: "log",
+          data: {
+            ts: "2026-10-24T10:00:00.000Z",
+            level: "info",
+            source: "engine",
+            run: null,
+            flow: null,
+            node: null,
+            msg: `line ${i}`,
+          },
+        });
+      }
+    },
   };
   window.__e2e = state;
   document.addEventListener("securitypolicyviolation", (event) => {
@@ -605,6 +682,72 @@ export function installFakeBackend(): void {
           String(input.node),
           String(input.alias),
         );
+      case "start_bot": {
+        if (state.running) return reject("already_running");
+        const diagnostics = fakeValidate(input.project as Project).filter(
+          (d) => d.severity === "error",
+        );
+        if (diagnostics.length > 0) return { outcome: "invalid", diagnostics };
+        state.running = true;
+        channel = channelId(input.events);
+        index = 0;
+        state.send({ kind: "status", data: { state: "starting" } });
+        return { outcome: "started" };
+      }
+      case "stop_bot": {
+        if (!state.running) return "not_running";
+        state.send({ kind: "status", data: { state: "stopping" } });
+        state.send({
+          kind: "status",
+          data: {
+            state: "exited",
+            code: 0,
+            signal: null,
+            reason: "clean",
+            requested: true,
+          },
+        });
+        return "stopped";
+      }
+      case "set_token": {
+        const token = String(input.token);
+        if (!/^[A-Za-z0-9._-]{1,256}$/.test(token)) {
+          return reject(
+            "invalid_input",
+            "the token must have 1 to 256 letters, digits, dots, dashes or underscores",
+          );
+        }
+        state.token = token;
+        return null;
+      }
+      case "token_status":
+        return { token_set: state.token !== null, dev_guild: state.devGuild };
+      case "set_dev_guild": {
+        const guild = input.guild as string | null;
+        if (guild !== null && !/^\d{1,20}$/.test(guild)) {
+          return reject(
+            "invalid_input",
+            "the server id must have 1 to 20 digits",
+          );
+        }
+        state.devGuild = guild;
+        return null;
+      }
+      case "export_bot": {
+        const name = String(input.name);
+        const problem = nameProblem(name);
+        if (problem !== null) return reject("invalid_input", problem);
+        const diagnostics = fakeValidate(input.project as Project).filter(
+          (d) => d.severity === "error",
+        );
+        if (diagnostics.length > 0) return { outcome: "invalid", diagnostics };
+        if (state.exportCancel) {
+          state.exportCancel = false;
+          return null;
+        }
+        state.exported.push(name);
+        return { outcome: "exported", path: `/tmp/e2e/${name}`, assets: 0 };
+      }
       default:
         return Promise.reject(
           new Error(`the fake backend has no command ${cmd}`),

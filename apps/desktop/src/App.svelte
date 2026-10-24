@@ -1,17 +1,65 @@
 <script lang="ts">
   import { SvelteFlowProvider } from "@xyflow/svelte";
+  import { untrack } from "svelte";
   import { appInfo } from "./app/appInfo.svelte";
   import { editor } from "./app/editor.svelte";
+  import { describeExit } from "./app/exit";
+  import { run } from "./app/run.svelte";
+  import BotSettings from "./components/BotSettings.svelte";
+  import ExportDialog from "./components/ExportDialog.svelte";
   import FlowCanvas from "./components/FlowCanvas.svelte";
   import FlowList from "./components/FlowList.svelte";
+  import LogPanel from "./components/LogPanel.svelte";
   import NewProjectForm from "./components/NewProjectForm.svelte";
   import PropertyPanel from "./components/PropertyPanel.svelte";
   import { m } from "./paraglide/messages.js";
 
   let creating = $state(false);
+  let settingsOpen = $state(false);
+  let exportOpen = $state(false);
 
   appInfo.load();
   editor.loadCatalog();
+
+  // Whether a token is set belongs to the project that is open.
+  $effect(() => {
+    void editor.opened;
+    untrack(() => {
+      run.loadSettings();
+    });
+  });
+
+  const stateText = $derived.by(() => {
+    switch (run.phase) {
+      case "idle":
+        return m.run_state_idle();
+      case "starting":
+        return m.run_state_starting();
+      case "running":
+        return m.run_state_running();
+      case "stopping":
+        return m.run_state_stopping();
+      case "exited":
+        return run.exit === null ? m.run_state_idle() : describeExit(run.exit);
+    }
+  });
+
+  const unexpectedExit = $derived(
+    run.phase === "exited" && run.exit !== null && !run.exit.requested,
+  );
+
+  const runTitle = $derived.by(() => {
+    switch (run.blocker) {
+      case "no-project":
+        return m.run_disabled_no_project();
+      case "errors":
+        return m.run_disabled_errors();
+      case "running":
+        return m.run_disabled_running();
+      case null:
+        return undefined;
+    }
+  });
 
   function onkeydown(event: KeyboardEvent): void {
     if (!event.ctrlKey && !event.metaKey) return;
@@ -40,7 +88,7 @@
       onclick={() => {
         creating = !creating;
       }}
-      disabled={editor.busy}
+      disabled={editor.busy || editor.locked}
     >
       {m.toolbar_new()}
     </button>
@@ -49,7 +97,7 @@
       onclick={() => {
         editor.openProject();
       }}
-      disabled={editor.busy}
+      disabled={editor.busy || editor.locked}
     >
       {m.toolbar_open()}
     </button>
@@ -81,6 +129,52 @@
         disabled={!editor.canRedo}
       >
         {m.toolbar_redo()}
+      </button>
+      <span class="separator" aria-hidden="true"></span>
+      <button
+        type="button"
+        class="primary"
+        onclick={() => {
+          run.start();
+        }}
+        disabled={run.blocker !== null}
+        title={runTitle}
+      >
+        {m.run_button()}
+      </button>
+      <button
+        type="button"
+        onclick={() => {
+          run.stop();
+        }}
+        disabled={!run.canStop}
+      >
+        {m.run_stop()}
+      </button>
+      <span
+        class="run-state"
+        class:running={run.phase === "running"}
+        class:failing={unexpectedExit}
+        role="status"
+        aria-label={m.run_state_label()}
+      >
+        {stateText}
+      </span>
+      <button
+        type="button"
+        onclick={() => {
+          settingsOpen = true;
+        }}
+      >
+        {m.settings_button()}
+      </button>
+      <button
+        type="button"
+        onclick={() => {
+          exportOpen = true;
+        }}
+      >
+        {m.export_button()}
       </button>
       <span class="project">{editor.project.manifest.name}</span>
       <span class="status" class:unsaved={editor.dirty}>
@@ -153,6 +247,22 @@
       </main>
       <PropertyPanel />
     </div>
+    <LogPanel />
+  {/if}
+
+  {#if settingsOpen}
+    <BotSettings
+      onclose={() => {
+        settingsOpen = false;
+      }}
+    />
+  {/if}
+  {#if exportOpen}
+    <ExportDialog
+      onclose={() => {
+        exportOpen = false;
+      }}
+    />
   {/if}
 </div>
 
@@ -173,6 +283,25 @@
   h1 {
     margin: 0 0.75rem 0 0;
     font-size: 1rem;
+  }
+  header {
+    flex-wrap: wrap;
+  }
+  .separator {
+    width: 1px;
+    height: 1.25rem;
+    margin: 0 0.25rem;
+    background: var(--border);
+  }
+  .run-state {
+    color: var(--muted);
+    font-size: 0.8125rem;
+  }
+  .run-state.running {
+    color: var(--accent);
+  }
+  .run-state.failing {
+    color: var(--danger);
   }
   .project {
     margin-left: 0.75rem;
