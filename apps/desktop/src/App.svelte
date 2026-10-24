@@ -5,6 +5,7 @@
   import FlowCanvas from "./components/FlowCanvas.svelte";
   import FlowList from "./components/FlowList.svelte";
   import NewProjectForm from "./components/NewProjectForm.svelte";
+  import PropertyPanel from "./components/PropertyPanel.svelte";
   import { m } from "./paraglide/messages.js";
 
   let creating = $state(false);
@@ -13,9 +14,18 @@
   editor.loadCatalog();
 
   function onkeydown(event: KeyboardEvent): void {
-    if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+    if (!event.ctrlKey && !event.metaKey) return;
+    const key = event.key.toLowerCase();
+    if (key === "s") {
       event.preventDefault();
       editor.save();
+    } else if (key === "z" && !event.shiftKey) {
+      // Also inside a text field: what is typed there is already part of the project.
+      event.preventDefault();
+      editor.undo();
+    } else if ((key === "z" && event.shiftKey) || key === "y") {
+      event.preventDefault();
+      editor.redo();
     }
   }
 </script>
@@ -54,9 +64,39 @@
       >
         {editor.busy ? m.toolbar_saving() : m.toolbar_save()}
       </button>
+      <button
+        type="button"
+        onclick={() => {
+          editor.undo();
+        }}
+        disabled={!editor.canUndo}
+      >
+        {m.toolbar_undo()}
+      </button>
+      <button
+        type="button"
+        onclick={() => {
+          editor.redo();
+        }}
+        disabled={!editor.canRedo}
+      >
+        {m.toolbar_redo()}
+      </button>
       <span class="project">{editor.project.manifest.name}</span>
       <span class="status" class:unsaved={editor.dirty}>
         {editor.dirty ? m.status_unsaved() : m.status_saved()}
+      </span>
+      <span
+        class="problems"
+        class:failing={editor.totals.errors > 0}
+        class:warned={editor.totals.errors === 0 && editor.totals.warnings > 0}
+      >
+        {editor.totals.errors + editor.totals.warnings === 0
+          ? m.problems_none()
+          : m.problems_count({
+              errors: editor.totals.errors,
+              warnings: editor.totals.warnings,
+            })}
       </span>
     {/if}
   </header>
@@ -111,6 +151,7 @@
           {/key}
         {/if}
       </main>
+      <PropertyPanel />
     </div>
   {/if}
 </div>
@@ -144,6 +185,17 @@
   .status.unsaved {
     color: var(--warning);
   }
+  .problems {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 0.8125rem;
+  }
+  .problems.failing {
+    color: var(--danger);
+  }
+  .problems.warned {
+    color: var(--warning);
+  }
   .notice {
     display: flex;
     align-items: center;
@@ -160,7 +212,7 @@
   .body {
     display: grid;
     flex: 1;
-    grid-template-columns: 13rem minmax(0, 1fr);
+    grid-template-columns: 13rem minmax(0, 1fr) 20rem;
     grid-template-rows: minmax(0, 1fr);
     min-height: 0;
   }

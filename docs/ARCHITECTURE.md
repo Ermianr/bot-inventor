@@ -347,7 +347,7 @@ An *HTTP request* node (state *Next*) needs its own design before it is built: s
 - **Storage:** tests on a real SQLite file in a temporary directory, including migrations and the type-mismatch refusal.
 - **Discord adapter:** unit tests for event normalization and the command diff; a manual checklist against a real test server, because the network is not part of the automated suite.
 - **Bad input:** every node has a test that gives it wrong types, missing fields and out-of-range values and expects an error, not a panic. The project loader, the payload decoder and the expression parser get `cargo-fuzz` targets once they exist, run on a schedule rather than on every pull request **[proposed]**.
-- **Editor:** `vitest` for logic; a few end-to-end tests (create → run → export) later.
+- **Editor:** `vitest` for logic and the store; WebdriverIO end-to-end tests of the renderer in Chrome on a fake backend (`cargo xtask e2e`, `DEVELOPMENT-GUIDE.md` §10.1); a few tests of the real app with `tauri-driver` (create → run → export) from M12.
 
 ## 12. Not in this design
 

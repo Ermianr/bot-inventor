@@ -18,6 +18,7 @@ Tasks:
   lint                    fmt, clippy -D warnings, layers, eslint, prettier, svelte-check,
                           Effect diagnostics and cargo-deny
   test                    nextest, doc tests and vitest
+  e2e                     End-to-end tests of the editor in Chrome, on a fake backend
   build                   Build the app
   layers                  Check the crate dependency rules (docs/ARCHITECTURE.md §2)
   bindings [--check]      Regenerate the TypeScript types; --check fails if they changed
@@ -43,6 +44,7 @@ fn dispatch(args: Vec<String>) -> Result<()> {
         "dev" => tasks::dev(),
         "lint" => tasks::lint(),
         "test" => tasks::test(),
+        "e2e" => tasks::e2e(),
         "build" => tasks::build(),
         "layers" => layers::run(),
         "bindings" => tasks::bindings(rest),

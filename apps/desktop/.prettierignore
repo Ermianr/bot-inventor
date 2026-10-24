@@ -2,3 +2,5 @@ dist
 src-tauri
 src/paraglide
 project.inlang
+dist-e2e
+e2e/catalog.json

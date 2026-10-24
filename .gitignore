@@ -4,3 +4,5 @@ dist
 .DS_Store
 /apps/desktop/src-tauri/gen
 /apps/desktop/src/paraglide
+/apps/desktop/dist-e2e
+/apps/desktop/e2e/last-run.png

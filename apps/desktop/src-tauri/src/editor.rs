@@ -455,4 +455,23 @@ mod tests {
             ]
         );
     }
+
+    /// The end-to-end tests of the editor run the frontend with no Rust behind it, and a fake
+    /// backend answers `node_catalog` from this file. The test keeps it equal to the real
+    /// catalog; `UPDATE_E2E_CATALOG=1 cargo test -p desktop` writes it again.
+    #[test]
+    fn the_catalog_of_the_end_to_end_tests_is_the_real_one() {
+        let mut json = serde_json::to_string_pretty(&node_catalog()).expect("it serializes");
+        json.push('\n');
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../e2e/catalog.json");
+        if std::env::var_os("UPDATE_E2E_CATALOG").is_some() {
+            fs::write(&path, &json).expect("the file is written");
+            return;
+        }
+        let saved = fs::read_to_string(&path).unwrap_or_default();
+        assert!(
+            saved == json,
+            "apps/desktop/e2e/catalog.json is out of date: run `UPDATE_E2E_CATALOG=1 cargo test -p desktop`"
+        );
+    }
 }

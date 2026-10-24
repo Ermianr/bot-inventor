@@ -35,20 +35,26 @@
     const flow = editor.flow;
     void editor.revision;
     const catalog = editor.catalog;
+    const marks = editor.marks;
     untrack(() => {
       if (flow === null) {
         nodes = [];
         edges = [];
         return;
       }
+      const dragging = new Map(
+        nodes.filter((n) => n.dragging).map((n) => [n.id, n]),
+      );
       nodes = toFlowNodes(
         flow,
         catalog,
         new Set(nodes.filter((n) => n.selected).map((n) => n.id)),
-      );
+        marks,
+      ).map((n) => dragging.get(n.id) ?? n);
       edges = toFlowEdges(
         flow,
         new Set(edges.filter((e) => e.selected).map((e) => e.id)),
+        marks,
       );
     });
   });
@@ -86,7 +92,9 @@
   }
 
   function onnodedragstop({ nodes: moved }: { nodes: Node[] }): void {
-    for (const node of moved) editor.moveNode(node.id, node.position);
+    editor.moveNodes(
+      moved.map((node) => ({ id: node.id, position: node.position })),
+    );
   }
 
   // A new node goes to the middle of what is on screen, a little lower for each one already there.
@@ -119,6 +127,9 @@
     {onconnect}
     {ondelete}
     {onnodedragstop}
+    onselectionchange={({ nodes: chosen }) => {
+      editor.setSelection(chosen.map((n) => n.id));
+    }}
   >
     <Background />
     <Controls showLock={false} />

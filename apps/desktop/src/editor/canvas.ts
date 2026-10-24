@@ -2,7 +2,8 @@
 
 import type { Edge, Node } from "@xyflow/svelte";
 import type { Flow, Line, NodeSpec } from "../lib/bindings";
-import { findSpec } from "./ops";
+import { NO_MARKS, hasError, ofNode, type Marks } from "./diagnostics";
+import { edgeId, findSpec } from "./ops";
 
 /** What the card of a node needs to draw itself. */
 export interface CardData extends Record<string, unknown> {
@@ -12,22 +13,23 @@ export interface CardData extends Record<string, unknown> {
   readonly ports: readonly string[];
   readonly isTrigger: boolean;
   readonly known: boolean;
+  /** How many diagnostics the node has, its fields included. */
+  readonly problems: number;
+  /** Whether one of them is an error. */
+  readonly failing: boolean;
 }
 
 export type CardNode = Node<CardData>;
-
-/** The id of the edge that draws `line`. */
-export function edgeId(line: Line): string {
-  return `${line.from.node}:${line.from.port}->${line.to}`;
-}
 
 export function toFlowNodes(
   flow: Flow,
   catalog: readonly NodeSpec[],
   selected: ReadonlySet<string> = new Set(),
+  marks: Marks = NO_MARKS,
 ): CardNode[] {
   return flow.nodes.map((node) => {
     const spec = findSpec(catalog, node.type, node.type_version);
+    const problems = ofNode(marks, node.id);
     return {
       id: node.id,
       type: "card",
@@ -39,6 +41,8 @@ export function toFlowNodes(
         ports: spec?.ports.map((p) => p.name) ?? [],
         isTrigger: spec?.trigger != null,
         known: spec !== undefined,
+        problems: problems.length,
+        failing: hasError(problems),
       },
     };
   });
@@ -47,6 +51,7 @@ export function toFlowNodes(
 export function toFlowEdges(
   flow: Flow,
   selected: ReadonlySet<string> = new Set(),
+  marks: Marks = NO_MARKS,
 ): Edge[] {
   return flow.lines.map((line) => {
     const id = edgeId(line);
@@ -56,6 +61,7 @@ export function toFlowEdges(
       sourceHandle: line.from.port,
       target: line.to,
       selected: selected.has(id),
+      class: marks.lines.has(id) ? "problem" : "",
     };
   });
 }

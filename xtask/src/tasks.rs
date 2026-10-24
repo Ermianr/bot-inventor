@@ -140,6 +140,13 @@ fn vitest() -> Result<()> {
     pnpm("test")
 }
 
+/// The end-to-end tests of the editor (`docs/DEVELOPMENT-GUIDE.md` §10). They need a browser, which
+/// WebdriverIO downloads the first time, so they are not part of `cargo xtask test`.
+pub fn e2e() -> Result<()> {
+    ensure_node_modules()?;
+    pnpm("e2e")
+}
+
 pub fn test() -> Result<()> {
     ensure_node_modules()?;
     ensure_frontend_dist()?;

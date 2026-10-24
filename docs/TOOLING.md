@@ -47,7 +47,8 @@ The tools the project uses, one line each. How to use each one well is in [`DEVE
 | Frontend tests | `vitest` | A component-testing helper is added only if needed |
 | Effect checks | `@effect/language-service` | Editor plugin and `effect-language-service diagnostics` in lint and CI; TypeScript is not patched |
 | Commits | `commitlint` in CI | Conventional Commits |
-| End-to-end | `tauri-driver` (WebDriver) | Few tests, critical flows only; later |
+| End-to-end, renderer | WebdriverIO (`@wdio/cli`, Mocha) with Chrome, `@tauri-apps/api/mocks` | `cargo xtask e2e`; the real app on a fake backend (`DEVELOPMENT-GUIDE.md` §10.1) |
+| End-to-end, real app | `tauri-driver` (WebDriver) | Few tests, critical flows only; from M12 |
 | Tasks | `cargo xtask` | `dev`, `test`, `lint`, `build`, `layers`, `bindings`; frontend-only tasks are `pnpm` scripts |
 | Reproducibility | `Cargo.lock`, `pnpm-lock.yaml`; `packageManager` field; `mise` or `.nvmrc` | |
 

@@ -5,6 +5,7 @@
  */
 
 const FLOW_NAME = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+const ALIAS = /^[a-z_][a-z0-9_]{0,63}$/;
 const MAX_NAME_LENGTH = 64;
 const ID_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 const ID_LENGTH = 10;
@@ -20,6 +21,11 @@ export const secureRandom: Random = () => {
 /** Whether `name` is a valid flow name: 1 to 64 lowercase letters, digits, `_` or `-`. */
 export function isFlowName(name: string): boolean {
   return FLOW_NAME.test(name);
+}
+
+/** Whether `name` is a valid alias: 1 to 64 lowercase letters, digits or `_`, not starting with a digit. */
+export function isAlias(name: string): boolean {
+  return ALIAS.test(name);
 }
 
 /** An opaque node id that is not in `taken`. */
