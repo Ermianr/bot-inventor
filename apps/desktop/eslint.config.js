@@ -4,7 +4,7 @@ import globals from "globals";
 import ts from "typescript-eslint";
 
 export default ts.config(
-  { ignores: ["dist/", "src-tauri/", "src/lib/bindings.ts"] },
+  { ignores: ["dist/", "src-tauri/", "src/lib/bindings.ts", "src/paraglide/"] },
   js.configs.recommended,
   ...ts.configs.recommendedTypeChecked,
   ...ts.configs.stylisticTypeChecked,
