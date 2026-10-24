@@ -117,8 +117,8 @@
 
 <style>
   .app {
-    display: grid;
-    grid-template-rows: auto auto auto 1fr;
+    display: flex;
+    flex-direction: column;
     height: 100vh;
   }
   header {
@@ -159,7 +159,9 @@
   }
   .body {
     display: grid;
-    grid-template-columns: 13rem 1fr;
+    flex: 1;
+    grid-template-columns: 13rem minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     min-height: 0;
   }
   aside {
@@ -172,6 +174,7 @@
     min-height: 0;
   }
   .welcome {
+    flex: 1;
     display: grid;
     place-content: center;
     gap: 0.25rem;
