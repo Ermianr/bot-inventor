@@ -40,14 +40,14 @@ The single unit of planned work: a capability stage with a definition of done (D
 
 **M10a. Editor: project and canvas.** Branch `m10-editor-canvas`.
 
-- [ ] `graph` has an optional `specta` feature that derives `specta::Type` on the project types and `runtime::catalog` on the schema types; `desktop` turns it on, and `cargo xtask bindings` regenerates the TypeScript types with CI failing on a difference. `cargo xtask layers` still passes.
-- [ ] Tauri commands to create, open and save a project and to read the node catalog, all typed with `tauri-specta`. The folder comes from a native dialog, each command validates its input in Rust (path, project name, flow name, ids), returns a typed error, and has its own permission in `capabilities/main.json`. The frontend never reads or writes a file.
-- [ ] A command `validate` runs `runtime::compile::compile` and returns its diagnostics (flow, node, field path, code, message) with no value of a setting.
-- [ ] Rust tests: the `ping` sample opens and saves back to identical bytes; a table of bad inputs (missing path, a link, a file that is not a folder, a damaged project, a newer `format_version`) returns an error and never panics.
+- [x] `graph` has an optional `specta` feature that derives `specta::Type` on the project types and `runtime::catalog` on the schema types; `desktop` turns it on, and `cargo xtask bindings` regenerates the TypeScript types with CI failing on a difference. `cargo xtask layers` still passes.
+- [x] Tauri commands to create, open and save a project and to read the node catalog, all typed with `tauri-specta`. The folder comes from a native dialog, each command validates its input in Rust (path, project name, flow name, ids), returns a typed error, and has its own permission in `capabilities/main.json`. The frontend never reads or writes a file.
+- [x] A command `validate` runs `runtime::compile::compile` and returns its diagnostics (flow, node, field path, code, message) with no value of a setting.
+- [x] Rust tests: the `ping` sample opens and saves back to identical bytes; a table of bad inputs (missing path, a link, a file that is not a folder, a damaged project, a newer `format_version`) returns an error and never panics.
 - [ ] The canvas (Svelte Flow) draws the flow of an open project from the saved positions. The user can add a node from a palette built from the catalog, connect an output port to a node, move, delete, and create or switch flows from a list. Saving and reopening gives the same graph and positions.
-- [ ] All I/O goes through `TauriBackend` and Effect; components and pure helpers stay plain. Every user-facing string goes through `paraglide-js`, English only.
-- [ ] Pure helpers (graph to Svelte Flow and back, new ids and aliases) have `vitest` tests, including an id or alias that would collide.
-- [ ] `cargo xtask lint`, `cargo xtask test` and `cargo xtask bindings` pass; this section, `ARCHITECTURE.md` §5.2 and `DECISIONS.md` are updated.
+- [x] All I/O goes through `TauriBackend` and Effect; components and pure helpers stay plain. Every user-facing string goes through `paraglide-js`, English only.
+- [x] Pure helpers (graph to Svelte Flow and back, new ids and aliases) have `vitest` tests, including an id or alias that would collide.
+- [x] `cargo xtask lint`, `cargo xtask test` and `cargo xtask bindings` pass; this section, `ARCHITECTURE.md` §5.2 and `DECISIONS.md` are updated.
 
 **M10b. Editor: panel, undo and diagnostics** (sketch, to be agreed when M10a is done).
 
