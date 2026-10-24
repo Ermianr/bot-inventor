@@ -4,7 +4,9 @@ use std::sync::Arc;
 
 use serde_json::Value;
 
-use crate::catalog::{FieldKind, FieldSpec, NodeRequires, NodeSpec, OutputSpec, PortSpec};
+use crate::catalog::{
+    FieldKind, FieldSpec, NodeRequires, NodeSpec, OutputSpec, PortSpec, ValueKind,
+};
 use crate::platform::{AllowedMentions, Platform, Reply};
 use crate::run::Stage;
 use crate::storage::Storage;
@@ -27,7 +29,10 @@ pub(super) static SPEC: NodeSpec = NodeSpec {
         required: true,
     }],
     ports: &[PortSpec { name: "next" }, PortSpec { name: "error" }],
-    outputs: &[OutputSpec { name: "message_id" }],
+    outputs: &[OutputSpec {
+        name: "message_id",
+        kind: ValueKind::Text,
+    }],
     requires: NodeRequires::NOTHING,
     trigger: None,
 };

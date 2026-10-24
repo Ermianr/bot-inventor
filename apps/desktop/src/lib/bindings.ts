@@ -23,6 +23,31 @@ export const commands = {
     __TAURI_INVOKE<DiagnosticView[]>("validate_project", { project }),
   /**  The schema of every node type, for the palette and the property panel. */
   nodeCatalog: () => __TAURI_INVOKE<NodeSpec[]>("node_catalog"),
+  /**  The names `node` can read. */
+  expressionNames: (project: Project, flow: FlowName, node: NodeId) =>
+    typedError<NameList, EditorError>(
+      __TAURI_INVOKE("expression_names", { project, flow, node }),
+    ),
+  /**  The expression that a condition of the builder spells. */
+  conditionToSource: (condition: Condition) =>
+    typedError<string, EditorError>(
+      __TAURI_INVOKE("condition_to_source", { condition }),
+    ),
+  /**  The condition of the builder that an expression spells, or `None` for the advanced mode. */
+  conditionFromSource: (source: string) =>
+    typedError<Condition | null, EditorError>(
+      __TAURI_INVOKE("condition_from_source", { source }),
+    ),
+  /**  Renames a node: its alias, and every read of it in the expressions and templates of the flow. */
+  renameAlias: (
+    project: Project,
+    flow: FlowName,
+    node: NodeId,
+    alias: string,
+  ) =>
+    typedError<Renamed, EditorError>(
+      __TAURI_INVOKE("rename_alias", { project, flow, node, alias }),
+    ),
 };
 
 /* Types */
@@ -36,6 +61,20 @@ export type Alias = string;
 export type AppInfo = {
   name: string;
   version: string;
+};
+
+/**  Whether a name exists on every path to the node. */
+export type Availability =
+  | "Always"
+  /**  On only some of the paths: compile warns where it is read. */
+  | "Sometimes";
+
+export type Compare = "Eq" | "Ne" | "Lt" | "Le" | "Gt" | "Ge";
+
+/**  Rows joined by *all* (`&&`) or *any* (`||`). */
+export type Condition = {
+  join: Join;
+  rows: Row[];
 };
 
 export type DiagnosticSeverity = "error" | "warning";
@@ -64,6 +103,13 @@ export type EditorError =
   | { kind: "project"; message: string }
   /**  A command needs an open project and there is none. */
   | { kind: "no_project" };
+
+/**  A field of the event that a trigger always provides. */
+export type EventField = {
+  /**  A dotted path below `event`, such as `user.id`. */
+  path: string;
+  kind: ValueKind;
+};
 
 /**  The kind of a setting and its limits. */
 export type FieldKind =
@@ -103,6 +149,13 @@ export type FieldKind =
       };
     };
 
+/**  A setting of a node of the flow. */
+export type FieldRef = {
+  node: NodeId;
+  /**  The path inside the settings, as in a diagnostic: `condition`, `options[0].name`. */
+  path: string;
+};
+
 /**  One setting of a node. */
 export type FieldSpec = {
   name: string;
@@ -119,6 +172,9 @@ export type Flow = {
 /**  The name of a flow; it is also the stem of its file, `flows/<name>.flow.json`. */
 export type FlowName = string;
 
+/**  How the rows combine. A condition of one row is always `All`. */
+export type Join = "All" | "Any";
+
 /**
  *  How the TypeScript types describe a JSON value in `settings` and `initial`. `serde_json::Value`
  *  holds 64-bit integers, which `specta` refuses to export, and a setting is a plain JSON number
@@ -131,6 +187,11 @@ export type JsonValue =
   | string
   | JsonValue[]
   | { [key in string]: JsonValue };
+
+export type LeftAlone = {
+  field: FieldRef;
+  reason: string;
+};
 
 /**  An execution link from an output port of one node to another node. */
 export type Line = {
@@ -146,6 +207,35 @@ export type Manifest = {
   /**  Settings of the project as a whole; their keys are not fixed yet. */
   settings: { [key in string]: JsonValue };
   variables: Variable[];
+};
+
+/**  Where a name comes from. */
+export type NameGroup = "Event" | "Step" | "Variable" | "Error";
+
+/**  One name that can be read. */
+export type NameInfo = {
+  group: NameGroup;
+  /**  `["event", "options", "reason"]`. */
+  segments: string[];
+  /**  The name as it is written in an expression. */
+  source: string;
+  kind: ValueKind;
+  availability: Availability;
+  /**
+   *  The field may be missing at run time, as an option the command does not require; read it
+   *  only after a presence test.
+   */
+  optional: boolean;
+};
+
+/**  The names a node can read. */
+export type NameList = {
+  /**
+   *  Whether the flow is sound enough to know which steps run before the node. When it is
+   *  not, there are no `steps` and no `error` names, and the flow's diagnostics say why.
+   */
+  order_known: boolean;
+  names: NameInfo[];
 };
 
 export type Node = {
@@ -192,8 +282,19 @@ export type OpenedProject = {
   migrated_from: number | null;
 };
 
+/**  A side of a test: a name picked from the list, or a value typed in. */
+export type Operand =
+  /**  A name such as `event.user.id`, as its segments. */
+  | { type: "Name"; value: string[] }
+  | { type: "Text"; value: string }
+  | { type: "Integer"; value: number }
+  | { type: "Decimal"; value: number | null }
+  | { type: "Boolean"; value: boolean };
+
 export type OutputSpec = {
   name: string;
+  /**  What the value is, so the condition builder offers the right operators. */
+  kind: ValueKind;
 };
 
 /**  The platform a bot runs on. */
@@ -217,20 +318,62 @@ export type Project = {
   flows: { [key in FlowName]: Flow };
 };
 
+/**  The project after a rename, and what happened to each field that read the old alias. */
+export type Renamed = {
+  project: Project;
+  /**  The fields whose reads now say the new alias. */
+  rewritten: FieldRef[];
+  /**  The fields that were left as they were, with the reason. */
+  left_alone: LeftAlone[];
+};
+
+/**  One test. */
+export type Row =
+  /**  `left == right`, `left < right`, … */
+  | { type: "Compare"; left: Operand; op: Compare; right: Operand }
+  /**  `left.contains(right)`, `left.startsWith(right)`, `left.endsWith(right)`. */
+  | {
+      type: "Text";
+      negated: boolean;
+      left: Operand;
+      op: TextTest;
+      right: Operand;
+    }
+  /**  `item in list`: a role among the roles of the member, for example. */
+  | { type: "Member"; negated: boolean; item: Operand; list: Operand }
+  /**  `has(name)`: the field exists, as an optional option of a command may not. */
+  | { type: "Present"; negated: boolean; name: string[] };
+
+export type TextTest = "Contains" | "StartsWith" | "EndsWith";
+
 /**  What makes a node a trigger and what the event it starts offers. */
 export type TriggerSpec = {
   /**  The kind of event that starts the flow, as the event table of the payload names it. */
   event: string;
   /**  Whether the node defines a slash command to register. */
   command: boolean;
-  /**  The fields of `event` that always exist, as dotted paths (`user.id`). */
-  fields: string[];
+  /**  The fields of `event` that always exist. */
+  fields: EventField[];
   /**
    *  The setting that lists the options of a command; each option's `name` becomes a field
    *  `event.options.<name>`.
    */
   options_field: string | null;
 };
+
+/**
+ *  What a named value is, as far as the editor needs to know. Expressions are not type checked
+ *  (`docs/ARCHITECTURE.md` §6); this only decides which choices the condition builder offers.
+ */
+export type ValueKind =
+  | "Text"
+  | "Integer"
+  | "Decimal"
+  | "Boolean"
+  /**  A list of text, such as the roles of a member. */
+  | "List"
+  /**  The type depends on something the schema does not know, such as a variable. */
+  | "Any";
 
 /**  A declared variable (`docs/ARCHITECTURE.md` §4.3). */
 export type Variable = {

@@ -14,10 +14,15 @@ mod lex;
 mod limits;
 mod references;
 mod scope;
+mod syntax;
 mod template;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_rename;
+#[cfg(test)]
+mod tests_syntax;
 
 pub use cel_engine::CelEngine;
 pub use error::ExprError;
@@ -28,7 +33,8 @@ pub use limits::{
 };
 pub use references::{Path, ROOTS, References};
 pub use scope::Scope;
-pub use template::Template;
+pub use syntax::{Binary, Method, Syntax, is_identifier, name_source, quote};
+pub use template::{Template, rename_step_in_template};
 
 pub use serde_json::Value;
 
@@ -46,4 +52,18 @@ pub trait ExpressionEngine: Send + Sync {
     /// Parses and checks `source`: its length, its shape, the names it reads and the functions it
     /// calls. Nothing is evaluated.
     fn compile(&self, source: &str) -> Result<Box<dyn Expression>, ExprError>;
+
+    /// Parses `source` as `compile` does and describes it for the condition builder. A part the
+    /// builder does not know is [`Syntax::Other`]; it is never an error.
+    fn syntax(&self, source: &str) -> Result<Syntax, ExprError>;
+
+    /// Rewrites every read of `steps.<from>` in `source` to `steps.<to>`, found in the syntax
+    /// tree and not by searching the text: a string, a field of another name or a longer alias
+    /// is left alone. `None` when nothing reads `steps.<from>`. `to` must be a valid alias.
+    ///
+    /// # Errors
+    ///
+    /// When `source` does not compile, when the result would not, or when a read cannot be
+    /// rewritten with certainty. The source is never half rewritten.
+    fn rename_step(&self, source: &str, from: &str, to: &str) -> Result<Option<String>, ExprError>;
 }

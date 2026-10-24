@@ -8,8 +8,10 @@ pub use graph;
 
 pub mod catalog;
 pub mod compile;
+pub mod condition;
 pub mod expr;
 mod nodes;
 pub mod platform;
+pub mod rename;
 pub mod run;
 pub mod storage;

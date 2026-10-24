@@ -115,3 +115,55 @@ fn segment_end(body: &str) -> Option<usize> {
     }
     None
 }
+
+/// Rewrites the reads of `steps.<from>` in the `{{ }}` segments of a template as
+/// [`ExpressionEngine::rename_step`] does, and leaves the plain text alone. `None` when no
+/// segment reads it.
+///
+/// # Errors
+///
+/// When the template has a segment that is never closed, a segment that cannot be rewritten, or
+/// the result is longer than a template may be.
+pub fn rename_step_in_template(
+    engine: &dyn ExpressionEngine,
+    source: &str,
+    from: &str,
+    to: &str,
+) -> Result<Option<String>, ExprError> {
+    if source.len() > MAX_TEMPLATE_BYTES {
+        return Err(ExprError::SourceTooLong {
+            len: source.len(),
+            max: MAX_TEMPLATE_BYTES,
+        });
+    }
+    let mut out = String::with_capacity(source.len());
+    let mut changed = false;
+    let mut rest = source;
+    let mut offset = 0;
+    while let Some(start) = rest.find("{{") {
+        out.push_str(&rest[..start + 2]);
+        let body = &rest[start + 2..];
+        let end = segment_end(body).ok_or(ExprError::UnclosedSegment {
+            offset: offset + start,
+        })?;
+        match engine.rename_step(&body[..end], from, to)? {
+            Some(new) => {
+                changed = true;
+                out.push_str(&new);
+            }
+            None => out.push_str(&body[..end]),
+        }
+        out.push_str("}}");
+        let consumed = start + 2 + end + 2;
+        offset += consumed;
+        rest = &rest[consumed..];
+    }
+    out.push_str(rest);
+    if out.len() > MAX_TEMPLATE_BYTES {
+        return Err(ExprError::SourceTooLong {
+            len: out.len(),
+            max: MAX_TEMPLATE_BYTES,
+        });
+    }
+    Ok(changed.then_some(out))
+}

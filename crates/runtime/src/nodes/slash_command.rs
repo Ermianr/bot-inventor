@@ -1,6 +1,8 @@
 //! `discord.slash_command`: the trigger of a flow started by a slash command.
 
-use crate::catalog::{FieldKind, FieldSpec, NodeRequires, NodeSpec, PortSpec, TriggerSpec};
+use crate::catalog::{
+    EventField, FieldKind, FieldSpec, NodeRequires, NodeSpec, PortSpec, TriggerSpec, ValueKind,
+};
 use crate::platform::Platform;
 use crate::storage::Storage;
 
@@ -88,14 +90,38 @@ pub(super) static SPEC: NodeSpec = NodeSpec {
         event: "slash_command",
         command: true,
         fields: &[
-            "command.name",
-            "user.id",
-            "user.name",
-            "member.roles",
-            "member.permissions",
-            "guild.id",
-            "channel.id",
-            "timestamp",
+            EventField {
+                path: "command.name",
+                kind: ValueKind::Text,
+            },
+            EventField {
+                path: "user.id",
+                kind: ValueKind::Text,
+            },
+            EventField {
+                path: "user.name",
+                kind: ValueKind::Text,
+            },
+            EventField {
+                path: "member.roles",
+                kind: ValueKind::List,
+            },
+            EventField {
+                path: "member.permissions",
+                kind: ValueKind::List,
+            },
+            EventField {
+                path: "guild.id",
+                kind: ValueKind::Text,
+            },
+            EventField {
+                path: "channel.id",
+                kind: ValueKind::Text,
+            },
+            EventField {
+                path: "timestamp",
+                kind: ValueKind::Text,
+            },
         ],
         options_field: Some("options"),
     }),

@@ -44,7 +44,8 @@
     ],
     "outputs": [
       {
-        "name": "value"
+        "name": "value",
+        "kind": "Any"
       }
     ],
     "requires": {
@@ -80,7 +81,8 @@
     ],
     "outputs": [
       {
-        "name": "message_id"
+        "name": "message_id",
+        "kind": "Text"
       }
     ],
     "requires": {
@@ -200,14 +202,38 @@
       "event": "slash_command",
       "command": true,
       "fields": [
-        "command.name",
-        "user.id",
-        "user.name",
-        "member.roles",
-        "member.permissions",
-        "guild.id",
-        "channel.id",
-        "timestamp"
+        {
+          "path": "command.name",
+          "kind": "Text"
+        },
+        {
+          "path": "user.id",
+          "kind": "Text"
+        },
+        {
+          "path": "user.name",
+          "kind": "Text"
+        },
+        {
+          "path": "member.roles",
+          "kind": "List"
+        },
+        {
+          "path": "member.permissions",
+          "kind": "List"
+        },
+        {
+          "path": "guild.id",
+          "kind": "Text"
+        },
+        {
+          "path": "channel.id",
+          "kind": "Text"
+        },
+        {
+          "path": "timestamp",
+          "kind": "Text"
+        }
       ],
       "options_field": "options"
     }

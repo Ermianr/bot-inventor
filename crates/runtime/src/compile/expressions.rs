@@ -57,22 +57,16 @@ impl<'a> FlowScope<'a> {
 }
 
 fn event_shape(spec: &TriggerSpec, trigger: &Node) -> EventShape {
-    let mut leaves: Vec<(Vec<String>, bool)> = spec
-        .fields
-        .iter()
-        .map(|field| (field.split('.').map(str::to_owned).collect(), false))
+    let leaves = spec
+        .event_names(&trigger.settings)
+        .into_iter()
+        .map(|name| (name.segments, name.open))
         .collect();
-    let mut containers = Vec::new();
-    if let Some(options) = spec.options_field {
-        containers.push("options");
-        if let Some(serde_json::Value::Array(items)) = trigger.settings.get(options) {
-            for item in items {
-                if let Some(name) = item.get("name").and_then(serde_json::Value::as_str) {
-                    leaves.push((vec!["options".to_owned(), name.to_owned()], true));
-                }
-            }
-        }
-    }
+    let containers = if spec.options_field.is_some() {
+        vec!["options"]
+    } else {
+        Vec::new()
+    };
     EventShape {
         name: spec.event,
         leaves,

@@ -10,6 +10,7 @@ use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands};
 
 pub mod editor;
+pub mod expressions;
 
 /// What the app tells the frontend about itself.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
@@ -42,6 +43,10 @@ fn specta_builder() -> Builder<tauri::Wry> {
             editor::save_project,
             editor::validate_project,
             editor::node_catalog,
+            expressions::expression_names,
+            expressions::condition_to_source,
+            expressions::condition_from_source,
+            expressions::rename_alias,
         ])
 }
 

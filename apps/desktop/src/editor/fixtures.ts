@@ -21,7 +21,7 @@ export const trigger: NodeSpec = {
   trigger: {
     event: "slash_command",
     command: true,
-    fields: ["user.id"],
+    fields: [{ path: "user.id", kind: "Text" }],
     options_field: "options",
   },
 };
@@ -37,7 +37,7 @@ export const reply: NodeSpec = {
     },
   ],
   ports: [{ name: "next" }, { name: "error" }],
-  outputs: [{ name: "message_id" }],
+  outputs: [{ name: "message_id", kind: "Text" }],
   requires: nothing,
   trigger: null,
 };

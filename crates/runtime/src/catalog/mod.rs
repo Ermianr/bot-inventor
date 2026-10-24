@@ -97,6 +97,32 @@ pub struct PortSpec {
 #[cfg_attr(feature = "specta", derive(serde::Serialize, specta::Type))]
 pub struct OutputSpec {
     pub name: &'static str,
+    /// What the value is, so the condition builder offers the right operators.
+    pub kind: ValueKind,
+}
+
+/// What a named value is, as far as the editor needs to know. Expressions are not type checked
+/// (`docs/ARCHITECTURE.md` §6); this only decides which choices the condition builder offers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "specta", derive(serde::Serialize, specta::Type))]
+pub enum ValueKind {
+    Text,
+    Integer,
+    Decimal,
+    Boolean,
+    /// A list of text, such as the roles of a member.
+    List,
+    /// The type depends on something the schema does not know, such as a variable.
+    Any,
+}
+
+/// A field of the event that a trigger always provides.
+#[derive(Debug)]
+#[cfg_attr(feature = "specta", derive(serde::Serialize, specta::Type))]
+pub struct EventField {
+    /// A dotted path below `event`, such as `user.id`.
+    pub path: &'static str,
+    pub kind: ValueKind,
 }
 
 /// What a node needs from the platform; compile joins these over the nodes in use.
@@ -124,11 +150,71 @@ pub struct TriggerSpec {
     pub event: &'static str,
     /// Whether the node defines a slash command to register.
     pub command: bool,
-    /// The fields of `event` that always exist, as dotted paths (`user.id`).
-    pub fields: &'static [&'static str],
+    /// The fields of `event` that always exist.
+    pub fields: &'static [EventField],
     /// The setting that lists the options of a command; each option's `name` becomes a field
     /// `event.options.<name>`.
     pub options_field: Option<&'static str>,
+}
+
+/// A field of the event of one flow, as the condition builder and compile see it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EventName {
+    /// The path below `event`: `["user", "id"]`, or `["options", "reason"]`.
+    pub segments: Vec<String>,
+    pub kind: ValueKind,
+    /// The field may be missing: an option the command does not require.
+    pub optional: bool,
+    /// Names may continue below the field.
+    pub open: bool,
+}
+
+impl TriggerSpec {
+    /// The fields of `event` for a trigger with these settings: the fixed ones, then one
+    /// `options.<name>` for each option the settings declare. An option that is not well formed
+    /// is left out; the settings check reports it.
+    #[must_use]
+    pub fn event_names(
+        &self,
+        settings: &serde_json::Map<String, serde_json::Value>,
+    ) -> Vec<EventName> {
+        let mut names: Vec<EventName> = self
+            .fields
+            .iter()
+            .map(|field| EventName {
+                segments: field.path.split('.').map(str::to_owned).collect(),
+                kind: field.kind,
+                optional: false,
+                open: false,
+            })
+            .collect();
+        let items = self
+            .options_field
+            .and_then(|field| settings.get(field))
+            .and_then(serde_json::Value::as_array);
+        for item in items.into_iter().flatten() {
+            let Some(name) = item.get("name").and_then(serde_json::Value::as_str) else {
+                continue;
+            };
+            let kind = match item.get("type").and_then(serde_json::Value::as_str) {
+                Some("integer") => ValueKind::Integer,
+                Some("number") => ValueKind::Decimal,
+                Some("boolean") => ValueKind::Boolean,
+                Some(_) | None => ValueKind::Text,
+            };
+            let required = item
+                .get("required")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false);
+            names.push(EventName {
+                segments: vec!["options".to_owned(), name.to_owned()],
+                kind,
+                optional: !required,
+                open: true,
+            });
+        }
+        names
+    }
 }
 
 /// Why a type and version have no schema.

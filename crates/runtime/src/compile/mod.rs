@@ -7,6 +7,7 @@
 mod diagnostic;
 mod discord;
 mod expressions;
+mod names;
 mod paths;
 mod settings;
 mod structure;
@@ -22,6 +23,7 @@ use graph::{
     CommandDef, EventRoute, FlowName, NodeId, Output, Payload, PayloadFlow, PayloadNode, Project,
     Requirements, Variable, VariableType,
 };
+pub use names::{Availability, NameGroup, NameInfo, NameList, NamesError, expression_names};
 pub use settings::unsafe_asset_path;
 pub use structure::{MAX_FLOW_LINES, MAX_FLOW_NODES};
 
