@@ -27,24 +27,29 @@ The single unit of planned work: a capability stage with a definition of done (D
 | M8 | Runner | M2, M7 | done | The entry below |
 | M9 | Export | M8 | done | The entry below |
 | M10a | Editor: project and canvas | M5 | done | The entry below |
-| M10b | Editor: panel, undo and diagnostics | M10a | draft | The criteria below: the panel generated from the node schema, undo and redo, and validation errors on the exact field |
+| M10b | Editor: panel, undo and diagnostics | M10a | ready | The criteria below: the panel generated from the node schema, undo and redo, and validation errors on the exact field |
 | M11 | Condition builder | M3, M10b | draft | A condition is built from lists and the generated expression shows in the advanced mode (CodeMirror); renaming a node rewrites the expressions that use it; a broken reference is reported |
 | M12 | Local run and export in the app | M8, M9, M10b | draft | Ping is built from scratch in the app, run locally with live logs, stopped and exported; the token field writes `.env` with mode 0600 and the frontend can never read it back |
 | M13 | Reference bots | M6, M7, M12 | draft | Welcome and Moderation are built in the editor, run locally and exported; the nodes they need are done as node tasks |
 | M14 | More nodes | M13 | draft | The *Next* rows of section 4, one small task each; each ships with schema, executor and bad-input test |
 | M15 | Beyond Linux and distribution | M14 | draft | Linux packages (AppImage, `.deb`), release pipeline with `release-plz`, docs site (`mdBook`) and other systems; to be written when M13 is done |
 
-### In preparation
+### Ready
 
-**M10 is split in two** because the whole editor does not fit in about a week (M10a is done, below). Decisions taken for both: the types of `graph` reach the frontend through an optional `specta` feature of `graph` (one definition; `graph` still depends on nothing in the repo); the editor shows one flow at a time, with a list to switch and create; the undo history lives in the frontend as plain TypeScript, and the backend only saves and validates.
+**M10 was split in two** because the whole editor does not fit in about a week (M10a is done, below). Decisions taken for both: the editor shows one flow at a time, with a list to switch and create; the undo history lives in the frontend as plain TypeScript, and the backend only saves and validates.
 
-**M10b. Editor: panel, undo and diagnostics** (sketch, to be agreed when M10a is done).
+**M10b. Editor: panel, undo and diagnostics.** Branch `m10b-panel-undo-diagnostics`. Decisions taken for it: one undo history for the whole project (every flow, and creating a flow); typing in one field is one step; the panel is a fixed sidebar on the right; "unsaved" means the project differs from the last saved one, so undoing back to it shows "Saved".
 
-- [ ] The property panel is generated from the `NodeSpec` with no code per node type, and covers every `FieldKind` that exists then; expressions are plain text until M11.
-- [ ] Undo and redo (`Ctrl+Z`, `Ctrl+Shift+Z`) over every edit of M10a and of the panel, as pure TypeScript with `vitest` tests, including a long sequence that returns to the initial state.
-- [ ] After each change, with a delay, `validate` runs and its diagnostics mark the exact field in the panel and the node or line on the canvas (`options[0].name` marks that field, not the whole node).
-- [ ] Renaming an alias is allowed; a reference left broken is reported by compile (rewriting references is M11).
-- [ ] Ping is built from scratch in the editor with the compile step reporting no diagnostic.
+- [ ] **Panel.** With exactly one node selected, a right sidebar shows its alias, its type and a control for each field of its `NodeSpec`, with no code per node type: text (a text area when it is a template), expression (a monospace text area; CodeMirror is M11), whole number (with its limits), boolean, closed list, asset path and list of objects (add and remove rows, the add button off at `max`, each row drawn from `item`). With none or several selected it shows a short hint. A field's label comes from `paraglide` and falls back to its name; a text field shows its length against its limit.
+- [ ] **Settings.** A field that is emptied (or an optional boolean or list that is cleared) is removed from `settings`, so compile reports a missing required field and an absent optional one is just absent. The edits are pure functions (`setSetting` with a path such as `options[0].name`, add and remove a list row, `renameAlias`) and each has `vitest` tests, including a path into a list row that was removed.
+- [ ] **Alias.** The alias is edited in the panel. A text that is not a valid alias (`graph::names` rules) or that another node of the flow already has is refused with a message under the field and changes nothing. A reference to the old alias is not rewritten (M11); compile reports it.
+- [ ] **History.** `Ctrl+Z` undoes and `Ctrl+Shift+Z` (and `Ctrl+Y`) redoes, with two buttons in the toolbar, over every edit of the project: add, move, delete, connect, create a flow, change a setting and rename an alias. The history is pure TypeScript: typing in one field of one node (the same flow, node and path) is one step, a drag is one step, a new edit empties the redo side, it keeps at most 200 steps, and opening or creating a project empties it. Undoing or redoing shows the flow it touched, and if the flow being shown no longer exists the first one is shown. `vitest` tests cover each of those, and a long random sequence of edits undone to the end gives the initial project and redone to the end gives the final one. `Ctrl+Z` always acts on the project, also inside a text field.
+- [ ] **Unsaved.** The editor is "Unsaved" only while the project differs from the last one opened or saved (compared by value). Undoing back to it shows "Saved", and saving keeps the history. Tested with `EditorStore` and `layerTest`, including an edit made while saving.
+- [ ] **Diagnostics.** After each change (and when a project is opened), after 300 ms of quiet, the editor calls `validate_project` and shows the result; an answer to an older project is dropped. A diagnostic marks the field with its path (`options[0].name` marks that row's field, not the whole list) with its message under the control, the node with a red border and the number of its problems, and, for `lines[n]`, that line in red. A diagnostic of a flow or of the project as a whole is counted in the toolbar with the errors and warnings of the whole project. Pure helpers that group diagnostics by node, by field and by line have `vitest` tests, including a path that does not exist any more.
+- [ ] **Ping from scratch.** A `vitest` test builds Ping with the same edit functions the editor uses (an empty flow, add a Slash command and a Reply, set their fields, connect) and gets the flow of the `ping` sample apart from ids, aliases and positions, and the Rust test that the sample compiles with no diagnostic stays. Built by hand in the app, Ping shows no problem in the toolbar.
+- [ ] `cargo xtask lint`, `cargo xtask test` and `cargo xtask bindings` pass; this section, `ARCHITECTURE.md` and `DECISIONS.md` are updated.
+
+Not in M10b: the condition builder, CodeMirror and the rewrite of references on a rename (M11), the declaration of variables, renaming or deleting a flow, a file picker for assets, and moving the rows of a list.
 
 ### Done
 
@@ -69,7 +74,7 @@ The single unit of planned work: a capability stage with a definition of done (D
 
 Ranked; pick from the top unless a draft pull request already claims it.
 
-1. **M10b**, the editor: panel, undo and diagnostics. Its criteria are a sketch: agree them in full first (`CONTRIBUTING.md` §3.2).
+1. **M10b**, the editor: panel, undo and diagnostics. Ready; its criteria are in section 2.
 
 ## 4. Node catalog
 
