@@ -117,7 +117,9 @@ fn prepare(
             FieldKind::Text { template: true, .. } => {
                 Template::compile(engine, &expression.source).map(Compiled::Template)
             }
-            FieldKind::Expression => engine.compile(&expression.source).map(Compiled::Expression),
+            FieldKind::Expression | FieldKind::Condition => {
+                engine.compile(&expression.source).map(Compiled::Expression)
+            }
             _ => Err(ExprError::Unsupported("this setting holds no expression")),
         }
         .map_err(|error| bad(error.to_string()))?;

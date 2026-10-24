@@ -245,7 +245,7 @@
       {
         "name": "condition",
         "kind": {
-          "type": "Expression"
+          "type": "Condition"
         },
         "required": true
       }

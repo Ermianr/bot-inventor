@@ -5,6 +5,8 @@
   import { fieldPath, rowPath } from "../editor/settings";
   import type { FieldSpec } from "../lib/bindings";
   import { m } from "../paraglide/messages.js";
+  import ConditionField from "./ConditionField.svelte";
+  import ExpressionEditor from "./ExpressionEditor.svelte";
   import FieldControls from "./FieldControls.svelte";
 
   let {
@@ -90,16 +92,24 @@
           oninput={(event) => {
             set(path, event.currentTarget.value);
           }}></textarea>
+      {:else if kind.type === "Condition"}
+        <ConditionField
+          {nodeId}
+          {path}
+          source={text(value)}
+          label={fieldLabel(field.name)}
+          invalid={problems.length > 0}
+        />
       {:else if kind.type === "Expression"}
-        <textarea
-          {id}
-          class="code"
-          rows="2"
-          spellcheck="false"
+        <ExpressionEditor
           value={text(value)}
-          oninput={(event) => {
-            set(path, event.currentTarget.value);
-          }}></textarea>
+          label={fieldLabel(field.name)}
+          names={editor.namesOf(nodeId)?.names ?? []}
+          invalid={problems.length > 0}
+          onchange={(next: string) => {
+            set(path, next);
+          }}
+        />
       {:else if kind.type === "Integer"}
         <input
           {id}
@@ -189,10 +199,6 @@
   }
   textarea {
     resize: vertical;
-  }
-  .code {
-    font-family: ui-monospace, monospace;
-    font-size: 0.8125rem;
   }
   .invalid > input,
   .invalid > select,

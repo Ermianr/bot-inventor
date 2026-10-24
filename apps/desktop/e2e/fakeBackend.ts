@@ -6,12 +6,18 @@
 
 import { mockIPC } from "@tauri-apps/api/mocks";
 import type {
+  Condition,
   DiagnosticView,
   FieldSpec,
   Flow,
+  NameInfo,
+  NameList,
   NodeSpec,
+  Operand,
   OpenedProject,
   Project,
+  Renamed,
+  Row,
 } from "../src/lib/bindings";
 import catalogJson from "./catalog.json";
 
@@ -55,11 +61,19 @@ function missing(value: Setting): boolean {
   return value === undefined || value === null || value === "";
 }
 
+/** The aliases that a text reads as `steps.<alias>`, found with a pattern: this is a stand-in. */
+function stepsRead(text: string): string[] {
+  return [...text.matchAll(/(?<![.\w])steps\.([a-z_][a-z0-9_]*)/g)].map(
+    (match) => match[1] ?? "",
+  );
+}
+
 function checkFields(
   fields: readonly FieldSpec[],
   values: Record<string, Setting>,
   base: string,
-  out: (path: string, message: string) => void,
+  out: (path: string, message: string, code?: string) => void,
+  aliases: ReadonlySet<string>,
 ): void {
   for (const field of fields) {
     const path = base === "" ? field.name : `${base}.${field.name}`;
@@ -68,6 +82,22 @@ function checkFields(
       if (field.required) out(path, `\`${path}\` is required`);
       continue;
     }
+    const kind = field.kind;
+    const holdsExpression =
+      kind.type === "Expression" ||
+      kind.type === "Condition" ||
+      (kind.type === "Text" && kind.value.template);
+    if (holdsExpression && typeof value === "string") {
+      for (const alias of stepsRead(value)) {
+        if (!aliases.has(alias)) {
+          out(
+            path,
+            `no node of this flow has the alias \`${alias}\``,
+            "unknown-step",
+          );
+        }
+      }
+    }
     if (field.kind.type === "List" && Array.isArray(value)) {
       value.forEach((row, index) => {
         checkFields(
@@ -75,6 +105,7 @@ function checkFields(
           row as Record<string, Setting>,
           `${path}[${index}]`,
           out,
+          aliases,
         );
       });
     }
@@ -90,16 +121,23 @@ export function fakeValidate(project: Project): DiagnosticView[] {
     for (const node of flow.nodes) {
       const spec = specOf(node.type, node.type_version);
       if (spec === undefined) continue;
-      checkFields(spec.fields, node.settings, "", (path, message) => {
-        found.push({
-          flow: flowName,
-          node: node.id,
-          path,
-          code: "missing-field",
-          severity: "error",
-          message,
-        });
-      });
+      const aliases = new Set(flow.nodes.map((n) => n.alias));
+      checkFields(
+        spec.fields,
+        node.settings,
+        "",
+        (path, message, code = "missing-field") => {
+          found.push({
+            flow: flowName,
+            node: node.id,
+            path,
+            code,
+            severity: "error",
+            message,
+          });
+        },
+        aliases,
+      );
     }
     const trigger = flow.nodes.find(
       (n) => specOf(n.type, n.type_version)?.trigger != null,
@@ -144,6 +182,371 @@ function unreachable(flow: Flow, from: string): string[] {
   return flow.nodes.map((n) => n.id).filter((id) => !reached.has(id));
 }
 
+// --- the condition builder -----------------------------------------------------------------
+
+const ROOTS = ["event", "steps", "vars", "error"];
+
+/** Fails like a command of Rust that returns `Err(EditorError::InvalidInput(..))`. */
+function refuse(message: string): never {
+  // Tauri rejects with the serialized error as it is, not with an `Error`.
+  // eslint-disable-next-line @typescript-eslint/only-throw-error
+  throw { kind: "invalid_input", message };
+}
+
+/** The text is not a condition of the builder. */
+class Unreadable extends Error {}
+
+function specOf(node: {
+  type: string;
+  type_version: number;
+}): NodeSpec | undefined {
+  return catalog.find(
+    (s) => s.type_id === node.type && s.version === node.type_version,
+  );
+}
+
+function ancestors(flow: Flow, id: string): Set<string> {
+  const found = new Set<string>();
+  const queue = [id];
+  while (queue.length > 0) {
+    const current = queue.pop();
+    for (const line of flow.lines) {
+      if (line.to === current && !found.has(line.from.node)) {
+        found.add(line.from.node);
+        queue.push(line.from.node);
+      }
+    }
+  }
+  return found;
+}
+
+function info(
+  group: NameInfo["group"],
+  segments: string[],
+  kind: NameInfo["kind"],
+  optional = false,
+): NameInfo {
+  return {
+    group,
+    segments,
+    source: nameSource(segments),
+    kind,
+    availability: "Always",
+    optional,
+  };
+}
+
+/** A stand-in for `expression_names`: the event, the nodes with a line to this one, variables. */
+export function fakeNames(
+  project: Project,
+  flowName: string,
+  nodeId: string,
+): NameList {
+  const flow = project.flows[flowName];
+  if (!flow?.nodes.some((n) => n.id === nodeId)) {
+    return refuse("the flow has no such node");
+  }
+  const names: NameInfo[] = [];
+  const trigger = flow.nodes.find((n) => specOf(n)?.trigger != null);
+  const triggerSpec =
+    trigger === undefined ? undefined : specOf(trigger)?.trigger;
+  if (trigger !== undefined && triggerSpec != null) {
+    for (const field of triggerSpec.fields) {
+      names.push(
+        info("Event", ["event", ...field.path.split(".")], field.kind),
+      );
+    }
+    const options = trigger.settings[triggerSpec.options_field ?? ""];
+    if (Array.isArray(options)) {
+      for (const option of options as Record<string, unknown>[]) {
+        if (typeof option.name !== "string") continue;
+        const kind =
+          option.type === "integer"
+            ? "Integer"
+            : option.type === "number"
+              ? "Decimal"
+              : option.type === "boolean"
+                ? "Boolean"
+                : "Text";
+        names.push(
+          info(
+            "Event",
+            ["event", "options", option.name],
+            kind,
+            option.required !== true,
+          ),
+        );
+      }
+    }
+  }
+  const before = ancestors(flow, nodeId);
+  for (const node of flow.nodes) {
+    if (!before.has(node.id)) continue;
+    for (const output of specOf(node)?.outputs ?? []) {
+      names.push(info("Step", ["steps", node.alias, output.name], output.kind));
+    }
+  }
+  const scopes = { run: 0, bot: 1, server: 2, member: 3, user: 4 } as const;
+  const variables = [...project.manifest.variables].sort(
+    (a, b) => scopes[a.scope] - scopes[b.scope] || a.name.localeCompare(b.name),
+  );
+  for (const variable of variables) {
+    const kind = {
+      integer: "Integer",
+      decimal: "Decimal",
+      text: "Text",
+      boolean: "Boolean",
+    }[variable.type] as NameInfo["kind"];
+    names.push(info("Variable", ["vars", variable.scope, variable.name], kind));
+  }
+  return { order_known: true, names };
+}
+
+function identifier(segment: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(segment);
+}
+
+function nameSource(segments: readonly string[]): string {
+  return segments
+    .map((segment, i) =>
+      i === 0
+        ? segment
+        : identifier(segment)
+          ? `.${segment}`
+          : `[${JSON.stringify(segment)}]`,
+    )
+    .join("");
+}
+
+function operandSource(operand: Operand): string {
+  switch (operand.type) {
+    case "Name":
+      return nameSource(operand.value);
+    case "Text":
+      return JSON.stringify(operand.value);
+    case "Integer":
+      return String(operand.value);
+    case "Decimal":
+      return Number.isInteger(operand.value)
+        ? `${operand.value}.0`
+        : String(operand.value);
+    case "Boolean":
+      return String(operand.value);
+  }
+}
+
+const COMPARE_SOURCE = {
+  Eq: "==",
+  Ne: "!=",
+  Lt: "<",
+  Le: "<=",
+  Gt: ">",
+  Ge: ">=",
+} as const;
+const TEXT_SOURCE = {
+  Contains: "contains",
+  StartsWith: "startsWith",
+  EndsWith: "endsWith",
+} as const;
+
+function rowSource(row: Row): string {
+  switch (row.type) {
+    case "Compare":
+      return `${operandSource(row.left)} ${COMPARE_SOURCE[row.op]} ${operandSource(row.right)}`;
+    case "Text":
+      return `${row.negated ? "!" : ""}${operandSource(row.left)}.${TEXT_SOURCE[row.op]}(${operandSource(row.right)})`;
+    case "Member": {
+      const test = `${operandSource(row.item)} in ${operandSource(row.list)}`;
+      return row.negated ? `!(${test})` : test;
+    }
+    case "Present":
+      return `${row.negated ? "!" : ""}has(${nameSource(row.name)})`;
+  }
+}
+
+/** A stand-in for `condition_to_source`. */
+export function fakeToSource(condition: Condition): string {
+  if (condition.rows.length === 0) {
+    return refuse("a condition needs at least one row");
+  }
+  return condition.rows
+    .map(rowSource)
+    .join(condition.join === "Any" ? " || " : " && ");
+}
+
+const TOKEN =
+  /\s*(?:(&&|\|\||==|!=|<=|>=|<|>|!|\(|\)|\[|\]|\.)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(-?\d+\.\d+|-?\d+)|([A-Za-z_]\w*))/y;
+
+function tokenize(source: string): string[] | null {
+  const tokens: string[] = [];
+  TOKEN.lastIndex = 0;
+  while (TOKEN.lastIndex < source.length) {
+    if (/^\s*$/.test(source.slice(TOKEN.lastIndex))) break;
+    const match = TOKEN.exec(source);
+    if (match === null) return null;
+    tokens.push(match[1] ?? match[2] ?? match[3] ?? match[4] ?? "");
+  }
+  return tokens;
+}
+
+/** A stand-in for `condition_from_source`: the shapes the end-to-end tests write. */
+export function fakeFromSource(source: string): Condition | null {
+  if (source.trim() === "") {
+    return refuse("the expression is empty");
+  }
+  const tokens = tokenize(source);
+  if (tokens === null) return null;
+  let at = 0;
+  const peek = (offset = 0) => tokens[at + offset];
+  const take = () => tokens[at++];
+  const fail = (): never => {
+    throw new Unreadable();
+  };
+
+  function operand(): Operand {
+    const token = take() ?? "";
+    if (/^["']/.test(token)) {
+      return {
+        type: "Text",
+        value: token.slice(1, -1).replace(/\\(.)/g, "$1"),
+      };
+    }
+    if (/^-?\d+\.\d+$/.test(token))
+      return { type: "Decimal", value: Number(token) };
+    if (/^-?\d+$/.test(token)) return { type: "Integer", value: Number(token) };
+    if (token === "true" || token === "false")
+      return { type: "Boolean", value: token === "true" };
+    if (!ROOTS.includes(token)) return fail();
+    const segments = [token];
+    for (;;) {
+      if (
+        peek() === "." &&
+        /^[A-Za-z_]/.test(peek(1) ?? "") &&
+        peek(2) !== "("
+      ) {
+        take();
+        segments.push(take() ?? "");
+      } else if (
+        peek() === "[" &&
+        /^["']/.test(peek(1) ?? "") &&
+        peek(2) === "]"
+      ) {
+        take();
+        segments.push((take() ?? "").slice(1, -1));
+        take();
+      } else break;
+    }
+    if (segments.length < 2) return fail();
+    return { type: "Name", value: segments };
+  }
+
+  function row(): Row {
+    const negated = peek() === "!";
+    if (negated) take();
+    if (negated && peek() === "(") {
+      take();
+      const item = operand();
+      if (take() !== "in") return fail();
+      const list = operand();
+      if (take() !== ")") return fail();
+      return { type: "Member", negated, item, list };
+    }
+    if (peek() === "has" && peek(1) === "(") {
+      take();
+      take();
+      const name = operand();
+      if (take() !== ")" || name.type !== "Name") return fail();
+      return { type: "Present", negated, name: name.value };
+    }
+    const left = operand();
+    const next = take();
+    if (next === ".") {
+      const method = take();
+      const op =
+        method === "contains"
+          ? "Contains"
+          : method === "startsWith"
+            ? "StartsWith"
+            : method === "endsWith"
+              ? "EndsWith"
+              : undefined;
+      if (op === undefined || take() !== "(") return fail();
+      const right = operand();
+      if (take() !== ")") return fail();
+      return { type: "Text", negated, left, op, right };
+    }
+    if (negated) return fail();
+    if (next === "in")
+      return { type: "Member", negated: false, item: left, list: operand() };
+    const compare = {
+      "==": "Eq",
+      "!=": "Ne",
+      "<": "Lt",
+      "<=": "Le",
+      ">": "Gt",
+      ">=": "Ge",
+    }[next ?? ""] as keyof typeof COMPARE_SOURCE | undefined;
+    if (compare === undefined) return fail();
+    return { type: "Compare", left, op: compare, right: operand() };
+  }
+
+  try {
+    const rows = [row()];
+    const join = peek();
+    while (peek() === join && (join === "&&" || join === "||")) {
+      take();
+      rows.push(row());
+    }
+    if (at !== tokens.length || rows.length > 8) return null;
+    return { join: join === "||" ? "Any" : "All", rows };
+  } catch (error) {
+    if (error instanceof Unreadable) return null;
+    throw error;
+  }
+}
+
+/** A stand-in for `rename_alias`: a pattern instead of the parser of Rust. */
+export function fakeRename(
+  project: Project,
+  flowName: string,
+  nodeId: string,
+  alias: string,
+): Renamed {
+  const flow = project.flows[flowName];
+  const target = flow?.nodes.find((n) => n.id === nodeId);
+  if (flow === undefined || target === undefined) {
+    return refuse("the flow has no such node");
+  }
+  if (!/^[a-z_][a-z0-9_]{0,63}$/.test(alias)) {
+    return refuse("invalid alias");
+  }
+  if (flow.nodes.some((n) => n.alias === alias && n.id !== nodeId)) {
+    return refuse("another node of this flow already has that alias");
+  }
+  const old = target.alias;
+  const reads = new RegExp(`(?<![.\\w])steps\\.${old}(?![\\w])`, "g");
+  const rewritten: Renamed["rewritten"] = [];
+  const next = structuredClone(project);
+  for (const node of next.flows[flowName]?.nodes ?? []) {
+    if (node.id === nodeId) node.alias = alias;
+    const kinds = specOf(node)?.fields ?? [];
+    for (const field of kinds) {
+      const value = node.settings[field.name];
+      const holds =
+        field.kind.type === "Expression" ||
+        field.kind.type === "Condition" ||
+        (field.kind.type === "Text" && field.kind.value.template);
+      if (holds && typeof value === "string" && reads.test(value)) {
+        reads.lastIndex = 0;
+        node.settings[field.name] = value.replace(reads, `steps.${alias}`);
+        rewritten.push({ node: node.id, path: field.name });
+      }
+      reads.lastIndex = 0;
+    }
+  }
+  return { project: next, rewritten, left_alone: [] };
+}
+
 export function installFakeBackend(): void {
   const state: E2eState = {
     calls: [],
@@ -185,6 +588,23 @@ export function installFakeBackend(): void {
       }
       case "validate_project":
         return fakeValidate(input.project as Project);
+      case "expression_names":
+        return fakeNames(
+          input.project as Project,
+          String(input.flow),
+          String(input.node),
+        );
+      case "condition_to_source":
+        return fakeToSource(input.condition as Condition);
+      case "condition_from_source":
+        return fakeFromSource(String(input.source));
+      case "rename_alias":
+        return fakeRename(
+          input.project as Project,
+          String(input.flow),
+          String(input.node),
+          String(input.alias),
+        );
       default:
         return Promise.reject(
           new Error(`the fake backend has no command ${cmd}`),

@@ -28,7 +28,7 @@ The tools the project uses, one line each. How to use each one well is in [`DEVE
 | Styles | Tailwind CSS v4 | With `@tailwindcss/vite` |
 | Components | `bits-ui` plus our own | No `shadcn-svelte` |
 | Effects and I/O | `effect` 4, `@effect/vitest` | Pinned to the same exact version; frontend boundaries only |
-| Expression editor | CodeMirror 6 | Used directly, without a wrapper |
+| Expression editor | CodeMirror 6 | Used directly, without a wrapper; four packages (`state`, `view`, `commands`, `autocomplete`) and no language or history; it lives in a shadow root (see *Frontend stack* in `DECISIONS.md`) |
 | Icons | `@lucide/svelte` | |
 | i18n | `@inlang/paraglide-js` | |
 | Package manager | `pnpm` workspaces | |

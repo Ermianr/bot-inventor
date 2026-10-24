@@ -13,7 +13,7 @@ pub(super) static SPEC: NodeSpec = NodeSpec {
     version: 1,
     fields: &[FieldSpec {
         name: "condition",
-        kind: FieldKind::Expression,
+        kind: FieldKind::Condition,
         required: true,
     }],
     ports: &[

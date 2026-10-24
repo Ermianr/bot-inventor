@@ -18,11 +18,13 @@ import {
   type History,
 } from "../editor/history";
 import type {
+  Condition,
   DiagnosticView,
   FieldSpec,
   Flow,
   JsonValue,
   Line,
+  NameList,
   NodeSpec,
   OpenedProject,
   Project,
@@ -60,6 +62,17 @@ export interface Notice {
   readonly text: string;
 }
 
+/** The answer of a call the panel waits for: the value, or the message to show. */
+export type Reply<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly message: string };
+
+/** Why a rename did not happen: the alias is refused, or the backend could not rewrite. */
+export type RenameFailure = AliasError | "failed";
+
+/** The most times a rename is asked again because the project changed while it was answered. */
+const RENAME_ATTEMPTS = 3;
+
 /** How long the editor waits after a change before it validates. */
 export const VALIDATION_DELAY_MS = 300;
 
@@ -84,6 +97,12 @@ export class EditorStore {
   diagnostics = $state.raw<readonly DiagnosticView[]>([]);
   /** The ids of the selected nodes of the flow that is shown. */
   selected = $state.raw<readonly string[]>([]);
+
+  /** The names the selected node can read, as the backend listed them for the open project. */
+  private listed = $state.raw<{
+    readonly nodeId: string;
+    readonly list: NameList;
+  } | null>(null);
 
   private history = $state.raw<History<Project> | null>(null);
   /** The project as it was last opened or saved. */
@@ -220,11 +239,17 @@ export class EditorStore {
 
   /**
    * Sets one setting of a node, by the path that compile uses; `undefined` removes it. Edits in a
-   * row to the same field are one step of the history.
+   * row to the same field are one step of the history, unless `join` is false: a choice made from
+   * a list is a step of its own.
    */
-  setSetting(nodeId: string, path: string, value: JsonValue | undefined): void {
+  setSetting(
+    nodeId: string,
+    path: string,
+    value: JsonValue | undefined,
+    join = true,
+  ): void {
     this.editSettings(nodeId, (settings) => setSetting(settings, path, value), {
-      key: `${nodeId}\u0000${path}`,
+      ...(join ? { key: `${nodeId}\u0000${path}` } : {}),
     });
   }
 
@@ -255,14 +280,79 @@ export class EditorStore {
     return result.ok ? null : result.error;
   }
 
-  /** Renames a node; `null` when it worked, or why it did not (nothing changes then). */
-  renameAlias(nodeId: string, alias: string): AliasError | null {
+  /**
+   * Renames a node and rewrites every read of the old alias in its flow, as one step of the
+   * history. `null` when it worked, or why it did not (nothing changes then). A field that could
+   * not be rewritten keeps the old alias and is named in a notice.
+   */
+  async renameAlias(
+    nodeId: string,
+    alias: string,
+    attempt = 1,
+  ): Promise<RenameFailure | null> {
+    const project = this.project;
+    const flowName = this.flowName;
     const flow = this.flow;
-    if (flow === null) return "unknown-node";
-    const result = renameAlias(flow, nodeId, alias);
-    if (!result.ok) return result.error;
-    this.editFlow(() => result.flow, `${nodeId}\u0000alias`);
+    if (project === null || flowName === null || flow === null) {
+      return "unknown-node";
+    }
+    const checked = renameAlias(flow, nodeId, alias);
+    if (!checked.ok) return checked.error;
+    if (checked.flow === flow) return null;
+    const exit = await this.rt.runPromiseExit(
+      Effect.flatMap(TauriBackend, (b) =>
+        b.renameAlias(project, flowName, nodeId, alias),
+      ),
+    );
+    if (!Exit.isSuccess(exit)) {
+      this.fail(exit.cause, m.error_backend());
+      return "failed";
+    }
+    if (this.project !== project) {
+      // The project changed while Rust answered: ask again about the one that is open now.
+      return attempt < RENAME_ATTEMPTS
+        ? this.renameAlias(nodeId, alias, attempt + 1)
+        : "failed";
+    }
+    const renamed = exit.value;
+    this.commit(() => renamed.project, { flow: flowName, key: null });
+    if (renamed.left_alone.length > 0) {
+      const nodes = renamed.project.flows[flowName]?.nodes ?? [];
+      const fields = renamed.left_alone
+        .map((left) => {
+          const owner = nodes.find((n) => n.id === left.field.node);
+          return `${owner?.alias ?? left.field.node}.${left.field.path} (${left.reason})`;
+        })
+        .join("; ");
+      this.notice = {
+        kind: "info",
+        text: m.notice_rename_left({ fields }),
+      };
+    }
     return null;
+  }
+
+  /** The names that the selected node can read, or `null` while they are not known. */
+  namesOf(nodeId: string): NameList | null {
+    return this.listed?.nodeId === nodeId ? this.listed.list : null;
+  }
+
+  /** The condition that an expression spells; `null` when it has another shape. */
+  async readCondition(source: string): Promise<Reply<Condition | null>> {
+    return this.reply(
+      await this.rt.runPromiseExit(
+        Effect.flatMap(TauriBackend, (b) => b.conditionFromSource(source)),
+      ),
+    );
+  }
+
+  /** The expression that a condition spells, or why it cannot be written. */
+  async writeCondition(condition: Condition): Promise<Reply<string>> {
+    return this.reply(
+      await this.rt.runPromiseExit(
+        Effect.flatMap(TauriBackend, (b) => b.conditionToSource(condition)),
+      ),
+    );
   }
 
   /** The current value of a setting of a node, for the panel. */
@@ -295,6 +385,7 @@ export class EditorStore {
     }
     this.selected = ids;
     this.sealHistory();
+    this.refreshNames();
   }
 
   dismissNotice(): void {
@@ -374,6 +465,7 @@ export class EditorStore {
     this.saved = opened.project;
     this.flowName = Object.keys(opened.project.flows)[0] ?? null;
     this.selected = [];
+    this.listed = null;
     this.diagnostics = [];
     this.revision += 1;
     const from = opened.migrated_from;
@@ -400,7 +492,47 @@ export class EditorStore {
         if (this.project !== project || !Exit.isSuccess(exit)) return;
         this.diagnostics = exit.value;
       });
+      this.refreshNames();
     }, delay);
+  }
+
+  /** Asks which names the selected node can read; an answer about an older state is dropped. */
+  private refreshNames(): void {
+    const project = this.project;
+    const flowName = this.flowName;
+    const [id, ...others] = this.selected;
+    if (project === null || flowName === null || id === undefined) {
+      this.listed = null;
+      return;
+    }
+    if (others.length > 0) {
+      this.listed = null;
+      return;
+    }
+    const program = Effect.flatMap(TauriBackend, (b) =>
+      b.expressionNames(project, flowName, id),
+    );
+    void this.rt.runPromiseExit(program).then((exit) => {
+      if (
+        this.project !== project ||
+        this.flowName !== flowName ||
+        this.selected[0] !== id
+      ) {
+        return;
+      }
+      this.listed = Exit.isSuccess(exit)
+        ? { nodeId: id, list: exit.value }
+        : null;
+    });
+  }
+
+  private reply<T>(exit: Exit.Exit<T, unknown>): Reply<T> {
+    if (Exit.isSuccess(exit)) return { ok: true, value: exit.value };
+    const error = Option.getOrUndefined(Cause.findErrorOption(exit.cause));
+    return {
+      ok: false,
+      message: error === undefined ? m.error_backend() : describeFailure(error),
+    };
   }
 
   private run<A>(

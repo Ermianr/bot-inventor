@@ -136,7 +136,7 @@ impl Cx<'_> {
                     });
                 }
             }
-            FieldKind::Expression => {
+            FieldKind::Expression | FieldKind::Condition => {
                 let Value::String(text) = value else {
                     return self.wrong_type(path, "the text of an expression", value);
                 };

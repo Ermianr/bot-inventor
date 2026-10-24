@@ -2,11 +2,14 @@ import { Context, Effect, Layer, Schema } from "effect";
 import {
   commands,
   type AppInfo,
+  type Condition,
   type DiagnosticView,
   type EditorError,
+  type NameList,
   type NodeSpec,
   type OpenedProject,
   type Project,
+  type Renamed,
 } from "../lib/bindings";
 
 /** A call to the Rust backend failed. */
@@ -35,6 +38,25 @@ export interface Backend {
   validateProject(
     project: Project,
   ): Effect.Effect<DiagnosticView[], BackendError>;
+  /** The names that an expression of a node can read, for the lists of the condition builder. */
+  expressionNames(
+    project: Project,
+    flow: string,
+    node: string,
+  ): Effect.Effect<NameList, BackendError>;
+  /** The expression that a condition of the builder spells. */
+  conditionToSource(condition: Condition): Effect.Effect<string, BackendError>;
+  /** The condition that an expression spells; `null` when it has another shape. */
+  conditionFromSource(
+    source: string,
+  ): Effect.Effect<Condition | null, BackendError>;
+  /** A new alias for a node and every read of the old one in its flow. */
+  renameAlias(
+    project: Project,
+    flow: string,
+    node: string,
+    alias: string,
+  ): Effect.Effect<Renamed, BackendError>;
 }
 
 function call<T>(
@@ -83,6 +105,22 @@ export class TauriBackend extends Context.Service<TauriBackend, Backend>()(
         ),
       validateProject: (project) =>
         call("validate_project", () => commands.validateProject(project)),
+      expressionNames: (project, flow, node) =>
+        callChecked("expression_names", () =>
+          commands.expressionNames(project, flow, node),
+        ),
+      conditionToSource: (condition) =>
+        callChecked("condition_to_source", () =>
+          commands.conditionToSource(condition),
+        ),
+      conditionFromSource: (source) =>
+        callChecked("condition_from_source", () =>
+          commands.conditionFromSource(source),
+        ),
+      renameAlias: (project, flow, node, alias) =>
+        callChecked("rename_alias", () =>
+          commands.renameAlias(project, flow, node, alias),
+        ),
     }),
   );
 
@@ -100,6 +138,11 @@ export class TauriBackend extends Context.Service<TauriBackend, Backend>()(
         openProject: () => Effect.succeed(null),
         saveProject: () => Effect.void,
         validateProject: () => Effect.succeed([]),
+        expressionNames: () => Effect.succeed({ order_known: true, names: [] }),
+        conditionToSource: () => Effect.succeed(""),
+        conditionFromSource: () => Effect.succeed(null),
+        renameAlias: (project) =>
+          Effect.succeed({ project, rewritten: [], left_alone: [] }),
         ...overrides,
       }),
     );
