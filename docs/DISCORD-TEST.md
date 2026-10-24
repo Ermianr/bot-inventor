@@ -55,4 +55,18 @@ cargo run -q -p exporter --example export -- --runner target/release/runner \
 | 13 | `ldd /tmp/ping-bot/ping-bot`; then copy only `/tmp/ping-bot` to a machine or container with no Rust, no repository and none of the variables above, copy `.env.example` to `.env`, fill in the token and `DISCORD_DEV_GUILD_ID`, run `env -i ./ping-bot` from another directory, and use `/ping` | `ldd` lists only system libraries (libc, libm, libgcc_s and the loader); the bot prints `listening` and answers `Pong!`; `data/` appears next to it with mode 0700 |
 | 14 | On that machine, start `env -i ./ping-bot` before creating `.env`, and again with the example copied as it is | Exit code `2` both times: first an `error:` line that names the `.env` it looked for, then one that says `DISCORD_TOKEN` is not set |
 
+## The app (M12b)
+
+The same server and bot, run from the app (`cargo xtask dev`, or an installed package) instead of the command line. Make a new project, build Ping with the editor (a *Slash command* named `ping` joined to a *Reply* with `Pong!`), save it, and use the same test bot. The token is written from the app, never to a file by hand, so these rows also check where it ends up.
+
+| # | Do | Expect |
+|---|---|---|
+| 15 | Press *Run* before any token is set | The log opens and shows an `error:` line that names the `.env` it looked for; the state says *Stopped unexpectedly: Configuration problem (exit code 2)* and *Run* is enabled again |
+| 16 | *Bot settings*: paste the token and *Save token*; then `stat -c '%a' <project>/.env` and `grep -c DISCORD_TOKEN <project>/.env` | The dialog says *A token is set* and the field is empty; the file has mode `600` and one `DISCORD_TOKEN` line. Close and open the dialog: the field is empty again. Put the id of the test server in *Development server id* and *Save server* |
+| 17 | *Run*, then use `/ping` in the server | The state goes *Starting…* to *Running*, the lines appear as they happen (`commands: …`, `listening`), and the bot answers `Pong!` |
+| 18 | *Stop* | A `stopping` and a `stopped` line, the state says *Stopped*, and `pgrep -x runner` prints nothing; *Run* works again |
+| 19 | *Run*, then close the window of the app | `pgrep -x runner` prints nothing within a few seconds |
+| 20 | `grep -rl "$(sed -n 's/^DISCORD_TOKEN=//p' <project>/.env)" <project>`, and read the log panel after rows 15 to 18 | Only `.env` is listed (the payload, the database and the saved project do not have it), and the token is in no line of the log |
+| 21 | *Export*, accept the name, choose an empty folder, then copy `.env.example` to `.env` there with the token and run `env -i ./<name>` from another directory | The folder has the program, `assets/` and `.env.example` and no `.env` until you make it; the bot answers `/ping` |
+
 Write the date, the commit and which rows passed in the pull request.

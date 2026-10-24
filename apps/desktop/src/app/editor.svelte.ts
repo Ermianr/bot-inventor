@@ -90,7 +90,11 @@ export class EditorStore {
   catalog = $state.raw<readonly NodeSpec[]>([]);
   flowName = $state.raw<string | null>(null);
   busy = $state(false);
+  /** A bot runs from the open project: it cannot be replaced until the bot stops. */
+  locked = $state(false);
   notice = $state.raw<Notice | null>(null);
+  /** Counts the projects opened or created, so a screen can read what belongs to each. */
+  opened = $state(0);
   /** Grows with every edit, accepted or not, so the canvas draws the model again. */
   revision = $state(0);
   /** What `validate_project` said about the project as it was when it answered. */
@@ -450,8 +454,17 @@ export class EditorStore {
     if (this.history !== null) this.history = seal(this.history);
   }
 
+  /** Validates the open project now, instead of after the quiet moment. */
+  revalidate(): void {
+    if (this.project !== null) this.scheduleValidation(0);
+  }
+
   private canReplace(): boolean {
     if (this.busy) return false;
+    if (this.locked) {
+      this.notice = { kind: "error", text: m.notice_running() };
+      return false;
+    }
     if (this.dirty) {
       this.notice = { kind: "error", text: m.notice_unsaved() };
       return false;
@@ -461,6 +474,7 @@ export class EditorStore {
 
   private open(opened: OpenedProject | null): void {
     if (opened === null) return;
+    this.opened += 1;
     this.history = createHistory(opened.project);
     this.saved = opened.project;
     this.flowName = Object.keys(opened.project.flows)[0] ?? null;
