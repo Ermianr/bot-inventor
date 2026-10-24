@@ -31,12 +31,14 @@ cargo xtask lint && cargo xtask test
 | `cargo xtask dev` | Run the app in development mode |
 | `cargo xtask lint` | Format check, `clippy -D warnings`, `layers`, ESLint, Prettier, `svelte-check`, Effect diagnostics, `cargo-deny` |
 | `cargo xtask test` | Rust tests (`nextest`), doc tests and `vitest` |
-| `cargo xtask build` | Build the app (the runner joins it in a later milestone) |
+| `cargo xtask build` | Build the app, with the release runner bundled as its sidecar |
 | `cargo xtask layers` | Check the crate dependency rules of `ARCHITECTURE.md` §2 |
 | `cargo xtask bindings` | Regenerate the TypeScript types from Rust; `--check` fails if they differ from the committed ones (what CI runs) |
 | `cargo xtask dump <file>` | Print a payload, or the payload at the end of an exported bot, as JSON |
 
-To write an exported folder by hand (the app does it from M12), compile a project and give the result to the exporter:
+`dev`, `build`, `lint`, `test` and `bindings` first build the runner and copy it to `apps/desktop/src-tauri/binaries/runner-<target triple>`, where Tauri expects the app's sidecar; the app crate does not compile without that file, so on a clean checkout run `cargo xtask test` (or `lint`) once before using `cargo` directly on it.
+
+The app exports a bot from its menu (M12b). To write an exported folder by hand, compile a project and give the result to the exporter:
 
 ```sh
 cargo build --release -p runner

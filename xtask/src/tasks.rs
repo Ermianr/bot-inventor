@@ -37,6 +37,43 @@ fn ensure_frontend_dist() -> Result<()> {
     pnpm("build")
 }
 
+/// Where Tauri looks for the bundled runner (`bundle.externalBin` in `tauri.conf.json`). It is
+/// named with the target triple and ignored by git.
+const SIDECAR_DIR: &str = "apps/desktop/src-tauri/binaries";
+
+/// The name Tauri expects for the sidecar `runner` on the system `triple`.
+fn sidecar_file(triple: &str) -> String {
+    format!("runner-{triple}")
+}
+
+/// Builds the runner and puts it where Tauri expects the sidecar. The Tauri crate does not
+/// compile without the file, so every task that compiles the app (`dev`, `build`, `lint`, `test`
+/// and `bindings`) calls this first. Local run and export use this same file.
+fn ensure_sidecar(release: bool) -> Result<()> {
+    let mut args = vec!["build", "--package", "runner"];
+    if release {
+        args.push("--release");
+    }
+    run("cargo", &args)?;
+    let triple = run_capture("rustc", &["--print", "host-tuple"])?;
+    let target =
+        std::env::var_os("CARGO_TARGET_DIR").map_or_else(|| root().join("target"), PathBuf::from);
+    let built = target
+        .join(if release { "release" } else { "debug" })
+        .join("runner");
+    let dir = root().join(SIDECAR_DIR);
+    std::fs::create_dir_all(&dir).with_context(|| format!("could not create {SIDECAR_DIR}"))?;
+    let sidecar = dir.join(sidecar_file(triple.trim()));
+    let bytes = std::fs::read(&built)
+        .with_context(|| format!("the runner was not built at {}", built.display()))?;
+    // Copy only a changed file, so Tauri does not rebuild the app for nothing.
+    if std::fs::read(&sidecar).ok().as_deref() != Some(bytes.as_slice()) {
+        std::fs::copy(&built, &sidecar)
+            .with_context(|| format!("could not copy the runner to {}", sidecar.display()))?;
+    }
+    Ok(())
+}
+
 /// Installs a cargo subcommand the first time, so a clean clone needs only Rust and pnpm.
 fn ensure_cargo_tool(subcommand: &str, package: &str) -> Result<()> {
     if run_capture("cargo", &[subcommand, "--version"]).is_ok() {
@@ -48,11 +85,13 @@ fn ensure_cargo_tool(subcommand: &str, package: &str) -> Result<()> {
 
 pub fn dev() -> Result<()> {
     ensure_node_modules()?;
+    ensure_sidecar(false)?;
     run_in(&app_dir(), "pnpm", &["run", "tauri", "dev"])
 }
 
 pub fn build() -> Result<()> {
     ensure_node_modules()?;
+    ensure_sidecar(true)?;
     run_in(&app_dir(), "pnpm", &["run", "tauri", "build"])
 }
 
@@ -114,6 +153,7 @@ fn cargo_deny() -> Result<()> {
 pub fn lint() -> Result<()> {
     ensure_node_modules()?;
     ensure_frontend_dist()?;
+    ensure_sidecar(false)?;
     ensure_cargo_tool("deny", "cargo-deny")?;
     run_all(&[
         ("rustfmt", rustfmt),
@@ -150,6 +190,7 @@ pub fn e2e() -> Result<()> {
 pub fn test() -> Result<()> {
     ensure_node_modules()?;
     ensure_frontend_dist()?;
+    ensure_sidecar(false)?;
     ensure_cargo_tool("nextest", "cargo-nextest")?;
     run_all(&[
         ("nextest", nextest),
@@ -193,6 +234,7 @@ pub fn bindings(args: &[String]) -> Result<()> {
     };
     ensure_node_modules()?;
     ensure_frontend_dist()?;
+    ensure_sidecar(false)?;
     run(
         "cargo",
         &[
@@ -217,4 +259,17 @@ pub fn bindings(args: &[String]) -> Result<()> {
         })?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_sidecar_is_named_with_the_target_triple() {
+        assert_eq!(
+            sidecar_file("x86_64-unknown-linux-gnu"),
+            "runner-x86_64-unknown-linux-gnu"
+        );
+    }
 }

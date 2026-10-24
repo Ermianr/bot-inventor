@@ -23,7 +23,7 @@ use std::path::{Component, Path, PathBuf};
 pub use assets::{MAX_BYTES, MAX_DEPTH, MAX_ENTRIES};
 pub use error::ExportError;
 use graph::{Payload, read_container, write_container};
-pub use name::MAX_NAME_BYTES;
+pub use name::{MAX_NAME_BYTES, check as check_name};
 
 use crate::assets::Scan;
 use crate::fsx::{DIR_MODE, EXECUTABLE_MODE, Staging};

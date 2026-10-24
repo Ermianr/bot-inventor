@@ -54,7 +54,7 @@ impl EditorState {
         *self.folder.lock().unwrap_or_else(|e| e.into_inner()) = Some(folder);
     }
 
-    fn get(&self) -> Option<PathBuf> {
+    pub(crate) fn get(&self) -> Option<PathBuf> {
         self.folder
             .lock()
             .unwrap_or_else(|e| e.into_inner())
@@ -105,7 +105,7 @@ impl From<&Diagnostic> for DiagnosticView {
 }
 
 /// Checks the name of a project: 1 to 64 characters, none a control character.
-fn check_project_name(name: &str) -> Result<(), EditorError> {
+pub(crate) fn check_project_name(name: &str) -> Result<(), EditorError> {
     let length = name.chars().count();
     if name.trim().is_empty() || length > MAX_PROJECT_NAME {
         return Err(EditorError::InvalidInput(format!(
@@ -172,7 +172,7 @@ pub fn validate(project: &Project) -> Vec<DiagnosticView> {
 }
 
 /// Shows the folder dialog and waits; `None` when the person cancels.
-async fn pick_folder(app: &AppHandle) -> Result<Option<PathBuf>, EditorError> {
+pub(crate) async fn pick_folder(app: &AppHandle) -> Result<Option<PathBuf>, EditorError> {
     let app = app.clone();
     let picked =
         tauri::async_runtime::spawn_blocking(move || app.dialog().file().blocking_pick_folder())

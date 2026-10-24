@@ -6,3 +6,4 @@ dist
 /apps/desktop/src/paraglide
 /apps/desktop/dist-e2e
 /apps/desktop/e2e/last-run.png
+/apps/desktop/src-tauri/binaries
