@@ -7,21 +7,25 @@
     "dev": "vite",
     "build": "vite build",
     "tauri": "tauri",
-    "lint": "eslint .",
+    "lint": "pnpm run i18n && eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "svelte-check --tsconfig ./tsconfig.json",
-    "effect": "effect-language-service diagnostics --project tsconfig.json",
-    "test": "vitest run"
+    "check": "pnpm run i18n && svelte-check --tsconfig ./tsconfig.json",
+    "effect": "pnpm run i18n && effect-language-service diagnostics --project tsconfig.json",
+    "test": "pnpm run i18n && vitest run",
+    "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy baseLocale --emit-ts-declarations"
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.4",
+    "@xyflow/svelte": "1.7.0",
     "effect": "4.0.5"
   },
   "devDependencies": {
     "@effect/language-service": "^0.87.5",
     "@effect/vitest": "4.0.5",
     "@eslint/js": "^10.0.1",
+    "@inlang/paraglide-js": "^2.29.1",
+    "@inlang/plugin-message-format": "^4.5.5",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tauri-apps/cli": "^2.12.4",
     "eslint": "^10.13.0",

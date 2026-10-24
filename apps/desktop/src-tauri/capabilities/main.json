@@ -3,5 +3,12 @@
   "identifier": "main",
   "description": "The main window: it may call the commands listed here and nothing else.",
   "windows": ["main"],
-  "permissions": ["allow-app-info"]
+  "permissions": [
+    "allow-app-info",
+    "allow-new-project",
+    "allow-open-project",
+    "allow-save-project",
+    "allow-validate-project",
+    "allow-node-catalog"
+  ]
 }

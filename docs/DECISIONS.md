@@ -93,6 +93,7 @@ The decisions that shape the project: the ones that change how it behaves or tha
 - **Why.** One definition and one validator for the project format avoid drift between Rust and TypeScript and keep the frontend small.
 - **Risk.** `tauri-specta` for Tauri v2 is in beta; `tauri-specta`, `specta` and `specta-typescript` are pinned together with exact versions. Fallback: hand-written `Schema` definitions plus contract tests on JSON produced by Rust.
 - **To verify.** Error typing in the generated bindings and the CI regeneration check.
+- **How (M10a).** `graph` and `runtime` derive `specta::Type` behind an optional `specta` feature that only `apps/desktop` enables, so the runner and the layer rules are untouched. Bindings are exported with `disable_serde_phases`, so each type has one TypeScript shape instead of a `_Serialize` and a `_Deserialize` copy. `specta` refuses 64-bit integers, so the `settings` and `initial` JSON values, the editor positions and the limits of a schema are typed with a stand-in through `specta(type = ...)`. The open project's folder never leaves Rust: the commands show a native folder dialog (`tauri-plugin-dialog`, used only from Rust and with no permission for the webview) and the webview sends the project, not a path. The webview holds the project and its undo history; Rust loads, saves and validates it.
 
 ## Frontend stack
 

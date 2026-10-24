@@ -1,6 +1,13 @@
 /// Every command the frontend may call is listed here; a command that is not listed cannot be
 /// called, even from the main window (`docs/DEVELOPMENT-GUIDE.md` §7).
-const COMMANDS: &[&str] = &["app_info"];
+const COMMANDS: &[&str] = &[
+    "app_info",
+    "new_project",
+    "open_project",
+    "save_project",
+    "validate_project",
+    "node_catalog",
+];
 
 fn main() {
     tauri_build::try_build(
