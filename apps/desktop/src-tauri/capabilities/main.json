@@ -13,6 +13,12 @@
     "allow-expression-names",
     "allow-condition-to-source",
     "allow-condition-from-source",
-    "allow-rename-alias"
+    "allow-rename-alias",
+    "allow-start-bot",
+    "allow-stop-bot",
+    "allow-set-token",
+    "allow-token-status",
+    "allow-set-dev-guild",
+    "allow-export-bot"
   ]
 }

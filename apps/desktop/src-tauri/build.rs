@@ -11,6 +11,12 @@ const COMMANDS: &[&str] = &[
     "condition_to_source",
     "condition_from_source",
     "rename_alias",
+    "start_bot",
+    "stop_bot",
+    "set_token",
+    "token_status",
+    "set_dev_guild",
+    "export_bot",
 ];
 
 fn main() {

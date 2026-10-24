@@ -752,8 +752,11 @@ name = "desktop"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "exporter",
  "graph",
+ "proptest",
  "runtime",
+ "rustix",
  "serde",
  "serde_json",
  "specta",
@@ -764,6 +767,7 @@ dependencies = [
  "tauri-specta",
  "tempfile",
  "thiserror 2.0.21",
+ "tokio",
 ]
 
 [[package]]

@@ -16,19 +16,25 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 anyhow.workspace = true
+exporter = { path = "../../../crates/exporter" }
 graph = { path = "../../../crates/graph", features = ["specta"] }
 runtime = { path = "../../../crates/runtime", features = ["specta"] }
+# `rustix` sends the termination signal to the runner: its `kill_process` is safe, where `libc` needs
+# `unsafe` (it is already in the tree through `tokio` and `tauri`).
+rustix = { version = "1", default-features = false, features = ["process", "std"] }
 serde.workspace = true
 specta.workspace = true
 specta-typescript = "=0.0.13"
 serde_json.workspace = true
 thiserror.workspace = true
+tempfile.workspace = true
 tauri = { version = "2.12.5", features = [] }
 tauri-plugin-dialog = "2"
+tokio = { workspace = true, features = ["process", "io-util", "rt", "sync", "time", "macros"] }
 tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
 
 [dev-dependencies]
-tempfile.workspace = true
+proptest.workspace = true
 
 [lints]
 workspace = true
