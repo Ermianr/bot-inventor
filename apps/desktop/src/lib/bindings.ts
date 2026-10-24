@@ -5,11 +5,256 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
   appInfo: () => __TAURI_INVOKE<AppInfo>("app_info"),
+  /**  Asks for an empty folder and creates a project in it. */
+  newProject: (name: string) =>
+    typedError<OpenedProject | null, EditorError>(
+      __TAURI_INVOKE("new_project", { name }),
+    ),
+  /**  Asks for a project folder and opens it. */
+  openProject: () =>
+    typedError<OpenedProject | null, EditorError>(
+      __TAURI_INVOKE("open_project"),
+    ),
+  /**  Saves the project to the folder that was opened or created. */
+  saveProject: (project: Project) =>
+    typedError<null, EditorError>(__TAURI_INVOKE("save_project", { project })),
+  /**  Compiles the project the editor holds and returns its diagnostics. */
+  validateProject: (project: Project) =>
+    __TAURI_INVOKE<DiagnosticView[]>("validate_project", { project }),
+  /**  The schema of every node type, for the palette and the property panel. */
+  nodeCatalog: () => __TAURI_INVOKE<NodeSpec[]>("node_catalog"),
 };
 
 /* Types */
+/**
+ *  The human name of a node, unique inside its flow; expressions read it as
+ *  `steps.<alias>`.
+ */
+export type Alias = string;
+
 /**  What the app tells the frontend about itself. */
 export type AppInfo = {
   name: string;
   version: string;
 };
+
+export type DiagnosticSeverity = "error" | "warning";
+
+/**  One finding of compile, ready for the editor to mark the field. */
+export type DiagnosticView = {
+  flow: string | null;
+  node: string | null;
+  path: string | null;
+  code: string;
+  severity: DiagnosticSeverity;
+  message: string;
+};
+
+/**  Where the editor draws a node. It is not part of the compiled payload. */
+export type Editor = {
+  x: number;
+  y: number;
+};
+
+/**  Why a command failed. The message is for the person using the app and names no secret. */
+export type EditorError =
+  /**  The webview sent something that is not valid. */
+  | { kind: "invalid_input"; message: string }
+  /**  The folder is not a project, or the project could not be read or written. */
+  | { kind: "project"; message: string }
+  /**  A command needs an open project and there is none. */
+  | { kind: "no_project" };
+
+/**  The kind of a setting and its limits. */
+export type FieldKind =
+  /**
+   *  Text of `min` to `max` characters. With `template`, it is plain text with
+   *  `{{ expression }}` segments.
+   */
+  | {
+      type: "Text";
+      value: {
+        min: number;
+        max: number;
+        template: boolean;
+      };
+    }
+  /**  The source of one expression, such as the condition of a branch. */
+  | { type: "Expression" }
+  /**  A whole number from `min` to `max`. */
+  | {
+      type: "Integer";
+      value: {
+        min: number;
+        max: number;
+      };
+    }
+  | { type: "Boolean" }
+  /**  One of a closed list of words. */
+  | { type: "Choice"; value: string[] }
+  /**  A path inside the `assets/` folder of the project. */
+  | { type: "Asset" }
+  /**  A list of at most `max` objects with the fields of `item`. */
+  | {
+      type: "List";
+      value: {
+        max: number;
+        item: FieldSpec[];
+      };
+    };
+
+/**  One setting of a node. */
+export type FieldSpec = {
+  name: string;
+  kind: FieldKind;
+  required: boolean;
+};
+
+/**  The content of one `*.flow.json`. */
+export type Flow = {
+  nodes: Node[];
+  lines: Line[];
+};
+
+/**  The name of a flow; it is also the stem of its file, `flows/<name>.flow.json`. */
+export type FlowName = string;
+
+/**
+ *  How the TypeScript types describe a JSON value in `settings` and `initial`. `serde_json::Value`
+ *  holds 64-bit integers, which `specta` refuses to export, and a setting is a plain JSON number
+ *  to the editor (`i32` stands for `number`, as on `Editor`). It is only a stand-in for `specta(type = ...)`; no value is ever of this type.
+ */
+export type JsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | JsonValue[]
+  | { [key in string]: JsonValue };
+
+/**  An execution link from an output port of one node to another node. */
+export type Line = {
+  from: Port;
+  to: NodeId;
+};
+
+/**  The content of `bot.botproj`. */
+export type Manifest = {
+  format_version: number;
+  name: string;
+  platform: Platform;
+  /**  Settings of the project as a whole; their keys are not fixed yet. */
+  settings: { [key in string]: JsonValue };
+  variables: Variable[];
+};
+
+export type Node = {
+  id: NodeId;
+  alias: Alias;
+  /**  The node type, for example `discord.slash_command`. */
+  type: string;
+  type_version: number;
+  settings: { [key in string]: JsonValue };
+  editor: Editor;
+};
+
+/**  The opaque, stable id of a node, created by the editor. */
+export type NodeId = string;
+
+/**  What a node needs from the platform; compile joins these over the nodes in use. */
+export type NodeRequires = {
+  /**  Gateway intents, such as `guilds`. */
+  intents: string[];
+  /**  Cache resources, such as `members`. */
+  cache: string[];
+};
+
+/**  The schema of one version of one node type. */
+export type NodeSpec = {
+  /**  The type id, for example `discord.reply`. */
+  type_id: string;
+  /**  The `type_version` this schema describes. */
+  version: number;
+  fields: FieldSpec[];
+  /**  The output ports, in the order the editor shows them. */
+  ports: PortSpec[];
+  /**  The named values that later nodes read as `steps.<alias>.<output>`. */
+  outputs: OutputSpec[];
+  requires: NodeRequires;
+  /**  Set on a trigger, which has no input and starts a flow. */
+  trigger: TriggerSpec | null;
+};
+
+/**  A project the editor has just opened or created. */
+export type OpenedProject = {
+  project: Project;
+  /**  The format version the project was written in, when it was older than the current one. */
+  migrated_from: number | null;
+};
+
+export type OutputSpec = {
+  name: string;
+};
+
+/**  The platform a bot runs on. */
+export type Platform = "discord";
+
+export type Port = {
+  node: NodeId;
+  port: PortName;
+};
+
+/**  The name of an output port of a node, such as `next` or `error`. */
+export type PortName = string;
+
+export type PortSpec = {
+  name: string;
+};
+
+/**  A project in memory: the manifest and one [`Flow`] per `flows/<name>.flow.json`. */
+export type Project = {
+  manifest: Manifest;
+  flows: { [key in FlowName]: Flow };
+};
+
+/**  What makes a node a trigger and what the event it starts offers. */
+export type TriggerSpec = {
+  /**  The kind of event that starts the flow, as the event table of the payload names it. */
+  event: string;
+  /**  Whether the node defines a slash command to register. */
+  command: boolean;
+  /**  The fields of `event` that always exist, as dotted paths (`user.id`). */
+  fields: string[];
+  /**
+   *  The setting that lists the options of a command; each option's `name` becomes a field
+   *  `event.options.<name>`.
+   */
+  options_field: string | null;
+};
+
+/**  A declared variable (`docs/ARCHITECTURE.md` §4.3). */
+export type Variable = {
+  name: VariableName;
+  type: VariableType;
+  scope: VariableScope;
+  initial: JsonValue;
+};
+
+/**  The name of a declared variable; expressions read it as `vars.<scope>.<name>`. */
+export type VariableName = string;
+
+export type VariableScope = "run" | "bot" | "server" | "member" | "user";
+
+export type VariableType = "integer" | "decimal" | "text" | "boolean";
+
+/* Tauri Specta runtime */
+async function typedError<T, E>(
+  result: Promise<T>,
+): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {
+  try {
+    return { status: "ok", data: await result };
+  } catch (e) {
+    if (e instanceof Error) throw e;
+    return { status: "error", error: e as any };
+  }
+}

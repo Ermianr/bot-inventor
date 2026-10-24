@@ -53,6 +53,7 @@ macro_rules! name_type {
         $(#[$doc])*
         #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
         #[serde(try_from = "String", into = "String")]
+        #[cfg_attr(feature = "specta", derive(specta::Type))]
         pub struct $name(String);
 
         impl $name {

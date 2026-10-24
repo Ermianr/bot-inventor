@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-node-catalog"
+description = "Enables the node_catalog command without any pre-configured scope."
+commands.allow = ["node_catalog"]
+
+[[permission]]
+identifier = "deny-node-catalog"
+description = "Denies the node_catalog command without any pre-configured scope."
+commands.deny = ["node_catalog"]
