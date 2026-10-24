@@ -11,11 +11,17 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[features]
+# Serializes the node schemas and derives `specta::Type` on them, for the property panel of the editor.
+specta = ["graph/specta", "dep:serde", "dep:specta"]
+
 [dependencies]
 cel.workspace = true
 graph = { path = "../graph" }
+serde = { workspace = true, optional = true }
 serde_json.workspace = true
 sha2.workspace = true
+specta = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt", "sync", "time"] }
 

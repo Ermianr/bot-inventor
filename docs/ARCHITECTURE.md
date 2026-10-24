@@ -194,7 +194,7 @@ async fn execute<P: Platform, S: Storage>(cx: &mut NodeCx<'_, P, S>) -> Result<O
 
 `NodeError` has a closed kind, which is `error.kind`: `expression`, `invalid_value`, `missing_permissions`, `platform` or `storage` (a variable could not be read or written; its message names a variable at most, never a value or the detail of the database, because a flow can send `error.message` to a user). The runtime dispatches on an enum of node types rather than on a trait object, so `Platform` stays a plain generic trait. The steps to add one are in `CONTRIBUTING.md` §8.
 
-- The schema will be serialized to the frontend (through `tauri-specta`, with the editor in M10) and drives the property panel. Compile uses the same schema.
+- The schema is serialized to the frontend through `tauri-specta` (`node_catalog`) and drives the palette and, from M10b, the property panel. `runtime` and `graph` derive `serde::Serialize` and `specta::Type` on these types only behind their optional `specta` feature, which `apps/desktop` turns on; the runner never builds it. Compile uses the same schema.
 - A test checks that every schema has an executor and every executor has a schema.
 - A payload that skips compile still cannot make a node panic: executors read their settings through `NodeCx`, which returns an error for a missing or wrong value.
 

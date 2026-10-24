@@ -1,2 +1,4 @@
 dist
 src-tauri
+src/paraglide
+project.inlang

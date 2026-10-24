@@ -16,11 +16,19 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 anyhow.workspace = true
+graph = { path = "../../../crates/graph", features = ["specta"] }
+runtime = { path = "../../../crates/runtime", features = ["specta"] }
 serde.workspace = true
-specta = "=2.0.0-rc.26"
+specta.workspace = true
 specta-typescript = "=0.0.13"
+serde_json.workspace = true
+thiserror.workspace = true
 tauri = { version = "2.12.5", features = [] }
+tauri-plugin-dialog = "2"
 tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

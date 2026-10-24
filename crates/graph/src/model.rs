@@ -11,11 +11,29 @@ use serde_json::{Map, Value};
 
 use crate::names::{Alias, FlowName, NodeId, PortName, VariableName};
 
+/// How the TypeScript types describe a JSON value in `settings` and `initial`. `serde_json::Value`
+/// holds 64-bit integers, which `specta` refuses to export, and a setting is a plain JSON number
+/// to the editor (`i32` stands for `number`, as on `Editor`). It is only a stand-in for `specta(type = ...)`; no value is ever of this type.
+#[cfg(feature = "specta")]
+#[derive(Serialize, specta::Type)]
+#[serde(untagged)]
+#[allow(dead_code)]
+pub(crate) enum JsonValue {
+    Null,
+    Bool(bool),
+    Number(i32),
+    Text(String),
+    List(Vec<JsonValue>),
+    Object(BTreeMap<String, JsonValue>),
+}
+
 /// The version of the project format this crate reads and writes.
 pub const CURRENT_FORMAT_VERSION: u32 = 1;
 
 /// A project in memory: the manifest and one [`Flow`] per `flows/<name>.flow.json`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Project {
     pub manifest: Manifest,
     pub flows: BTreeMap<FlowName, Flow>,
@@ -24,12 +42,14 @@ pub struct Project {
 /// The content of `bot.botproj`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Manifest {
     pub format_version: u32,
     pub name: String,
     pub platform: Platform,
     /// Settings of the project as a whole; their keys are not fixed yet.
     #[serde(serialize_with = "sorted_map")]
+    #[cfg_attr(feature = "specta", specta(type = BTreeMap<String, JsonValue>))]
     pub settings: Map<String, Value>,
     pub variables: Vec<Variable>,
 }
@@ -51,6 +71,7 @@ impl Manifest {
 /// The platform a bot runs on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum Platform {
     Discord,
 }
@@ -58,17 +79,20 @@ pub enum Platform {
 /// A declared variable (`docs/ARCHITECTURE.md` §4.3).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Variable {
     pub name: VariableName,
     #[serde(rename = "type")]
     pub kind: VariableType,
     pub scope: VariableScope,
     #[serde(serialize_with = "sorted_value")]
+    #[cfg_attr(feature = "specta", specta(type = JsonValue))]
     pub initial: Value,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum VariableType {
     Integer,
     Decimal,
@@ -78,6 +102,7 @@ pub enum VariableType {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum VariableScope {
     Run,
     Bot,
@@ -89,6 +114,7 @@ pub enum VariableScope {
 /// The content of one `*.flow.json`.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Flow {
     pub nodes: Vec<Node>,
     pub lines: Vec<Line>,
@@ -96,6 +122,7 @@ pub struct Flow {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Node {
     pub id: NodeId,
     pub alias: Alias,
@@ -104,6 +131,7 @@ pub struct Node {
     pub kind: String,
     pub type_version: u32,
     #[serde(serialize_with = "sorted_map")]
+    #[cfg_attr(feature = "specta", specta(type = BTreeMap<String, JsonValue>))]
     pub settings: Map<String, Value>,
     pub editor: Editor,
 }
@@ -111,14 +139,20 @@ pub struct Node {
 /// Where the editor draws a node. It is not part of the compiled payload.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Editor {
+    // `specta` types an `f64` as `number | null` (NaN is written as null); a position is always
+    // finite (save refuses the rest), so the editor sees a plain `number`.
+    #[cfg_attr(feature = "specta", specta(type = i32))]
     pub x: f64,
+    #[cfg_attr(feature = "specta", specta(type = i32))]
     pub y: f64,
 }
 
 /// An execution link from an output port of one node to another node.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Line {
     pub from: Port,
     pub to: NodeId,
@@ -126,6 +160,7 @@ pub struct Line {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Port {
     pub node: NodeId,
     pub port: PortName,

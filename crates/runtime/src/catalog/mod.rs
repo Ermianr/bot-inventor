@@ -14,6 +14,7 @@ pub const ERROR_PORT: &str = "error";
 
 /// The schema of one version of one node type.
 #[derive(Debug)]
+#[cfg_attr(feature = "specta", derive(serde::Serialize, specta::Type))]
 pub struct NodeSpec {
     /// The type id, for example `discord.reply`.
     pub type_id: &'static str,
@@ -43,6 +44,7 @@ impl NodeSpec {
 
 /// One setting of a node.
 #[derive(Debug)]
+#[cfg_attr(feature = "specta", derive(serde::Serialize, specta::Type))]
 pub struct FieldSpec {
     pub name: &'static str,
     pub kind: FieldKind,
@@ -51,11 +53,15 @@ pub struct FieldSpec {
 
 /// The kind of a setting and its limits.
 #[derive(Debug)]
+#[cfg_attr(feature = "specta", derive(serde::Serialize, specta::Type))]
+#[cfg_attr(feature = "specta", serde(tag = "type", content = "value"))]
 pub enum FieldKind {
     /// Text of `min` to `max` characters. With `template`, it is plain text with
     /// `{{ expression }}` segments.
     Text {
+        #[cfg_attr(feature = "specta", specta(type = u32))]
         min: usize,
+        #[cfg_attr(feature = "specta", specta(type = u32))]
         max: usize,
         template: bool,
     },
@@ -63,7 +69,9 @@ pub enum FieldKind {
     Expression,
     /// A whole number from `min` to `max`.
     Integer {
+        #[cfg_attr(feature = "specta", specta(type = i32))]
         min: i64,
+        #[cfg_attr(feature = "specta", specta(type = i32))]
         max: i64,
     },
     Boolean,
@@ -73,23 +81,27 @@ pub enum FieldKind {
     Asset,
     /// A list of at most `max` objects with the fields of `item`.
     List {
+        #[cfg_attr(feature = "specta", specta(type = u32))]
         max: usize,
         item: &'static [FieldSpec],
     },
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "specta", derive(serde::Serialize, specta::Type))]
 pub struct PortSpec {
     pub name: &'static str,
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "specta", derive(serde::Serialize, specta::Type))]
 pub struct OutputSpec {
     pub name: &'static str,
 }
 
 /// What a node needs from the platform; compile joins these over the nodes in use.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "specta", derive(serde::Serialize, specta::Type))]
 pub struct NodeRequires {
     /// Gateway intents, such as `guilds`.
     pub intents: &'static [&'static str],
@@ -106,6 +118,7 @@ impl NodeRequires {
 
 /// What makes a node a trigger and what the event it starts offers.
 #[derive(Debug)]
+#[cfg_attr(feature = "specta", derive(serde::Serialize, specta::Type))]
 pub struct TriggerSpec {
     /// The kind of event that starts the flow, as the event table of the payload names it.
     pub event: &'static str,
