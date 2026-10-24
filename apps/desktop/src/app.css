@@ -78,3 +78,8 @@ button.primary {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+.svelte-flow__edge.problem .svelte-flow__edge-path {
+  stroke: var(--danger);
+  stroke-width: 2.5;
+}

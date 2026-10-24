@@ -12,6 +12,8 @@
   class:selected
   class:trigger={data.isTrigger}
   class:unknown={!data.known}
+  class:failing={data.problems > 0 && data.failing}
+  class:warned={data.problems > 0 && !data.failing}
 >
   {#if !data.isTrigger}
     <Handle type="target" position={Position.Left} />
@@ -21,6 +23,14 @@
       >{data.known ? nodeLabel(data.type) : m.node_unknown()}</span
     >
     {#if data.isTrigger}<span class="badge">{m.node_trigger()}</span>{/if}
+    {#if data.problems > 0}
+      <span
+        class="problems"
+        aria-label={m.node_problems({ count: data.problems })}
+      >
+        {data.problems}
+      </span>
+    {/if}
   </header>
   <p class="alias">{data.alias}</p>
   {#if !data.known}<p class="type">{data.type}</p>{/if}
@@ -54,6 +64,25 @@
   .card.unknown {
     border-style: dashed;
     border-color: var(--danger);
+  }
+  .card.failing {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 2px var(--danger-soft);
+  }
+  .card.warned {
+    border-color: var(--warning);
+  }
+  .problems {
+    min-width: 1.25rem;
+    padding: 0 0.375rem;
+    border-radius: 999px;
+    background: var(--danger);
+    color: var(--surface);
+    font-size: 0.6875rem;
+    text-align: center;
+  }
+  .warned .problems {
+    background: var(--warning);
   }
   header {
     display: flex;

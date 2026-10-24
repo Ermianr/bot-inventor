@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { edgeId, lineOfEdge, toFlowEdges, toFlowNodes } from "./canvas";
+import { lineOfEdge, toFlowEdges, toFlowNodes } from "./canvas";
+import { groupDiagnostics } from "./diagnostics";
+import { edgeId } from "./ops";
 import { catalog, ping } from "./fixtures";
 
 describe("toFlowNodes", () => {
@@ -54,5 +56,50 @@ describe("edges", () => {
     const a = edgeId({ from: { node: "n", port: "true" }, to: "t" });
     const b = edgeId({ from: { node: "n", port: "false" }, to: "t" });
     expect(a).not.toBe(b);
+  });
+});
+
+describe("problems", () => {
+  const marks = groupDiagnostics(
+    [
+      {
+        flow: "ping",
+        node: "n2",
+        path: "content",
+        code: "missing-field",
+        severity: "error",
+        message: "m",
+      },
+      {
+        flow: "ping",
+        node: "n2",
+        path: null,
+        code: "unreachable-node",
+        severity: "warning",
+        message: "m",
+      },
+      {
+        flow: "ping",
+        node: "n1",
+        path: "lines[0]",
+        code: "unknown-port",
+        severity: "error",
+        message: "m",
+      },
+    ],
+    "ping",
+    ping,
+  );
+
+  it("counts the problems of a node and of its fields", () => {
+    const nodes = toFlowNodes(ping, catalog, new Set(), marks);
+    expect(nodes[0]?.data).toMatchObject({ problems: 0, failing: false });
+    expect(nodes[1]?.data).toMatchObject({ problems: 2, failing: true });
+  });
+
+  it("marks the line and no other", () => {
+    const edges = toFlowEdges(ping, new Set(), marks);
+    expect(edges[0]?.class).toBe("problem");
+    expect(toFlowEdges(ping)[0]?.class).toBe("");
   });
 });

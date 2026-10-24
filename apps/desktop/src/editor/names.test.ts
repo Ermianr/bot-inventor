@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isAlias,
   isFlowName,
   newAlias,
   newFlowName,
@@ -88,5 +89,26 @@ describe("aliases", () => {
     const alias = newAlias(`x.${base}`, new Set([base]));
     expect(alias).toHaveLength(64);
     expect(alias.endsWith("_2")).toBe(true);
+  });
+});
+
+describe("isAlias", () => {
+  it("accepts and refuses what Rust does", () => {
+    for (const alias of ["a", "_a", "reply_2", "a".repeat(64)]) {
+      expect(isAlias(alias), alias).toBe(true);
+    }
+    for (const alias of [
+      "",
+      "9a",
+      "Reply",
+      "a-b",
+      "a b",
+      "a.b",
+      "ñ",
+      "a".repeat(65),
+      "a\n",
+    ]) {
+      expect(isAlias(alias), alias).toBe(false);
+    }
   });
 });

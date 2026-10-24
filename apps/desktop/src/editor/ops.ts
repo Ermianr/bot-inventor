@@ -4,7 +4,14 @@
  * it is saved or validated, so these functions refuse only what the canvas could not draw.
  */
 
-import type { Flow, JsonValue, Line, NodeSpec, Project } from "../lib/bindings";
+import type {
+  FieldSpec,
+  Flow,
+  JsonValue,
+  Line,
+  NodeSpec,
+  Project,
+} from "../lib/bindings";
 import {
   newAlias,
   newFlowName,
@@ -43,8 +50,15 @@ export function findSpec(
 
 /** The settings a new node starts with: what a required field can have without the user typing. */
 export function defaultSettings(spec: NodeSpec): Record<string, JsonValue> {
+  return defaultsFor(spec.fields);
+}
+
+/** What the required fields of `fields` can have without the user typing. */
+export function defaultsFor(
+  fields: readonly FieldSpec[],
+): Record<string, JsonValue> {
   const settings: Record<string, JsonValue> = {};
-  for (const field of spec.fields) {
+  for (const field of fields) {
     if (!field.required) continue;
     const kind = field.kind;
     switch (kind.type) {
@@ -103,6 +117,11 @@ export function removeNodes(flow: Flow, ids: ReadonlySet<string>): Flow {
     nodes: flow.nodes.filter((n) => !ids.has(n.id)),
     lines: flow.lines.filter((l) => !ids.has(l.from.node) && !ids.has(l.to)),
   };
+}
+
+/** The id of the edge that draws `line`. */
+export function edgeId(line: Line): string {
+  return `${line.from.node}:${line.from.port}->${line.to}`;
 }
 
 export function sameLine(a: Line, b: Line): boolean {

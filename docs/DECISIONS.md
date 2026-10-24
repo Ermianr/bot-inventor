@@ -101,6 +101,7 @@ The decisions that shape the project: the ones that change how it behaves or tha
 - **Why.** Retrofitting i18n into a finished UI is expensive. CodeMirror is modular and light (about 2 MB against about 100 MB for Monaco). Effect gives typed errors and resource handling at the boundaries and one validation library.
 - **Cost.** There is no Svelte binding for Effect, so a small bridge is our own code.
 - **To verify.** Effect's runtime lifecycle and hot reload in Svelte/Vite; Svelte Flow with large graphs; how `paraglide-js` plugs into the Vite setup.
+- **Editor state (M10b).** The open project is an immutable value held by the frontend; an edit builds a new one, so the undo history (`editor/history.ts`, pure TypeScript) keeps snapshots by reference, at most 200, one history for every flow. Edits in a row to the same field of the same node are one step (a selection change or a save closes the step), and a drag of several nodes is one. "Unsaved" compares the project with the last opened or saved one by value, so an undo back to it shows "Saved". Rust still validates: the editor asks `validate_project` after 300 ms without changes and drops an answer about a project that has since changed. `Ctrl+Z` always acts on the project, also inside a text field, so there is one undo and not two.
 - **Details.** `DEVELOPMENT-GUIDE.md` §1–§4, `TOOLING.md`.
 
 ## Platforms and signing
