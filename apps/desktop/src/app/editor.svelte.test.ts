@@ -286,6 +286,16 @@ describe("EditorStore history", () => {
     expect(store.canUndo).toBe(false);
   });
 
+  it("checks an alias without changing it", async () => {
+    const { store } = await opened();
+    expect(store.checkAlias("n2", "answer")).toBeNull();
+    expect(store.checkAlias("n2", "Bad Name")).toBe("invalid");
+    expect(store.checkAlias("n2", "ping_command")).toBe("taken");
+    expect(store.checkAlias("zz", "x")).toBe("unknown-node");
+    expect(store.flow?.nodes[1]?.alias).toBe("reply");
+    expect(store.canUndo).toBe(false);
+  });
+
   it("edits the rows of a list", async () => {
     const { store } = await opened();
     const field = { max: 2, item: [] };

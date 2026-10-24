@@ -247,6 +247,14 @@ export class EditorStore {
     );
   }
 
+  /** Why `alias` cannot be the alias of this node, or `null` when it can. Changes nothing. */
+  checkAlias(nodeId: string, alias: string): AliasError | null {
+    const flow = this.flow;
+    if (flow === null) return "unknown-node";
+    const result = renameAlias(flow, nodeId, alias);
+    return result.ok ? null : result.error;
+  }
+
   /** Renames a node; `null` when it worked, or why it did not (nothing changes then). */
   renameAlias(nodeId: string, alias: string): AliasError | null {
     const flow = this.flow;

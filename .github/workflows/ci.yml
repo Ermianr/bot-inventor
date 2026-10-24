@@ -84,6 +84,8 @@ jobs:
       - run: cargo xtask test
       - name: Generated bindings match the committed ones
         run: cargo xtask bindings --check
+      - name: End-to-end tests of the editor
+        run: cargo xtask e2e
 
   commits:
     name: Conventional Commits

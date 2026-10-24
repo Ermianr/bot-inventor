@@ -1,0 +1,245 @@
+[
+  {
+    "type_id": "data.set_variable",
+    "version": 1,
+    "fields": [
+      {
+        "name": "variable",
+        "kind": {
+          "type": "Text",
+          "value": {
+            "min": 3,
+            "max": 71,
+            "template": false
+          }
+        },
+        "required": true
+      },
+      {
+        "name": "operation",
+        "kind": {
+          "type": "Choice",
+          "value": [
+            "set",
+            "add"
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "value",
+        "kind": {
+          "type": "Expression"
+        },
+        "required": true
+      }
+    ],
+    "ports": [
+      {
+        "name": "next"
+      },
+      {
+        "name": "error"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "value"
+      }
+    ],
+    "requires": {
+      "intents": [],
+      "cache": []
+    },
+    "trigger": null
+  },
+  {
+    "type_id": "discord.reply",
+    "version": 1,
+    "fields": [
+      {
+        "name": "content",
+        "kind": {
+          "type": "Text",
+          "value": {
+            "min": 1,
+            "max": 2000,
+            "template": true
+          }
+        },
+        "required": true
+      }
+    ],
+    "ports": [
+      {
+        "name": "next"
+      },
+      {
+        "name": "error"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "message_id"
+      }
+    ],
+    "requires": {
+      "intents": [],
+      "cache": []
+    },
+    "trigger": null
+  },
+  {
+    "type_id": "discord.slash_command",
+    "version": 1,
+    "fields": [
+      {
+        "name": "name",
+        "kind": {
+          "type": "Text",
+          "value": {
+            "min": 1,
+            "max": 64,
+            "template": false
+          }
+        },
+        "required": true
+      },
+      {
+        "name": "description",
+        "kind": {
+          "type": "Text",
+          "value": {
+            "min": 1,
+            "max": 200,
+            "template": false
+          }
+        },
+        "required": true
+      },
+      {
+        "name": "ephemeral",
+        "kind": {
+          "type": "Boolean"
+        },
+        "required": false
+      },
+      {
+        "name": "options",
+        "kind": {
+          "type": "List",
+          "value": {
+            "max": 64,
+            "item": [
+              {
+                "name": "name",
+                "kind": {
+                  "type": "Text",
+                  "value": {
+                    "min": 1,
+                    "max": 64,
+                    "template": false
+                  }
+                },
+                "required": true
+              },
+              {
+                "name": "description",
+                "kind": {
+                  "type": "Text",
+                  "value": {
+                    "min": 1,
+                    "max": 200,
+                    "template": false
+                  }
+                },
+                "required": true
+              },
+              {
+                "name": "type",
+                "kind": {
+                  "type": "Choice",
+                  "value": [
+                    "string",
+                    "integer",
+                    "number",
+                    "boolean",
+                    "user",
+                    "channel",
+                    "role"
+                  ]
+                },
+                "required": true
+              },
+              {
+                "name": "required",
+                "kind": {
+                  "type": "Boolean"
+                },
+                "required": false
+              }
+            ]
+          }
+        },
+        "required": false
+      }
+    ],
+    "ports": [
+      {
+        "name": "next"
+      }
+    ],
+    "outputs": [],
+    "requires": {
+      "intents": [
+        "guilds"
+      ],
+      "cache": []
+    },
+    "trigger": {
+      "event": "slash_command",
+      "command": true,
+      "fields": [
+        "command.name",
+        "user.id",
+        "user.name",
+        "member.roles",
+        "member.permissions",
+        "guild.id",
+        "channel.id",
+        "timestamp"
+      ],
+      "options_field": "options"
+    }
+  },
+  {
+    "type_id": "logic.branch",
+    "version": 1,
+    "fields": [
+      {
+        "name": "condition",
+        "kind": {
+          "type": "Expression"
+        },
+        "required": true
+      }
+    ],
+    "ports": [
+      {
+        "name": "true"
+      },
+      {
+        "name": "false"
+      },
+      {
+        "name": "error"
+      }
+    ],
+    "outputs": [],
+    "requires": {
+      "intents": [],
+      "cache": []
+    },
+    "trigger": null
+  }
+]

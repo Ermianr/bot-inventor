@@ -430,6 +430,29 @@ Sources: https://sqlite.org/wal.html, https://docs.rs/rusqlite/latest/rusqlite/ 
 - Frontend Effect testing is in 1.11; frontend tests use `vitest` with `@effect/vitest` for Effect code.
 - **[project]** Rust tests are run with `cargo nextest`, and each service trait (`Platform`, `Storage`) has an in-memory test implementation so logic is tested without the network or a database file.
 
+### 10.1 Testing a Tauri app
+
+**[official]** (Tauri testing documentation, checked 2026-10-23)
+- Tauri describes three levels. **Mock runtime:** unit and integration tests in Rust with `tauri::test` (`mock_builder`, `mock_context`, `noop_assets`, `get_ipc_response`); it needs the `test` feature, the module is marked unstable, and its page does not cover managed state. **Mocked APIs in the frontend:** `@tauri-apps/api/mocks` (`mockIPC`, `mockWindows`, `clearMocks`); call `clearMocks()` after each test, `shouldMockEvents: true` (2.7.0) simulates events with `emit` and `listen` but not `emitTo`, and jsdom lacks WebCrypto. **End to end:** the WebDriver protocol.
+- `tauri-driver` wraps the native WebDriver: WebKitWebDriver (`webkit2gtk-driver`) on Linux and the Edge driver on Windows. There is no desktop WebDriver for macOS. The recommended client is WebdriverIO with `@wdio/tauri-service`, whose providers are `embedded` (a plugin inside the app), `external` (`tauri-driver`) and `crabnebula` (a paid service on macOS).
+- Tauri's CI guide for Linux installs `webkit2gtk-driver` and `xvfb`, runs `cargo install tauri-driver --locked` and `xvfb-run` for the tests, and runs `cargo test` first.
+- WebdriverIO's **browser mode** runs only the renderer, in Chrome, against the Vite dev server, with the Rust side replaced by mocks. Its own mock of `invoke` is injected after `browser.url()` resolves, so calls made while the page loads are not intercepted.
+
+**[project]** the layers, from cheap to costly:
+- **Rust.** Keep the logic of a command in a plain function and test that (`editor::create_in`, `open_in`, `save_in`, `validate`); the command only adds the dialog and the state. A test keeps `apps/desktop/e2e/catalog.json` equal to the real catalog (`UPDATE_E2E_CATALOG=1 cargo test -p desktop` rewrites it).
+- **Frontend logic.** `vitest` on pure functions and on `EditorStore` with `TauriBackend.layerTest`. Component tests in a simulated DOM are not used: they cannot see layout, styles or the CSP.
+- **Renderer in Chrome** (`cargo xtask e2e`, not part of `cargo xtask test` because WebdriverIO downloads a browser the first time). `e2e/main.ts` installs a fake backend with `mockIPC` and then imports `src/main.ts`, so the app has no test code. `vite build --mode e2e` writes it to `dist-e2e` with the app, and `vite preview` serves it with the production CSP read from `tauri.conf.json`, so the tests run against what ships and report any `securitypolicyviolation`. The fake backend is a stand-in: its validation covers a few rules to drive the UI, and `compile` is tested in Rust.
+- **Writing the specs.** Find elements by their accessible name and visible text, not by generated class names (an XPath on a class needs whole-token matching: `svelte-flow__nodes` contains `svelte-flow__node`). Wait for a result (`waitUntil`) instead of reading right after a change: a node is hidden until Svelte Flow measures it. Drag with a pointer action that makes several moves; `dragAndDrop` makes one jump and Svelte Flow ignores it. A line is released on the input handle of a node, and a trigger has none.
+- **The real app** (from M12, when running and exporting exist): `tauri-driver` with the `external` provider, so the app carries no test plugin and gets no extra permission. WebDriver cannot drive a native dialog, so the folder dialog needs a test seam, a Cargo feature that reads the folder from the environment, absent from release builds and checked by a test.
+- **Dependencies.** WebdriverIO and its runners are development dependencies pinned to one version. `pnpm` runs no install script of `edgedriver`, `geckodriver` or `esbuild` (`allowBuilds` in `pnpm-workspace.yaml`): the first two only download drivers for browsers the tests do not use.
+
+**[verify]**
+- Whether Playwright can drive the webview of a Tauri app on Linux; the Tauri documentation does not mention it and this was not checked.
+- Whether the mock runtime of `tauri::test` applies the capability files.
+- The CSP check runs in Chrome; the app uses WebKitGTK, and Tauri adds nonces and hashes at compile time. A release build is still checked by hand.
+
+Sources: https://v2.tauri.app/develop/tests/, https://v2.tauri.app/develop/tests/mocking/, https://v2.tauri.app/develop/tests/webdriver/, https://v2.tauri.app/develop/tests/webdriver/ci/, https://docs.rs/tauri/latest/tauri/test/index.html, https://webdriver.io/docs/wdio-tauri-service, https://webdriver.io/docs/desktop-testing/tauri/platform-support, https://github.com/webdriverio/desktop-mobile/blob/main/packages/tauri-service/docs/browser-mode.md.
+
 ---
 
 ## 11. Repository tooling and the minimal baseline

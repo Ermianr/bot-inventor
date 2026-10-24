@@ -13,6 +13,15 @@
     draft = alias;
     error = null;
   });
+
+  // The text is checked as it is typed, but only a valid one that is confirmed (Enter, or leaving
+  // the field) renames the node, so a name that is refused never changes the alias on the way.
+  function commit(): void {
+    if (editor.renameAlias(id, draft) !== null) {
+      draft = alias;
+      error = null;
+    }
+  }
 </script>
 
 <div class="field" class:invalid={error !== null}>
@@ -25,8 +34,9 @@
     value={draft}
     oninput={(event) => {
       draft = event.currentTarget.value;
-      error = editor.renameAlias(id, draft);
+      error = editor.checkAlias(id, draft);
     }}
+    onchange={commit}
   />
   {#if error === "invalid"}
     <p class="problem">{m.alias_invalid()}</p>

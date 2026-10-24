@@ -1,2 +1,8 @@
 packages:
   - apps/*
+# WebdriverIO pulls these in. Their install scripts only fetch drivers for Edge and Firefox, which
+# the tests do not use, and esbuild works from its prebuilt binary, so none of them runs scripts.
+allowBuilds:
+  edgedriver: false
+  esbuild: false
+  geckodriver: false

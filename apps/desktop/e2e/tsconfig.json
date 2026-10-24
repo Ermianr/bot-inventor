@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "svelte",
+      "vite/client",
+      "@wdio/globals/types",
+      "@wdio/mocha-framework",
+      "expect-webdriverio"
+    ],
+    "resolveJsonModule": true,
+    "rootDir": ".."
+  },
+  "include": ["./**/*.ts", "../src/**/*.ts", "../src/**/*.svelte"]
+}
