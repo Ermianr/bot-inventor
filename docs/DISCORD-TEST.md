@@ -42,4 +42,17 @@ The runner prints JSON lines on standard output (`ARCHITECTURE.md` §9.2) and on
 | 11 | Run the whole session with `> /tmp/runner.log 2>&1` and then `grep -c "$(sed -n 's/^DISCORD_TOKEN=//p' ~/bot-test.env)" /tmp/runner.log` | It prints `0`: the token is in no line |
 | 12 | `cargo run -p runner -- --check --payload /tmp/ping.payload` | One `the check passed` line and exit code `0`, with no connection made |
 
+The exported folder (`ARCHITECTURE.md` §9.4) is made with a release runner and the export example, and the next two rows use it:
+
+```sh
+cargo build --release -p runner
+cargo run -q -p exporter --example export -- --runner target/release/runner \
+  --payload /tmp/ping.payload --project crates/graph/tests/samples/v1/ping --out /tmp/ping-bot --name ping-bot
+```
+
+| # | Do | Expect |
+|---|---|---|
+| 13 | `ldd /tmp/ping-bot/ping-bot`; then copy only `/tmp/ping-bot` to a machine or container with no Rust, no repository and none of the variables above, copy `.env.example` to `.env`, fill in the token and `DISCORD_DEV_GUILD_ID`, run `env -i ./ping-bot` from another directory, and use `/ping` | `ldd` lists only system libraries (libc, libm, libgcc_s and the loader); the bot prints `listening` and answers `Pong!`; `data/` appears next to it with mode 0700 |
+| 14 | On that machine, start `env -i ./ping-bot` before creating `.env`, and again with the example copied as it is | Exit code `2` both times: first an `error:` line that names the `.env` it looked for, then one that says `DISCORD_TOKEN` is not set |
+
 Write the date, the commit and which rows passed in the pull request.

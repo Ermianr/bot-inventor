@@ -952,6 +952,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "exporter"
+version = "0.1.0"
+dependencies = [
+ "graph",
+ "proptest",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "fallible-iterator"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3016,6 +3026,7 @@ dependencies = [
 name = "runner"
 version = "0.1.0"
 dependencies = [
+ "exporter",
  "platform-discord",
  "proptest",
  "rmp-serde",

@@ -36,6 +36,15 @@ cargo xtask lint && cargo xtask test
 | `cargo xtask bindings` | Regenerate the TypeScript types from Rust; `--check` fails if they differ from the committed ones (what CI runs) |
 | `cargo xtask dump <file>` | Print a payload, or the payload at the end of an exported bot, as JSON |
 
+To write an exported folder by hand (the app does it from M12), compile a project and give the result to the exporter:
+
+```sh
+cargo build --release -p runner
+cargo run -q -p runtime --example compile -- crates/graph/tests/samples/v1/ping /tmp/ping.payload
+cargo run -q -p exporter --example export -- --runner target/release/runner \
+  --payload /tmp/ping.payload --project crates/graph/tests/samples/v1/ping --out /tmp/ping-bot --name ping-bot
+```
+
 The first run installs the frontend dependencies and, if missing, `cargo-nextest` and `cargo-deny`, so Rust and `pnpm` are all you need besides Tauri's system libraries.
 
 There are no git hooks: run the checks yourself; CI runs them on every pull request.
