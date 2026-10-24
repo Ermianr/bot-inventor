@@ -223,6 +223,8 @@ Sources: https://www.typescriptlang.org/tsconfig/ (the page was read only in par
 
 All **[official]** rules below come from the Svelte documentation ("Best practices" and the `$effect` page).
 
+**Editors of code and other libraries that write styles.** A library that injects a `<style>` element into the document (CodeMirror does) is stopped by the CSP (`style-src 'self'`). Mount it in a shadow root, where it adopts a constructed stylesheet, and test it in the end-to-end tests, which serve the build with the production CSP and report violations. Give such an editor no undo of its own: `Ctrl+Z` belongs to the history of the project.
+
 **State and derived values**
 - Always use runes mode in new code. Avoid the legacy features: `$:`, `export let`, `on:click`, `<slot>`, `<svelte:component>`, `<svelte:self>`, stores for shared reactivity (use classes with `$state` fields), `use:action` (use `{@attach}`), and the `class:` directive.
 - Use `$state` only for values that drive an effect, a `$derived` or the template. Plain variables are fine for everything else.
