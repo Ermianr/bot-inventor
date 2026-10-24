@@ -513,6 +513,7 @@ Decision: see *No code node; CEL expressions* in `DECISIONS.md`. Conditions and 
 - **[project]** CEL ending is not the same as CEL being cheap. Cap the length of an expression's source and the size of values passed into a context (Discord already limits message sizes).
 - **[project]** The editor checks an expression as the user types, using the same compilation step as the exporter, so a bot with an invalid expression cannot be exported.
 - **[project]** Text templates: split the text on `{{ ... }}`, evaluate each segment as an expression, and convert the result to text. A template with no segments is plain text and costs nothing.
+- **[project]** Anything the editor does to an expression (reading it into the condition builder, renaming a node) is done by parsing it in Rust, behind `ExpressionEngine`, and then checking the result against the syntax tree; never with a regular expression or a text search, and never in TypeScript. Text typed by the author that goes into an expression is written as an escaped literal (`expr::quote`).
 - **[official]** `Program::references()` returns the variables and functions an expression uses, so compile needs no tree walker of its own, and `Program` is `Send + Sync`. Build one base `Context::with_env(env)` and give each event a child with `new_inner_scope()`, which borrows the parent.
 
 Sources: https://github.com/google/cel-spec (language definition), https://github.com/cel-rust/cel-rust, crates.io metadata for `cel`, and the size comparison in `DECISIONS.md`.
