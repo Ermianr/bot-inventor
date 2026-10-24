@@ -25,6 +25,7 @@ The decisions that shape the project: the ones that change how it behaves or tha
 
 - **Decision.** An exported bot embeds only its logic. `.env`, `assets/` and the SQLite `data/` stay outside, next to the executable. Directories resolve relative to the executable, not the working directory, with environment variables to override them. Asset names resolve only inside the assets directory (`..` and absolute paths are rejected), and at startup the runner checks that every referenced asset exists.
 - **Why.** The database holds state that changes while the bot runs, and testing data must not ship; `.env` holds secrets; not bundling assets keeps the executable small and lets a user change an image without exporting again.
+- **Exporting again.** The folder is meant to be exported into again, so the exporter replaces only what it writes (the executable, `.env.example` and the project's asset files) and keeps `.env`, `data/` and anything else, and it never leaves a half-written export (it stages, then renames). The executable is replaced by rename, never written in place, so a running bot does not block it.
 - **Cost.** An exported bot is a folder, not a single file. Optional embedding of assets can be added later.
 - **To verify.** Directory resolution under systemd and containers.
 - **Details.** `ARCHITECTURE.md` §9.4.

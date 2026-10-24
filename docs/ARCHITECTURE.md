@@ -68,6 +68,7 @@ Rules:
 2. `runtime` does not know Tauri, Discord or SQLite; it only sees the `Platform` and `Storage` traits.
 3. Only `apps/desktop` knows the GUI. The runner does not link a webview; the app does not link twilight or `rusqlite`.
 4. The app uses `runtime` for the node catalog, validation and compile, not to run bots.
+5. `runner` may use `exporter` in its tests only (a dev-dependency), for the end-to-end test of an exported bot; it never links it. Each layer lists such crates in `dev_may_use` in `xtask/src/layers.rs`.
 
 These rules are enforced, not just written: `cargo xtask layers` reads each crate's dependencies and fails the CI on any that breaks them. A new crate is registered with its layer when it is created.
 
@@ -305,7 +306,23 @@ The runner writes one line per write, redacts the token (and its JSON-escaped fo
 
 ### 9.4 Export
 
-The exporter writes `my-bot` (the runner with the payload appended), `assets/` copied from the project, and a `.env.example`; `.env` is the user's and `data/` is created on first run. Directories are resolved relative to the executable, with environment overrides (the same mechanism local run uses). Later, cross-export would need one prebuilt runner per target system, built in CI and attached to each release.
+`exporter::export` takes the runner executable (as built, with no bot inside: one that already has a footer is refused), the `Payload` that `compile` made, the project folder (only its `assets/` is read), the output folder and the name of the bot. It does not compile: a project with errors never reaches it. It writes:
+
+```
+<out>/
+├─ my-bot          the runner, then the payload, then the footer (§3.2); mode 0755
+├─ assets/         a copy of the project's assets/
+└─ .env.example    DISCORD_TOKEN= and a commented DISCORD_DEV_GUILD_ID=, with no value; mode 0644
+```
+
+`.env` is the user's and `data/` is created on first run; the exporter never writes either, never reads the project's `.env` and never copies a database. Directories are resolved relative to the executable, with environment overrides (the same mechanism local run uses). Later, cross-export would need one prebuilt runner per target system, built in CI and attached to each release.
+
+- **Name.** A plain file name of at most 64 bytes: it does not start with a dot or a dash, has no separator or control character, and is not `assets` or `data`.
+- **Assets.** All of `assets/` is copied; only regular files and folders are accepted and nothing is followed (a link or any other kind of file is refused and named). The limits are 4096 files and folders, 16 levels and 256 MiB **[measure]**; names must be text. Copied files get mode 0644 and folders 0755, whatever the project has. An asset that `requirements.assets` names and the project lacks refuses the export.
+- **Output.** A folder that exists (not a link) or one whose parent exists, which is created with mode 0755. The project folder itself, and anything inside its `assets/`, are refused (the copy would copy itself).
+- **Staging.** Everything is written first to a staging folder inside the output and moved into place with renames, the executable last. An error before the moves leaves the output as it was (a folder the export created is removed), and the checks of what is already in the output (a folder where a file goes, a link where a folder goes) are made before anything is written.
+- **Exporting again** into the same folder replaces the executable (a rename, so it works while the old one runs), `.env.example` and the files of `assets/` that the project has. It touches nothing else: `.env`, `data/`, an asset added by hand and any other file stay as they are.
+- The end-to-end tests are in `crates/runner/tests/export.rs`; `crates/exporter/examples/export.rs` writes a folder from the command line (`CONTRIBUTING.md` §2).
 
 ## 10. Security
 

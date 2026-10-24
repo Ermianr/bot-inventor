@@ -24,6 +24,7 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "rt", "signal", "time"] }
 
 [dev-dependencies]
+exporter = { path = "../exporter" }
 proptest.workspace = true
 rmp-serde.workspace = true
 serde_json.workspace = true

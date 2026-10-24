@@ -22,6 +22,9 @@ struct Layer {
     name: &'static str,
     /// The crates of this repository that this one may depend on.
     may_use: &'static [&'static str],
+    /// The crates it may use only in tests (a dev-dependency), for an end-to-end test that
+    /// needs two layers together.
+    dev_may_use: &'static [&'static str],
     /// External crates (a trailing `*` matches a prefix) that must not be linked at all.
     never_links: &'static [&'static [&'static str]],
 }
@@ -30,41 +33,49 @@ const LAYERS: &[Layer] = &[
     Layer {
         name: "graph",
         may_use: &[],
+        dev_may_use: &[],
         never_links: &[GUI, DISCORD, SQLITE],
     },
     Layer {
         name: "runtime",
         may_use: &["graph"],
+        dev_may_use: &[],
         never_links: &[GUI, DISCORD, SQLITE],
     },
     Layer {
         name: "platform-discord",
         may_use: &["runtime"],
+        dev_may_use: &[],
         never_links: &[GUI, SQLITE],
     },
     Layer {
         name: "storage-sqlite",
         may_use: &["runtime"],
+        dev_may_use: &[],
         never_links: &[GUI, DISCORD],
     },
     Layer {
         name: "exporter",
         may_use: &["graph"],
+        dev_may_use: &[],
         never_links: &[GUI, DISCORD, SQLITE],
     },
     Layer {
         name: "runner",
         may_use: &["graph", "runtime", "platform-discord", "storage-sqlite"],
+        dev_may_use: &["exporter"],
         never_links: &[GUI],
     },
     Layer {
         name: "desktop",
         may_use: &["graph", "runtime", "exporter"],
+        dev_may_use: &[],
         never_links: &[DISCORD, SQLITE],
     },
     Layer {
         name: "xtask",
         may_use: &[],
+        dev_may_use: &[],
         never_links: &[],
     },
 ];
@@ -160,7 +171,9 @@ pub fn check(metadata: &Metadata) -> Vec<String> {
             let Some(&dep_name) = names.get(dep.pkg.as_str()) else {
                 continue;
             };
-            if members.contains(dep.pkg.as_str()) && !layer.may_use.contains(&dep_name) {
+            let allowed = layer.may_use.contains(&dep_name)
+                || (!dep.is_linked() && layer.dev_may_use.contains(&dep_name));
+            if members.contains(dep.pkg.as_str()) && !allowed {
                 violations.push(format!("`{name}` must not depend on `{dep_name}`"));
             }
         }
@@ -282,6 +295,28 @@ mod tests {
             &[("graph", "runtime", json!("dev"))],
         );
         assert_eq!(check(&m), ["`graph` must not depend on `runtime`"]);
+    }
+
+    #[test]
+    fn the_runner_may_use_the_exporter_only_in_tests() {
+        let dev = metadata(
+            &["runner", "exporter"],
+            &[],
+            &[("runner", "exporter", json!("dev"))],
+        );
+        assert!(check(&dev).is_empty(), "{:?}", check(&dev));
+        let normal = metadata(
+            &["runner", "exporter"],
+            &[],
+            &[("runner", "exporter", Value::Null)],
+        );
+        assert_eq!(check(&normal), ["`runner` must not depend on `exporter`"]);
+        let build = metadata(
+            &["runner", "exporter"],
+            &[],
+            &[("runner", "exporter", json!("build"))],
+        );
+        assert_eq!(check(&build), ["`runner` must not depend on `exporter`"]);
     }
 
     #[test]
