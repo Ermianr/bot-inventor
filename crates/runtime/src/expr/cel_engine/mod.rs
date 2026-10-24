@@ -1,4 +1,7 @@
-//! The only module that uses the `cel` crate.
+//! The only module that uses the `cel` crate (with `convert` and `rename`, which belong to it).
+
+mod convert;
+mod rename;
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -10,7 +13,7 @@ use super::lex::{bracket_depth, chaining_characters};
 use super::references::{Path, ROOTS, References};
 use super::{
     ExprError, Expression, ExpressionEngine, MAX_COMPREHENSION_NESTING, MAX_DEPTH, MAX_NODES,
-    MAX_OPERATORS, MAX_RESULT_BYTES, MAX_SOURCE_BYTES, Scope, Value,
+    MAX_OPERATORS, MAX_RESULT_BYTES, MAX_SOURCE_BYTES, Scope, Syntax, Value,
 };
 
 /// Operators and functions an expression may use. All are pure. A name outside this list is
@@ -86,8 +89,9 @@ impl Default for CelEngine {
     }
 }
 
-impl ExpressionEngine for CelEngine {
-    fn compile(&self, source: &str) -> Result<Box<dyn Expression>, ExprError> {
+impl CelEngine {
+    /// Parses `source` and checks its length, shape and functions; the names are not looked at.
+    fn parse(&self, source: &str) -> Result<Program, ExprError> {
         if source.trim().is_empty() {
             return Err(ExprError::Empty);
         }
@@ -109,6 +113,13 @@ impl ExpressionEngine for CelEngine {
             .compile(source)
             .map_err(|errors| ExprError::Syntax(short(&errors.to_string())))?;
         check_shape(program.expression())?;
+        Ok(program)
+    }
+}
+
+impl ExpressionEngine for CelEngine {
+    fn compile(&self, source: &str) -> Result<Box<dyn Expression>, ExprError> {
+        let program = self.parse(source)?;
         let mut references = References::default();
         collect(program.expression(), &mut Vec::new(), &mut references)?;
         Ok(Box::new(CelExpression {
@@ -116,6 +127,17 @@ impl ExpressionEngine for CelEngine {
             references,
             base: Arc::clone(&self.base),
         }))
+    }
+
+    fn syntax(&self, source: &str) -> Result<Syntax, ExprError> {
+        let program = self.parse(source)?;
+        let mut references = References::default();
+        collect(program.expression(), &mut Vec::new(), &mut references)?;
+        Ok(convert::syntax(program.expression()))
+    }
+
+    fn rename_step(&self, source: &str, from: &str, to: &str) -> Result<Option<String>, ExprError> {
+        rename::rename_step(self, source, from, to)
     }
 }
 

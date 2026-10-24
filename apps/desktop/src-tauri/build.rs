@@ -7,6 +7,10 @@ const COMMANDS: &[&str] = &[
     "save_project",
     "validate_project",
     "node_catalog",
+    "expression_names",
+    "condition_to_source",
+    "condition_from_source",
+    "rename_alias",
 ];
 
 fn main() {

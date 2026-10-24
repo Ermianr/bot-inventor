@@ -9,6 +9,10 @@
     "allow-open-project",
     "allow-save-project",
     "allow-validate-project",
-    "allow-node-catalog"
+    "allow-node-catalog",
+    "allow-expression-names",
+    "allow-condition-to-source",
+    "allow-condition-from-source",
+    "allow-rename-alias"
   ]
 }

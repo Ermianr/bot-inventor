@@ -3,7 +3,9 @@
 use graph::VariableType;
 use serde_json::Value;
 
-use crate::catalog::{FieldKind, FieldSpec, NodeRequires, NodeSpec, OutputSpec, PortSpec};
+use crate::catalog::{
+    FieldKind, FieldSpec, NodeRequires, NodeSpec, OutputSpec, PortSpec, ValueKind,
+};
 use crate::platform::Platform;
 use crate::run::vars;
 use crate::storage::{Storage, StoredValue};
@@ -40,7 +42,10 @@ pub(super) static SPEC: NodeSpec = NodeSpec {
         },
     ],
     ports: &[PortSpec { name: "next" }, PortSpec { name: "error" }],
-    outputs: &[OutputSpec { name: "value" }],
+    outputs: &[OutputSpec {
+        name: "value",
+        kind: ValueKind::Any,
+    }],
     requires: NodeRequires::NOTHING,
     trigger: None,
 };
